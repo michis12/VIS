@@ -3,6 +3,7 @@ import * as cloud from './cloud'
 import * as db from './db'
 import type { Snapshot } from './db'
 import { buildProgress } from './progress'
+import { buildWorkoutScores } from './workoutScore'
 import type { Exercise, Measurement, Phase, Settings, Template, WeightEntry, Workout } from './types'
 
 interface Store extends Snapshot {
@@ -10,6 +11,8 @@ interface Store extends Snapshot {
   active: Workout | undefined
   /** progress/record rating per finished workout + history state for the running one */
   progress: ReturnType<typeof buildProgress>
+  /** score 0–99 per finished workout */
+  workoutScores: Map<string, number>
   saveWorkout: (w: Workout) => void
   deleteWorkout: (id: string) => void
   saveTemplate: (t: Template) => void
@@ -74,6 +77,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const workouts = snap?.workouts
   const progress = useMemo(() => buildProgress(workouts ?? []), [workouts])
+  const workoutScores = useMemo(() => buildWorkoutScores(workouts ?? [], progress.byId), [workouts, progress])
 
   const store = useMemo<Store | null>(() => {
     if (!snap) return null
@@ -81,6 +85,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ...snap,
       exerciseById: new Map(snap.exercises.map((e) => [e.id, e])),
       progress,
+      workoutScores,
       active: snap.workouts.find((w) => w.status === 'active'),
       saveWorkout: (w) => {
         db.put('workouts', w)
@@ -135,7 +140,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setSnap(await db.loadAll())
       },
     }
-  }, [snap, mutate, progress])
+  }, [snap, mutate, progress, workoutScores])
 
   if (error) return <div className="boot">Daten konnten nicht geladen werden: {error}</div>
   if (!store) return <div className="boot"><div className="boot-mark">VIS</div></div>

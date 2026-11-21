@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { BarChart, LineChart } from '../components/charts'
 import { MuscleMap } from '../components/MuscleMap'
+import { ScoreGauge } from '../components/ScoreGauge'
+import { pastWeekScores } from '../weekly'
 import { Icon } from '../components/ui'
 import { WeeklyReport } from '../components/WeeklyReport'
 import { useNav } from '../nav'
@@ -17,7 +19,7 @@ const RANGES = [
 const WD = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 
 export function Stats() {
-  const { workouts, exerciseById, exercises } = useStore()
+  const { workouts, exerciseById, exercises, progress, weights, phases, workoutScores } = useStore()
   const nav = useNav()
   const [range, setRange] = useState<(typeof RANGES)[number]['id']>('6m')
   const days = RANGES.find((r) => r.id === range)!.days
@@ -25,6 +27,24 @@ export function Stats() {
 
   const done = useMemo(() => workouts.filter((w) => w.status === 'done'), [workouts])
   const inRange = useMemo(() => done.filter((w) => w.startedAt.slice(0, 10) >= since), [done, since])
+
+  // average weekly score / workout score over the chosen range (finished weeks only)
+  const avg = useMemo(() => {
+    const first = done[0]?.startedAt.slice(0, 10)
+    if (!first) return { weeks: 0, week: 0, workout: 0, best: 0, bestStart: '' }
+    const fromDate = since > first ? since : first
+    const n = Math.max(0, Math.floor((Date.now() - new Date(fromDate + 'T12:00:00').getTime()) / (7 * 864e5)))
+    const list = pastWeekScores(workouts, progress.byId, weights, phases, Math.min(n, 400))
+    const best = list.reduce((b, s) => (s.score > b.score ? s : b), list[0] ?? { score: 0, start: '' })
+    const ws = inRange.map((w) => workoutScores.get(w.id) ?? 0).filter((s) => s > 0)
+    return {
+      weeks: list.length,
+      week: list.length ? Math.round(list.reduce((s, x) => s + x.score, 0) / list.length) : 0,
+      workout: ws.length ? Math.round(ws.reduce((a, b) => a + b, 0) / ws.length) : 0,
+      best: best?.score ?? 0,
+      bestStart: best?.start ?? '',
+    }
+  }, [done, since, workouts, progress, weights, phases, inRange, workoutScores])
 
   const k = useMemo(() => {
     const sets = inRange.reduce((n, w) => n + workoutSetCount(w), 0)
@@ -163,6 +183,17 @@ export function Stats() {
           {RANGES.map((r) => <button key={r.id} className={'chip' + (r.id === range ? ' on' : '')} onClick={() => setRange(r.id)}>{r.label}</button>)}
         </div>
       </div>
+
+      {avg.weeks > 0 && (
+        <div className="card avg-score" style={{ marginTop: 14 }}>
+          <ScoreGauge score={avg.week} size={112} label="Ø Woche" />
+          <div className="avg-score-side">
+            <div><span className="faint">Ø Workout-Score</span><b className="num">{avg.workout}</b></div>
+            <div><span className="faint">Beste Woche</span><b className="num">{avg.best}</b></div>
+            <div className="faint" style={{ fontSize: 11 }}>{avg.bestStart ? `ab ${shortDate(avg.bestStart)} · ` : ''}{avg.weeks} Wochen ausgewertet</div>
+          </div>
+        </div>
+      )}
 
       <div className="grid-2" style={{ marginTop: 14 }}>
         <Kpi label="Workouts" value={String(k.n)} sub={`${k.perWeek.toFixed(1).replace('.', ',')} pro Woche`} />

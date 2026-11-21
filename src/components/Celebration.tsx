@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { durationLabel, fmtInt, haptic, workoutSetCount, workoutVolume } from '../lib'
 import { useStore } from '../store'
+import { ScorePill } from './ScoreGauge'
 import { Icon, ProgressBadges } from './ui'
 
 /** Chrome confetti: flipping silver ribbons and dots, ~3 s, no loop. */
@@ -79,7 +80,7 @@ function ChromeConfetti() {
 }
 
 export function Celebration({ id, onClose }: { id: string; onClose: () => void }) {
-  const { workouts, progress, exerciseById } = useStore()
+  const { workouts, progress, exerciseById, workoutScores } = useStore()
   const w = workouts.find((x) => x.id === id)
   const rating = progress.byId.get(id)
 
@@ -102,6 +103,12 @@ export function Celebration({ id, onClose }: { id: string; onClose: () => void }
         <div className="celebrate-check"><Icon.check /></div>
         <div className="eyebrow" style={{ textAlign: 'center', marginTop: 14 }}>Workout abgeschlossen</div>
         <h2 className="chrome-text celebrate-title">{w.name}</h2>
+        {workoutScores.has(id) && (
+          <div className="celebrate-score">
+            <ScorePill score={workoutScores.get(id)!} size={44} />
+            <span>Workout-Score</span>
+          </div>
+        )}
 
         <div className="grid-3" style={{ marginTop: 18 }}>
           <div className="card kpi"><div className="label">Dauer</div><div className="value" style={{ fontSize: 19 }}>{durationLabel(w.durationSec)}</div></div>

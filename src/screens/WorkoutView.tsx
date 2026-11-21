@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ScorePill } from '../components/ScoreGauge'
 import { Icon, ProgressBadges } from '../components/ui'
 import { dateLabel, durationLabel, fmtInt, fmtKg, isRealSet, workoutSetCount, workoutVolume } from '../lib'
 import { useNav } from '../nav'
@@ -160,6 +161,7 @@ export function WorkoutView({ id }: { id: string }) {
           <div className="name">{w.name}</div>
           <div className="wo-timer">{dateLabel(w.startedAt)} · {w.startedAt.slice(11, 16)} Uhr</div>
         </div>
+        {w.status === 'done' && store.workoutScores.has(w.id) && <ScorePill score={store.workoutScores.get(w.id)!} size={36} />}
         {w.status !== 'active' && <button className="btn btn-ghost btn-sm" onClick={startEdit}>Bearbeiten</button>}
       </div>
 

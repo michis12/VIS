@@ -230,6 +230,7 @@ label.wheel-item { display: grid; }
 }
 .celebrate-check svg { width: 34px; height: 34px; }
 .celebrate-title { text-align: center; font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin-top: 2px; }
+.celebrate-score { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 8px; font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); }
 .celebrate-stat { display: flex; align-items: center; gap: 12px; padding: 14px; color: var(--text-3); }
 .celebrate-stat .n { font-size: 26px; font-weight: 800; color: var(--text-2); line-height: 1.1; font-variant-numeric: tabular-nums; }
 .celebrate-stat .l { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
@@ -430,6 +431,10 @@ label.lbl { display: block; font-size: 12px; font-weight: 600; letter-spacing: .
 .gauge-label { fill: var(--text-2); font-size: 13px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
 .gauge-sub { fill: var(--text-3); font-size: 11px; }
 .gauge-fill { filter: drop-shadow(0 0 6px rgba(255,255,255,.25)); }
+.score-pill { position: relative; display: inline-grid; place-items: center; flex-shrink: 0; }
+.score-pill svg { position: absolute; inset: 0; }
+.score-pill-n { position: relative; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--text); }
+.gauge-caption { text-align: center; font-size: 12px; color: var(--text-3); margin: 6px 0 16px; }
 .score-card { padding: 18px 16px 14px; }
 .score-parts { display: grid; gap: 8px; margin-top: 6px; }
 .score-part { display: grid; grid-template-columns: 88px 1fr 38px; gap: 10px; align-items: center; font-size: 13px; }
@@ -437,11 +442,15 @@ label.lbl { display: block; font-size: 12px; font-weight: 600; letter-spacing: .
 .score-part .fill { height: 100%; border-radius: 3px; background: var(--chrome); }
 .score-part .n { text-align: right; color: var(--text-2); font-variant-numeric: tabular-nums; }
 .score-part .d { grid-column: 2 / 4; margin-top: -4px; font-size: 11px; color: var(--text-3); }
+.avg-score { display: flex; align-items: center; gap: 12px; padding: 12px 16px 12px 6px; }
+.avg-score-side { flex: 1; display: grid; gap: 6px; font-size: 13px; }
+.avg-score-side > div { display: flex; justify-content: space-between; align-items: baseline; }
+.avg-score-side b { font-size: 20px; }
 .score-mini { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; margin-top: 12px; padding: 10px 16px 10px 8px; }
 
 /* muscle map */
 .mm-figs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-.mm-fig svg { display: block; width: 100%; max-height: 260px; }
+.mm-fig svg { display: block; width: 100%; max-height: 300px; }
 .mm-region { cursor: pointer; transition: opacity .2s; }
 .mm-region:hover { opacity: .9; }
 .mm-cap { text-align: center; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; margin-top: 2px; }

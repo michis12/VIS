@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { ScorePill } from '../components/ScoreGauge'
 import { Icon, ProgressBadges } from '../components/ui'
 import { dateLabel, durationLabel, fmtInt, workoutSetCount, workoutVolume } from '../lib'
 import { useNav } from '../nav'
@@ -48,9 +49,12 @@ export function History() {
 }
 
 export function HistoryRow({ w, onOpen }: { w: Workout; onOpen: () => void }) {
-  const rating = useStore().progress.byId.get(w.id)
+  const store = useStore()
+  const rating = store.progress.byId.get(w.id)
+  const score = store.workoutScores.get(w.id)
   return (
     <button className="list-row" style={{ width: '100%', textAlign: 'left' }} onClick={onOpen}>
+      {score != null && w.status === 'done' && <ScorePill score={score} />}
       <div className="grow">
         <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
           {w.name}

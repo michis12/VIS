@@ -33,6 +33,21 @@ const addDays = (iso: string, d: number) => {
 export const scoreLabel = (s: number) =>
   s >= 90 ? 'Legendär' : s >= 80 ? 'Elite' : s >= 60 ? 'Stark' : s >= 40 ? 'Solide' : s > 0 ? 'Aufbau' : 'Ruhewoche'
 
+/** Finished workouts grouped by their Monday (YYYY-MM-DD), with volumes precomputed. */
+type WeekIndex = Map<string, { ws: Workout[]; vol: number }>
+function indexWeeks(workouts: Workout[]): WeekIndex {
+  const idx: WeekIndex = new Map()
+  for (const w of workouts) {
+    if (w.status !== 'done') continue
+    const k = weekKey(w.startedAt)
+    const e = idx.get(k) ?? { ws: [], vol: 0 }
+    e.ws.push(w)
+    e.vol += workoutVolume(w)
+    idx.set(k, e)
+  }
+  return idx
+}
+
 export function weekScore(
   workouts: Workout[],
   progress: Map<string, WorkoutProgress>,
@@ -40,23 +55,42 @@ export function weekScore(
   phases: Phase[],
   weeksAgo = 0,
 ): WeekScore {
+  return scoreWeek(indexWeeks(workouts), progress, weights, phases, weeksAgo)
+}
+
+/** Scores for weeks 1..count ago (finished weeks), sharing one index – fast for long ranges. */
+export function pastWeekScores(
+  workouts: Workout[],
+  progress: Map<string, WorkoutProgress>,
+  weights: WeightEntry[],
+  phases: Phase[],
+  count: number,
+): WeekScore[] {
+  const idx = indexWeeks(workouts)
+  return Array.from({ length: count }, (_, i) => scoreWeek(idx, progress, weights, phases, i + 1))
+}
+
+function scoreWeek(
+  idx: WeekIndex,
+  progress: Map<string, WorkoutProgress>,
+  weights: WeightEntry[],
+  phases: Phase[],
+  weeksAgo: number,
+): WeekScore {
   const thisMonday = weekKey(new Date().toISOString())
   const start = addDays(thisMonday, -7 * weeksAgo)
   const end = addDays(start, 7)
-  const done = workouts.filter((w) => w.status === 'done')
-  const inWeek = (w: Workout, s: string, e: string) => w.startedAt.slice(0, 10) >= s && w.startedAt.slice(0, 10) < e
-  const week = done.filter((w) => inWeek(w, start, end))
+  const week = idx.get(start)?.ws ?? []
 
-  const volume = week.reduce((n, w) => n + workoutVolume(w), 0)
+  const volume = idx.get(start)?.vol ?? 0
   const sets = week.reduce((n, w) => n + workoutSetCount(w), 0)
   const ups = week.reduce((n, w) => n + (progress.get(w.id)?.ups ?? 0), 0)
   const prs = week.reduce((n, w) => n + (progress.get(w.id)?.prs ?? 0), 0)
 
   // baseline: the 4 previous weeks that had training (volume) / 8 weeks (progress per workout)
   const prevWeeks = Array.from({ length: 8 }, (_, i) => {
-    const s = addDays(start, -7 * (i + 1))
-    const ws = done.filter((w) => inWeek(w, s, addDays(s, 7)))
-    return { vol: ws.reduce((n, w) => n + workoutVolume(w), 0), ws }
+    const e = idx.get(addDays(start, -7 * (i + 1)))
+    return { vol: e?.vol ?? 0, ws: e?.ws ?? [] }
   })
   const volBase = prevWeeks.slice(0, 4).filter((p) => p.vol > 0)
   const avgVol = volBase.length ? volBase.reduce((n, p) => n + p.vol, 0) / volBase.length : 0

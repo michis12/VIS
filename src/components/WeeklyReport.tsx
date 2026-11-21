@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { fmtInt, shortDate } from '../lib'
 import { useStore } from '../store'
 import { scoreLabel, weekScore } from '../weekly'
-import { ScoreGauge } from './ScoreGauge'
+import { ScoreGaugeWithSub } from './ScoreGauge'
 
 export function useWeekScore(weeksAgo = 0) {
   const { workouts, progress, weights, phases } = useStore()
@@ -23,7 +23,7 @@ export function WeeklyReport() {
           <button className={ago === 1 ? 'on' : ''} onClick={() => setAgo(1)}>Letzte</button>
         </div>
       </div>
-      <ScoreGauge
+      <ScoreGaugeWithSub
         score={s.score}
         label={scoreLabel(s.score)}
         sub={`Woche ab ${shortDate(s.start)}${s.current ? ' · läuft' : ''}${prev.score ? ` · ${delta >= 0 ? '+' : ''}${delta} zur Vorwoche` : ''}`}

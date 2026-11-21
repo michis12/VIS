@@ -1,7 +1,7 @@
 import { useId } from 'react'
 
 /** 240° arc gauge for a 0–99 score, chrome fill on a dark track. */
-export function ScoreGauge({ score, size = 180, label, sub }: { score: number; size?: number; label?: string; sub?: string }) {
+export function ScoreGauge({ score, size = 180, label }: { score: number; size?: number; label?: string }) {
   const id = useId().replace(/:/g, '')
   const r = 80
   const cx = 100
@@ -22,7 +22,7 @@ export function ScoreGauge({ score, size = 180, label, sub }: { score: number; s
   const end = START + SWEEP * frac
   const [kx, ky] = pt(end)
   return (
-    <svg width={size} height={size * 0.82} viewBox="0 6 200 164" className="gauge" role="img" aria-label={`Wochenscore ${score} von 99`}>
+    <svg width={size} height={size * 0.74} viewBox="0 6 200 148" className="gauge" role="img" aria-label={`Wochenscore ${score} von 99`}>
       <defs>
         <linearGradient id={`g${id}`} x1="0" y1="1" x2="1" y2="0">
           <stop offset="0" stopColor="#8e8e93" />
@@ -36,9 +36,34 @@ export function ScoreGauge({ score, size = 180, label, sub }: { score: number; s
         <path d={arc(START, end)} fill="none" stroke={`url(#g${id})`} strokeWidth="12" strokeLinecap="round" className="gauge-fill" />
       )}
       {frac > 0.005 && <circle cx={kx} cy={ky} r="4" fill="#fff" />}
-      <text x="100" y="104" textAnchor="middle" className="gauge-num">{score}</text>
-      {label && <text x="100" y="128" textAnchor="middle" className="gauge-label">{label}</text>}
-      {sub && <text x="100" y="146" textAnchor="middle" className="gauge-sub">{sub}</text>}
+      <text x="100" y="108" textAnchor="middle" className="gauge-num">{score}</text>
+      {label && <text x="100" y="132" textAnchor="middle" className="gauge-label">{label}</text>}
     </svg>
+  )
+}
+
+/** Small round score badge (workout score): chrome ring filled to score/99. */
+export function ScorePill({ score, size = 34 }: { score: number; size?: number }) {
+  const r = 13
+  const c = 2 * Math.PI * r
+  return (
+    <span className="score-pill" style={{ width: size, height: size }} title={`Workout-Score ${score}/99`}>
+      <svg viewBox="0 0 32 32" width={size} height={size} aria-hidden="true">
+        <circle cx="16" cy="16" r={r} fill="none" stroke="rgba(255,255,255,.1)" strokeWidth="2.6" />
+        <circle cx="16" cy="16" r={r} fill="none" stroke="#e5e5ea" strokeWidth="2.6" strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={c * (1 - Math.max(0, Math.min(1, score / 99)))} transform="rotate(-90 16 16)" />
+      </svg>
+      <span className="score-pill-n" style={{ fontSize: size * 0.38 }}>{score}</span>
+    </span>
+  )
+}
+
+/** Gauge with a caption line below it (kept outside the arc). */
+export function ScoreGaugeWithSub({ sub, ...rest }: { score: number; size?: number; label?: string; sub: string }) {
+  return (
+    <div>
+      <ScoreGauge {...rest} />
+      <div className="gauge-caption">{sub}</div>
+    </div>
   )
 }
