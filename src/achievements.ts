@@ -4,6 +4,9 @@ import type { Exercise, WeightEntry, Workout } from './types'
 export type Glyph =
   | 'katana' | 'mountain' | 'flame' | 'shield' | 'anvil' | 'helm' | 'axe' | 'hourglass'
   | 'moon' | 'sun' | 'fist' | 'scroll' | 'lotus' | 'bolt' | 'phoenix' | 'crown' | 'eye'
+  | 'beer' | 'ghost' | 'tree' | 'heart' | 'rocket' | 'chair' | 'pyramid' | 'drumstick' | 'flex'
+  | 'repeat' | 'shot' | 'couch'
+  | 'barbell' | 'deadlift' | 'lion' | 'scale' | 'gorilla' | 'blade' | 'plate' | 'ring'
 
 export interface AchievementDef {
   id: string
@@ -13,6 +16,14 @@ export interface AchievementDef {
   unit: string
   tiers: [number, number, number, number, number]
   metric: keyof Metrics
+  /** just for fun – counts for stars and rank, not for Shōgun */
+  fun?: boolean
+  /** "Kraft & Körper" – counts for stars and rank, not for Shōgun */
+  body?: boolean
+  /** custom names for the 5 tiers (instead of Bronze … Obsidian) */
+  labels?: [string, string, string, string, string]
+  /** footnote shown in the detail sheet */
+  note?: string
 }
 
 export interface Metrics {
@@ -32,7 +43,33 @@ export interface Metrics {
   weighIns: number
   heaviest: number
   comebacks: number
+  // fun
+  weekend: number
+  ghost: number
+  holidays: number
+  mondayChest: number
+  speedruns: number
+  longestMin: number
+  pyramids: number
+  legSets: number
+  curlSets: number
+  highReps: number
+  schnaps: number
+  excuses: number
+  // strength & body
+  benchE1rm: number
+  deadliftE1rm: number
+  bestWeek: number
+  maxBodyweight: number
+  bodyGain: number
+  bodyLoss: number
+  heavySets: number
+  daysIn: number
 }
+
+const BENCH = new Set(['bench-press-barbell', 'bench-press-smith-machine', 'decline-barbell-bench-press', 'incline-bench-press-smith-machine'])
+const DEADLIFT = new Set(['deadlift-barbell'])
+const STANDARD_NOTE = 'Die Prozent-Angaben sind grobe Richtwerte für erwachsene Männer allgemein (nicht nur Gym-Gänger), berechnet aus dem geschätzten 1RM (Epley, Sätze bis 10 Wdh).'
 
 export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'samurai', name: 'Samurai', glyph: 'katana', metric: 'workouts', unit: 'Workouts', desc: 'Der Weg des Kriegers beginnt mit dem ersten Schritt. Absolviere Workouts.', tiers: [25, 100, 250, 400, 600] },
@@ -51,33 +88,68 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'chronist', name: 'Chronist', glyph: 'lotus', metric: 'weighIns', unit: 'Gewichtseinträge', desc: 'Kenne deinen Körper. Trage dein Gewicht ein.', tiers: [10, 30, 60, 120, 250] },
   { id: 'gigant', name: 'Gigant', glyph: 'flame', metric: 'heaviest', unit: 'kg in einem Satz', desc: 'Rohe Kraft. Das schwerste Gewicht, das du je bewegt hast.', tiers: [60, 100, 150, 200, 250] },
   { id: 'phoenix', name: 'Phönix', glyph: 'phoenix', metric: 'comebacks', unit: 'Comebacks', desc: 'Aus der Asche. Zurück ins Training nach 14+ Tagen Pause.', tiers: [1, 2, 3, 5, 8] },
+
+  // ---- just for fun
+  { id: 'wochenende', fun: true, name: 'Wochenend-Krieger', glyph: 'beer', metric: 'weekend', unit: 'Workouts am Wochenende', desc: 'Andere gehen brunchen, du gehst pumpen. Workouts am Samstag oder Sonntag.', tiers: [5, 25, 60, 100, 150] },
+  { id: 'geisterstunde', fun: true, name: 'Geisterstunde', glyph: 'ghost', metric: 'ghost', unit: 'Workouts nach 22 Uhr', desc: 'Das Gym gehört dir und dem Putzpersonal. Starte nach 22 Uhr.', tiers: [1, 5, 15, 30, 60] },
+  { id: 'weihnachtself', fun: true, name: 'Weihnachtself', glyph: 'tree', metric: 'holidays', unit: 'Feiertags-Workouts', desc: 'Keks verbrennen statt Keks essen. Training am 24., 25., 26., 31. Dezember oder 1. Jänner.', tiers: [1, 2, 3, 5, 8] },
+  { id: 'brusttag', fun: true, name: 'Internationaler Brusttag', glyph: 'heart', metric: 'mondayChest', unit: 'Montage mit Brust', desc: 'Weltweit ist Montag Brusttag – und du hältst dich dran.', tiers: [5, 15, 40, 75, 120] },
+  { id: 'speedrunner', fun: true, name: 'Speedrunner', glyph: 'rocket', metric: 'speedruns', unit: 'Blitz-Workouts', desc: 'Any% Gym-Run: mindestens 8 Sätze in unter 30 Minuten.', tiers: [1, 3, 10, 25, 50] },
+  { id: 'sitzfleisch', fun: true, name: 'Sitzfleisch', glyph: 'chair', metric: 'longestMin', unit: 'Minuten (längstes Workout)', desc: 'Wohnst du hier? Dein längstes Workout in Minuten.', tiers: [90, 120, 150, 180, 240] },
+  { id: 'pyramide', fun: true, name: 'Pyramidenbauer', glyph: 'pyramid', metric: 'pyramids', unit: 'Übungen mit 5+ Sätzen', desc: 'Die Pharaonen wären stolz. Mindestens 5 Sätze einer Übung in einem Training.', tiers: [5, 20, 50, 100, 200] },
+  { id: 'huehnerbein', fun: true, name: 'Kein Hühnerbein', glyph: 'drumstick', metric: 'legSets', unit: 'Bein-Sätze', desc: 'Leg Day ausgelassen? Nicht mit dir. Sätze für Beine und Waden.', tiers: [100, 300, 600, 1000, 1500] },
+  { id: 'curlbro', fun: true, name: 'Curl-Bro', glyph: 'flex', metric: 'curlSets', unit: 'Curl-Sätze', desc: 'Curls for the girls (und die Jungs). Jeder Satz mit „Curl“ im Namen.', tiers: [100, 300, 600, 1000, 1500] },
+  { id: 'wiederholungstaeter', fun: true, name: 'Wiederholungstäter', glyph: 'repeat', metric: 'highReps', unit: 'Sätze mit 20+ Wdh', desc: 'Brennen ist das neue Wachsen. Sätze mit mindestens 20 Wiederholungen.', tiers: [10, 40, 100, 200, 350] },
+  { id: 'schnapszahl', fun: true, name: 'Schnapszahl', glyph: 'shot', metric: 'schnaps', unit: 'Schnapszahl-Sätze', desc: 'Prost! Sätze mit Gewichten wie 11, 22, 55 oder 111 kg.', tiers: [20, 75, 200, 400, 700] },
+  // ---- strength & body
+  { id: 'bankdrueck', body: true, name: 'Bankdrück-Elite', glyph: 'barbell', metric: 'benchE1rm', unit: 'kg geschätztes 1RM Bankdrücken', desc: 'Wie stark ist deine Brust wirklich? Bestes geschätztes 1RM beim Bankdrücken (Langhantel oder Smith, flach, schräg oder negativ).', tiers: [60, 80, 100, 120, 140], labels: ['Einsteiger', 'Fortgeschritten', 'Stark (~Top 20 %)', 'Sehr stark (~Top 5 %)', 'Elite (~Top 1 %)'], note: STANDARD_NOTE },
+  { id: 'kreuzheben', body: true, name: 'Kreuzheben-Koloss', glyph: 'deadlift', metric: 'deadliftE1rm', unit: 'kg geschätztes 1RM Kreuzheben', desc: 'Heb die Welt vom Boden auf. Bestes geschätztes 1RM beim Kreuzheben.', tiers: [100, 140, 180, 220, 260], labels: ['Einsteiger', 'Fortgeschritten', 'Stark (~Top 20 %)', 'Sehr stark (~Top 5 %)', 'Elite (~Top 1 %)'], note: STANDARD_NOTE },
+  { id: 'loewe', body: true, name: 'Löwe – König des Gyms', glyph: 'lion', metric: 'bestWeek', unit: 'Workouts in einer Woche', desc: 'Das Gym ist dein Revier. Die meisten Workouts in einer Kalenderwoche – bei 7 regierst du.', tiers: [3, 4, 5, 6, 7], labels: ['Junglöwe', 'Rudelmitglied', 'Jäger', 'Rudelführer', 'König des Gyms'] },
+  { id: 'schwergewicht', body: true, name: 'Schwergewicht', glyph: 'scale', metric: 'maxBodyweight', unit: 'kg Körpergewicht (Höchstwert)', desc: 'Die Waage ächzt. Dein höchstes eingetragenes Körpergewicht – Ziel: dreistellig.', tiers: [75, 80, 85, 90, 100], labels: ['Weltergewicht', 'Mittelgewicht', 'Halbschwer', 'Cruiser', 'Schwergewicht (100 kg)'] },
+  { id: 'massemonster', body: true, name: 'Massemonster', glyph: 'gorilla', metric: 'bodyGain', unit: 'kg zugelegt', desc: 'Bulk mit Ansage. Größte Zunahme vom Tiefst- zum späteren Höchstgewicht.', tiers: [3, 6, 10, 15, 20] },
+  { id: 'shredder', body: true, name: 'Shredder', glyph: 'blade', metric: 'bodyLoss', unit: 'kg abgenommen', desc: 'Messerscharf. Größte Abnahme von einem Höchst- zum späteren Tiefstgewicht.', tiers: [2, 4, 6, 8, 12] },
+  { id: 'hunderter', body: true, name: '100er-Club', glyph: 'plate', metric: 'heavySets', unit: 'Sätze mit 100+ kg', desc: 'Dreistellig oder gar nicht. Sätze mit mindestens 100 kg.', tiers: [25, 100, 250, 500, 1000] },
+  { id: 'treue', body: true, name: 'Treueschwur', glyph: 'ring', metric: 'daysIn', unit: 'Tage seit dem ersten Workout', desc: 'Bis dass der Muskelkater uns scheidet. Tage seit deinem ersten Workout.', tiers: [30, 182, 365, 730, 1825], labels: ['1 Monat', '½ Jahr', '1 Jahr', '2 Jahre', '5 Jahre'] },
+
+  { id: 'ausreden', fun: true, name: 'Ausreden-Meister', glyph: 'couch', metric: 'excuses', unit: 'ausgelassene Übungen', desc: '„Heute nicht.“ – Übungen, die du per „Heute nicht trainieren“ geschwänzt hast.', tiers: [1, 5, 15, 30, 60] },
 ]
 
 export const ULTIMATE = {
   name: 'Shōgun',
-  desc: 'Herrscher über alle Disziplinen. Bringe jedes Achievement auf 5 Sterne.',
+  desc: 'Herrscher über alle Disziplinen. Bringe jedes ernste Achievement auf 5 Sterne – die Spaß-Achievements zählen hier nicht.',
 }
 
-export const RANKS: { min: number; name: string }[] = [
-  { min: 0, name: 'Rekrut' },
-  { min: 8, name: 'Knappe' },
-  { min: 16, name: 'Kämpfer' },
-  { min: 26, name: 'Veteran' },
-  { min: 38, name: 'Champion' },
-  { min: 50, name: 'Meister' },
-  { min: 62, name: 'Großmeister' },
-  { min: 72, name: 'Legende' },
-  { min: 80, name: 'Shōgun' },
+/** Ranks by share of all available stars, so adding achievements keeps them fair. */
+export const RANKS: { share: number; name: string }[] = [
+  { share: 0, name: 'Rekrut' },
+  { share: 0.1, name: 'Knappe' },
+  { share: 0.2, name: 'Kämpfer' },
+  { share: 0.325, name: 'Veteran' },
+  { share: 0.475, name: 'Champion' },
+  { share: 0.6, name: 'Meister' },
+  { share: 0.75, name: 'Großmeister' },
+  { share: 0.9, name: 'Legende' },
+  { share: 1, name: 'Shōgun' },
 ]
+export const MAX_STARS = ACHIEVEMENTS.length * 5
+const RANK_MIN = RANKS.map((r) => ({ ...r, min: Math.ceil(r.share * MAX_STARS) }))
 
 /** Sets above this are treated as typos (e.g. 1174 kg). */
 const MAX_PLAUSIBLE_KG = 500
 
-export function computeMetrics(workouts: Workout[], weights: WeightEntry[], _exercises: Exercise[]): Metrics {
+export function computeMetrics(workouts: Workout[], weights: WeightEntry[], exercises: Exercise[]): Metrics {
   const done = workouts.filter((w) => w.status === 'done')
+  const muscleOf = new Map(exercises.map((e) => [e.id, e.muscle]))
+  const nameOf = new Map(exercises.map((e) => [e.id, e.name]))
   const m: Metrics = {
     workouts: done.length, volumeT: 0, sets: 0, streak: 0, exercises: 0, maxSets: 0, maxVolume: 0, hours: 0,
     night: 0, morning: 0, strongWeeks: 0, prs: 0, bestMonth: 0, weighIns: weights.length, heaviest: 0, comebacks: 0,
+    weekend: 0, ghost: 0, holidays: 0, mondayChest: 0, speedruns: 0, longestMin: 0, pyramids: 0, legSets: 0,
+    curlSets: 0, highReps: 0, schnaps: 0,
+    benchE1rm: 0, deadliftE1rm: 0, bestWeek: 0, maxBodyweight: 0, bodyGain: 0, bodyLoss: 0, heavySets: 0,
+    daysIn: done.length ? Math.floor((Date.now() - new Date(done[0].startedAt).getTime()) / 864e5) : 0,
+    // whole workouts marked as skipped (older feature) count as one excuse each
+    excuses: workouts.filter((w) => w.status === 'skipped').length,
   }
   const used = new Set<string>()
   const weeks = new Map<string, number>()
@@ -104,9 +176,37 @@ export function computeMetrics(workouts: Workout[], weights: WeightEntry[], _exe
     if (prevDay != null && day - prevDay >= 14 * 864e5) m.comebacks++
     prevDay = day
 
+    // fun
+    const date = new Date(w.startedAt)
+    const wd = date.getDay()
+    const md = w.startedAt.slice(5, 10)
+    if (wd === 0 || wd === 6) m.weekend++
+    if (h >= 22 || h < 4) m.ghost++
+    if (['12-24', '12-25', '12-26', '12-31', '01-01'].includes(md)) m.holidays++
+    if (wd === 1 && w.exercises.some((e) => muscleOf.get(e.exerciseId) === 'Brust' && e.sets.some(isRealSet))) m.mondayChest++
+    if (w.durationSec != null && w.durationSec <= 30 * 60 && sets >= 8) m.speedruns++
+    if (w.durationSec != null) m.longestMin = Math.max(m.longestMin, Math.floor(w.durationSec / 60))
+
     for (const e of w.exercises) {
+      if (e.skipped) m.excuses++
       const real = e.sets.filter(isRealSet).filter((s) => (s.weight ?? 0) <= MAX_PLAUSIBLE_KG)
       if (!real.length) continue
+      const muscle = muscleOf.get(e.exerciseId)
+      const isCurl = /curl/i.test(nameOf.get(e.exerciseId) ?? '')
+      if (real.length >= 5) m.pyramids++
+      for (const s of real) {
+        if (muscle === 'Beine' || muscle === 'Waden') m.legSets++
+        if (isCurl) m.curlSets++
+        if ((s.reps ?? 0) >= 20) m.highReps++
+        const kg = s.weight ?? 0
+        if (kg >= 11 && Number.isInteger(kg) && new Set(String(kg)).size === 1) m.schnaps++
+        if (kg >= 100) m.heavySets++
+        if ((s.reps ?? 0) <= 10) {
+          const est = e1rm(kg, s.reps ?? 0)
+          if (BENCH.has(e.exerciseId)) m.benchE1rm = Math.max(m.benchE1rm, est)
+          if (DEADLIFT.has(e.exerciseId)) m.deadliftE1rm = Math.max(m.deadliftE1rm, est)
+        }
+      }
       used.add(e.exerciseId)
       let top = 0
       for (const s of real) {
@@ -120,6 +220,23 @@ export function computeMetrics(workouts: Workout[], weights: WeightEntry[], _exe
   }
   m.exercises = used.size
   m.bestMonth = Math.max(0, ...months.values())
+  m.bestWeek = Math.max(0, ...weeks.values())
+
+  // body weight: highest value, biggest rise from a low and biggest drop from a high
+  let low = Infinity
+  let high = -Infinity
+  for (const w of weights) {
+    m.maxBodyweight = Math.max(m.maxBodyweight, w.kg)
+    low = Math.min(low, w.kg)
+    high = Math.max(high, w.kg)
+    m.bodyGain = Math.max(m.bodyGain, w.kg - low)
+    m.bodyLoss = Math.max(m.bodyLoss, high - w.kg)
+  }
+  const r1 = (v: number) => Math.round(v * 10) / 10
+  m.benchE1rm = r1(m.benchE1rm)
+  m.deadliftE1rm = r1(m.deadliftE1rm)
+  m.bodyGain = r1(m.bodyGain)
+  m.bodyLoss = r1(m.bodyLoss)
   m.strongWeeks = [...weeks.values()].filter((n) => n >= 3).length
 
   // longest run of consecutive ISO weeks
@@ -156,7 +273,7 @@ export function evaluate(m: Metrics): AchievementState[] {
   })
 }
 
-export const rankFor = (stars: number) => [...RANKS].reverse().find((r) => stars >= r.min)!
-export const nextRank = (stars: number) => RANKS.find((r) => r.min > stars) ?? null
+export const rankFor = (stars: number) => [...RANK_MIN].reverse().find((r) => stars >= r.min)!
+export const nextRank = (stars: number) => RANK_MIN.find((r) => r.min > stars) ?? null
 
-export const fmtMetric = (v: number) => fmtInt(v)
+export const fmtMetric = (v: number) => (Number.isInteger(v) ? fmtInt(v) : v.toFixed(1).replace('.', ','))

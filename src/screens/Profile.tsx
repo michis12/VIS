@@ -1,5 +1,5 @@
 import { useId, useMemo, useRef, useState } from 'react'
-import { ACHIEVEMENTS, computeMetrics, evaluate, fmtMetric, nextRank, rankFor, ULTIMATE, type AchievementState, type Glyph } from '../achievements'
+import { computeMetrics, evaluate, fmtMetric, MAX_STARS, nextRank, rankFor, ULTIMATE, type AchievementState, type Glyph } from '../achievements'
 import { Avatar, ProfileEditor } from '../components/Avatar'
 import { Icon, Sheet } from '../components/ui'
 import { shareOrDownload } from '../files'
@@ -36,6 +36,28 @@ const GLYPHS: Record<Glyph, React.JSX.Element> = {
   flame: <g {...P}><path d="M16 4c1 5 7 7 7 14a7 7 0 0 1-14 0c0-4 2-6 4-8 0 3 1 4 3 5 1-4 0-7 0-11Z" /></g>,
   phoenix: <g {...P}><path d="M16 26c-2-4-2-8 0-12 2 4 2 8 0 12Z" /><path d="M15 15C11 9 6 9 4 10c3 2 5 5 6 8M17 15c4-6 9-6 11-5-3 2-5 5-6 8" /><path d="M16 14V9M14 7l2 2 2-2" /></g>,
   crown: <g {...P}><path d="M5 23 7 10l6 6 3-8 3 8 6-6 2 13Z" /><path d="M6 27h20" /></g>,
+  // fun
+  beer: <g {...P}><path d="M8 11h12v13a3 3 0 0 1-3 3h-6a3 3 0 0 1-3-3Z" /><path d="M20 14h2a3 3 0 0 1 0 6h-2" /><path d="M8 11c-1-3 2-5 4-4 1-2 4-2 5 0 2-1 4 1 3 4" /><path d="M12 16v6M16 16v6" /></g>,
+  ghost: <g {...P}><path d="M8 27V14a8 8 0 0 1 16 0v13l-3-2-2.5 2-2.5-2-2.5 2-2.5-2Z" /><circle cx="13" cy="15" r="1.2" fill="currentColor" /><circle cx="19" cy="15" r="1.2" fill="currentColor" /></g>,
+  tree: <g {...P}><path d="M16 5l5 7h-3l5 7h-4l5 6H8l5-6H9l5-7h-3Z" /><path d="M16 25v3" /></g>,
+  heart: <g {...P}><path d="M16 26S5 19.5 5 12.5A5.5 5.5 0 0 1 16 10a5.5 5.5 0 0 1 11 2.5C27 19.5 16 26 16 26Z" /><path d="M11 13.5h3l1.5-3 2 6 1.5-3h3" /></g>,
+  rocket: <g {...P}><path d="M19 5c4 0 8 4 8 8l-9 9-5-5 9-9" /><path d="M13 17l-4 1-3 4 5-1M18 22l-1 4-4 3 1-5" /><circle cx="20.5" cy="11.5" r="1.8" /><path d="M8 24l-3 3" /></g>,
+  chair: <g {...P}><path d="M10 5v12h12" /><path d="M10 17v10M22 17v10M10 11h9" /><path d="M19 11V5" /></g>,
+  pyramid: <g {...P}><path d="M16 5 28 26H4Z" /><path d="M9.5 16.5h13M7 21.5h18M16 5v21" /></g>,
+  drumstick: <g {...P}><path d="M19 6a7 7 0 0 1 5 12c-2 2-5 2-7 1l-5 5" /><path d="M19 6a7 7 0 0 0-4 11" /><circle cx="9.5" cy="25.5" r="2" /><circle cx="7" cy="22" r="2" /></g>,
+  flex: <g {...P}><path d="M6 25c2-6 3-10 3-14l4-4 2 2-2 3 3 3c3-2 7-2 9 1 2 4-1 9-6 9Z" /><path d="M16 18c1 2 3 3 5 2" /></g>,
+  repeat: <g {...P}><path d="M7 14a9 9 0 0 1 15-5l2 2" /><path d="M24 5v6h-6" /><path d="M25 18a9 9 0 0 1-15 5l-2-2" /><path d="M8 27v-6h6" /></g>,
+  shot: <g {...P}><path d="M9 7h14l-2 19H11Z" /><path d="M10 13h12" /><path d="M14 18h4" /></g>,
+  // strength & body
+  barbell: <g {...P}><path d="M3 16h26" /><rect x="6" y="9" width="3.5" height="14" rx="1" /><rect x="22.5" y="9" width="3.5" height="14" rx="1" /><rect x="10" y="11.5" width="2.5" height="9" rx="1" /><rect x="19.5" y="11.5" width="2.5" height="9" rx="1" /></g>,
+  deadlift: <g {...P}><circle cx="16" cy="6" r="2.4" /><path d="M16 9v8l-4 5v5M16 17l4 5v5M11 13h10" /><path d="M5 22h22" /><circle cx="6" cy="22" r="3" /><circle cx="26" cy="22" r="3" /></g>,
+  lion: <g {...P}><path d="M16 4l2.5 3 3.5-1.5.5 3.8 3.5 1.2-1.8 3.3 2.3 3-3.5 1.4.2 3.8-3.7-.4L16 28l-2-3.4-3.7.4.2-3.8-3.5-1.4 2.3-3-1.8-3.3 3.5-1.2.5-3.8L13.5 7Z" /><circle cx="13.5" cy="15" r=".9" fill="currentColor" /><circle cx="18.5" cy="15" r=".9" fill="currentColor" /><path d="M14.5 19.5 16 21l1.5-1.5" /></g>,
+  scale: <g {...P}><rect x="5" y="6" width="22" height="21" rx="5" /><path d="M10.5 13a6 6 0 0 1 11 0" /><path d="M16 13l2-2.5" /></g>,
+  gorilla: <g {...P}><path d="M9 27v-4c-3-1-4-4-4-7 0-5 5-9 11-9s11 4 11 9c0 3-1 6-4 7v4" /><path d="M11 15h3M18 15h3" /><path d="M12 20c2 2 6 2 8 0" /><path d="M16 7V4" /></g>,
+  blade: <g {...P}><path d="M6 26 22 10c2-2 5-2 5-2s0 3-2 5L9 29Z" /><path d="M4 24l4 4M18 14l2 2" /></g>,
+  plate: <g {...P}><circle cx="16" cy="16" r="11.5" /><circle cx="16" cy="16" r="2.5" /><path d="M16 4.5v3M16 24.5v3M4.5 16h3M24.5 16h3" /></g>,
+  ring: <g {...P}><circle cx="16" cy="19" r="8" /><path d="M12 7l4-3 4 3-4 4Z" /></g>,
+  couch: <g {...P}><path d="M7 16v-4a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v4" /><path d="M4 18a2 2 0 0 1 4 0v2h16v-2a2 2 0 0 1 4 0v6H4Z" /><path d="M7 24v3M25 24v3" /></g>,
 }
 
 export function Medal({ glyph, stars, size = 64, ultimate = false }: { glyph: Glyph; stars: number; size?: number; ultimate?: boolean }) {
@@ -133,13 +155,25 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
   }
 
   const total = list.reduce((n, a) => n + a.stars, 0)
-  const max = ACHIEVEMENTS.length * 5
+  const max = MAX_STARS
   const rank = rankFor(total)
   const nr = nextRank(total)
-  const maxed = list.filter((a) => a.stars === 5).length
-  const ultimate = maxed === list.length
+  const byRank = (a: AchievementState, b: AchievementState) => b.stars - a.stars || b.progress - a.progress
+  const core = list.filter((a) => !a.def.fun && !a.def.body)
+  const body = list.filter((a) => a.def.body).sort(byRank)
+  const fun = list.filter((a) => a.def.fun).sort(byRank)
+  const maxed = core.filter((a) => a.stars === 5).length
+  const ultimate = maxed === core.length
   const first = workouts.find((w) => w.status === 'done')
-  const sorted = [...list].sort((a, b) => b.stars - a.stars || b.progress - a.progress)
+  const sorted = [...core].sort(byRank)
+  const renderAch = (a: AchievementState) => (
+    <button key={a.def.id} className={'ach' + (a.stars === 0 ? ' locked' : '')} onClick={() => setOpen(a)}>
+      <Medal glyph={a.def.glyph} stars={a.stars} />
+      <div className="ach-name">{a.def.name}</div>
+      <Stars n={a.stars} />
+      <div className="ach-bar"><div style={{ width: `${a.progress * 100}%` }} /></div>
+    </button>
+  )
 
   return (
     <div className="screen">
@@ -171,22 +205,19 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
         <div style={{ flex: 1, textAlign: 'left' }}>
           <div className="eyebrow">Ultimatives Achievement</div>
           <div style={{ fontSize: 22, fontWeight: 750 }} className={ultimate ? 'chrome-text' : ''}>{ULTIMATE.name}</div>
-          <div className="muted" style={{ fontSize: 13 }}>{maxed} / {list.length} Achievements gemaxt</div>
-          <div className="progress" style={{ marginTop: 8 }}><div style={{ width: `${(maxed / list.length) * 100}%` }} /></div>
+          <div className="muted" style={{ fontSize: 13 }}>{maxed} / {core.length} Achievements gemaxt</div>
+          <div className="progress" style={{ marginTop: 8 }}><div style={{ width: `${(maxed / core.length) * 100}%` }} /></div>
         </div>
       </button>
 
-      <div className="section-title"><h2>Achievements</h2><span className="faint" style={{ fontSize: 13 }}>{list.filter((a) => a.stars > 0).length} freigeschaltet</span></div>
-      <div className="ach-grid" ref={gridRef}>
-        {sorted.map((a) => (
-          <button key={a.def.id} className={'ach' + (a.stars === 0 ? ' locked' : '')} onClick={() => setOpen(a)}>
-            <Medal glyph={a.def.glyph} stars={a.stars} />
-            <div className="ach-name">{a.def.name}</div>
-            <Stars n={a.stars} />
-            <div className="ach-bar"><div style={{ width: `${a.progress * 100}%` }} /></div>
-          </button>
-        ))}
-      </div>
+      <div className="section-title"><h2>Achievements</h2><span className="faint" style={{ fontSize: 13 }}>{core.filter((a) => a.stars > 0).length} / {core.length} freigeschaltet</span></div>
+      <div className="ach-grid" ref={gridRef}>{sorted.map(renderAch)}</div>
+
+      <div className="section-title"><h2>Kraft & Körper</h2><span className="faint" style={{ fontSize: 13 }}>{body.filter((a) => a.stars > 0).length} / {body.length} freigeschaltet</span></div>
+      <div className="ach-grid">{body.map(renderAch)}</div>
+
+      <div className="section-title"><h2>Just for fun</h2><span className="faint" style={{ fontSize: 13 }}>{fun.filter((a) => a.stars > 0).length} / {fun.length} freigeschaltet</span></div>
+      <div className="ach-grid">{fun.map(renderAch)}</div>
 
       {open && (
         <Sheet onClose={() => setOpen(null)}>
@@ -195,7 +226,7 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
             <div>
               <h3 style={{ fontSize: 24 }}>{open.def.name}</h3>
               <Stars n={open.stars} size={16} />
-              <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{TIER[open.stars].name}</div>
+              <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{open.stars && open.def.labels ? open.def.labels[open.stars - 1] : TIER[open.stars].name}</div>
             </div>
           </div>
           <p className="muted" style={{ margin: '14px 0' }}>{open.def.desc}</p>
@@ -207,7 +238,7 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
             {open.next != null && (
               <>
                 <div className="progress" style={{ marginTop: 10 }}><div style={{ width: `${open.progress * 100}%` }} /></div>
-                <div className="faint" style={{ fontSize: 12, marginTop: 6 }}>Noch {fmtInt(open.next - open.value)} bis {open.stars + 1} {open.stars + 1 === 1 ? 'Stern' : 'Sterne'}</div>
+                <div className="faint" style={{ fontSize: 12, marginTop: 6 }}>Noch {fmtMetric(Math.round((open.next - open.value) * 10) / 10)} bis {open.stars + 1} {open.stars + 1 === 1 ? 'Stern' : 'Sterne'}</div>
               </>
             )}
           </div>
@@ -216,12 +247,13 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
               <div key={i} className="pr-row num">
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Stars n={i + 1} />
-                  <span className={open.stars > i ? '' : 'faint'}>{TIER[i + 1].name}</span>
+                  <span className={open.stars > i ? '' : 'faint'}>{open.def.labels?.[i] ?? TIER[i + 1].name}</span>
                 </span>
                 <span className={open.stars > i ? '' : 'faint'}>{open.stars > i ? '✓ ' : ''}{fmtInt(t)}</span>
               </div>
             ))}
           </div>
+          {open.def.note && <p className="faint" style={{ fontSize: 12, marginTop: 12 }}>{open.def.note}</p>}
         </Sheet>
       )}
 
@@ -249,7 +281,7 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
             <h3 style={{ fontSize: 26, marginTop: 10 }} className={ultimate ? 'chrome-text' : ''}>{ULTIMATE.name}</h3>
             <p className="muted" style={{ margin: '6px 0 16px' }}>{ULTIMATE.desc}</p>
           </div>
-          {[...list].sort((a, b) => b.stars - a.stars).map((a) => (
+          {[...core].sort((a, b) => b.stars - a.stars).map((a) => (
             <div key={a.def.id} className="pr-row"><span className={a.stars === 5 ? '' : 'muted'}>{a.def.name}</span><Stars n={a.stars} /></div>
           ))}
         </Sheet>
