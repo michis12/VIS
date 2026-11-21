@@ -1,8 +1,8 @@
 import { openDB, type IDBPDatabase } from 'idb'
-import type { Exercise, Phase, Settings, Template, WeightEntry, Workout } from './types'
+import type { Exercise, Measurement, Phase, Settings, Template, WeightEntry, Workout } from './types'
 
 const DB_NAME = 'vis'
-const VERSION = 1
+const VERSION = 2
 
 export interface Snapshot {
   exercises: Exercise[]
@@ -10,6 +10,8 @@ export interface Snapshot {
   templates: Template[]
   weights: WeightEntry[]
   phases: Phase[]
+  /** body measurements (added later – may be missing in old backups) */
+  measurements: Measurement[]
   settings: Settings
 }
 
@@ -17,13 +19,16 @@ let dbp: Promise<IDBPDatabase> | null = null
 
 function db() {
   dbp ??= openDB(DB_NAME, VERSION, {
-    upgrade(d) {
-      d.createObjectStore('exercises', { keyPath: 'id' })
-      d.createObjectStore('workouts', { keyPath: 'id' })
-      d.createObjectStore('templates', { keyPath: 'id' })
-      d.createObjectStore('weights', { keyPath: 'date' })
-      d.createObjectStore('phases', { keyPath: 'id' })
-      d.createObjectStore('meta')
+    upgrade(d, oldVersion) {
+      if (oldVersion < 1) {
+        d.createObjectStore('exercises', { keyPath: 'id' })
+        d.createObjectStore('workouts', { keyPath: 'id' })
+        d.createObjectStore('templates', { keyPath: 'id' })
+        d.createObjectStore('weights', { keyPath: 'date' })
+        d.createObjectStore('phases', { keyPath: 'id' })
+        d.createObjectStore('meta')
+      }
+      if (oldVersion < 2) d.createObjectStore('measurements', { keyPath: 'date' })
     },
   })
   return dbp
@@ -93,22 +98,24 @@ export async function loadAll(): Promise<Snapshot> {
     tx.objectStore('meta').put(seed.version, 'seedVersion')
     await tx.done
   }
-  const [exercises, workouts, templates, weights, phases, settings] = await Promise.all([
+  const [exercises, workouts, templates, weights, phases, settings, measurements] = await Promise.all([
     d.getAll('exercises'),
     d.getAll('workouts'),
     d.getAll('templates'),
     d.getAll('weights'),
     d.getAll('phases'),
     d.get('meta', 'settings'),
+    d.getAll('measurements'),
   ])
+  measurements.sort((a, b) => a.date.localeCompare(b.date))
   workouts.sort((a, b) => a.startedAt.localeCompare(b.startedAt))
   templates.sort((a, b) => a.name.localeCompare(b.name, 'de', { numeric: true }))
   weights.sort((a, b) => a.date.localeCompare(b.date))
   phases.sort((a, b) => a.start.localeCompare(b.start))
-  return { exercises, workouts, templates, weights, phases, settings: { ...DEFAULT_SETTINGS, ...settings } }
+  return { exercises, workouts, templates, weights, phases, measurements, settings: { ...DEFAULT_SETTINGS, ...settings } }
 }
 
-type Store = 'exercises' | 'workouts' | 'templates' | 'weights' | 'phases'
+type Store = 'exercises' | 'workouts' | 'templates' | 'weights' | 'phases' | 'measurements'
 
 export async function put<T>(store: Store, value: T) {
   await (await db()).put(store, value)
@@ -125,11 +132,11 @@ export async function saveSettings(s: Settings) {
 /** Full replace, used by backup import. */
 export async function replaceAll(s: Snapshot) {
   const d = await db()
-  const stores: Store[] = ['exercises', 'workouts', 'templates', 'weights', 'phases']
+  const stores: Store[] = ['exercises', 'workouts', 'templates', 'weights', 'phases', 'measurements']
   const tx = d.transaction([...stores, 'meta'], 'readwrite')
   for (const st of stores) {
     await tx.objectStore(st).clear()
-    for (const v of s[st]) tx.objectStore(st).put(v)
+    for (const v of s[st] ?? []) tx.objectStore(st).put(v) // old backups have no measurements
   }
   tx.objectStore('meta').put(s.settings, 'settings')
   tx.objectStore('meta').put(true, 'seeded')

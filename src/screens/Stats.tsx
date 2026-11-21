@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { BarChart, LineChart } from '../components/charts'
+import { MuscleMap } from '../components/MuscleMap'
 import { Icon } from '../components/ui'
+import { WeeklyReport } from '../components/WeeklyReport'
 import { useNav } from '../nav'
 import { dateLabel, durationLabel, e1rm, fmtInt, fmtKg, isRealSet, shortDate, weekKey, workoutSetCount, workoutVolume } from '../lib'
 import { useStore } from '../store'
@@ -148,7 +150,16 @@ export function Stats() {
   return (
     <div className="screen">
       <div className="eyebrow">Fortschritt</div>
-      <h1 className="title">Statistik</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h1 className="title">Statistik</h1>
+        <button className="btn btn-ghost btn-sm" onClick={() => nav.push({ kind: 'coach' })}><span className="ai-spark">✦</span> Coach</button>
+      </div>
+
+      <WeeklyReport />
+
+      <div className="section-title"><h2>Muskeln diese Woche</h2></div>
+      <MuscleMap />
+      <div style={{ height: 22 }} />
 
       <div className="sticky-blur">
         <div className="chips">

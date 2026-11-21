@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { LineChart, type Band } from '../components/charts'
-import { Sheet, Wheel } from '../components/ui'
+import { Icon, Sheet, Wheel } from '../components/ui'
 import { dateLabel, fmtInt, fmtKg, shortDate, today, uid } from '../lib'
+import { useNav } from '../nav'
 import { useStore } from '../store'
 import type { Phase, PhaseType } from '../types'
 import { phaseName } from './Home'
@@ -12,6 +13,7 @@ const COLORS: Record<PhaseType, string> = { bulk: '#e3b26b', cut: '#7fb2e5', mai
 
 export function Body() {
   const store = useStore()
+  const nav = useNav()
   const { weights, phases } = store
   const [range, setRange] = useState(99999)
   const [addW, setAddW] = useState(false)
@@ -112,6 +114,16 @@ export function Body() {
           ))}
         </div>
       )}
+
+      <button className="card subtle-link" onClick={() => nav.push({ kind: 'measures' })}>
+        <span style={{ flex: 1 }}>
+          Körpermaße
+          <span className="faint" style={{ display: 'block', fontSize: 12 }}>
+            {store.measurements.length ? `Zuletzt gemessen ${shortDate(store.measurements[store.measurements.length - 1].date)}` : 'Arm, Brust, Taille, Oberschenkel …'}
+          </span>
+        </span>
+        <Icon.chevron />
+      </button>
 
       <div className="section-title"><h2>Einträge</h2></div>
       <div className="card" style={{ padding: '4px 14px' }}>

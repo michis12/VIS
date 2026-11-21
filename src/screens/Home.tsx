@@ -1,5 +1,8 @@
 import { useState } from 'react'
+import { ScoreGauge } from '../components/ScoreGauge'
 import { Icon, Sheet } from '../components/ui'
+import { useWeekScore } from '../components/WeeklyReport'
+import { scoreLabel, WEEKLY_TARGET } from '../weekly'
 import { dateLabel, fmtInt, fmtKg, localIso } from '../lib'
 import { parseTemplatesFile, pickFile, shareOrDownload, templatesFile } from '../files'
 import { useNav } from '../nav'
@@ -14,6 +17,7 @@ export function Home({ onOpenWorkout, toast }: { onOpenWorkout: () => void; toas
   const { templates, workouts, exerciseById, active, weights, phases } = store
   const [chosen, setChosen] = useState<Template | null>(null)
   const [manage, setManage] = useState(false)
+  const week = useWeekScore(0)
 
   const importTemplates = async () => {
     setManage(false)
@@ -67,6 +71,15 @@ export function Home({ onOpenWorkout, toast }: { onOpenWorkout: () => void; toas
             {phase ? <><span className={'phase-dot phase-' + phase.type} /> {phaseName(phase.type)}</> : <span className="faint">Nicht gesetzt</span>}
           </div>
           {phase && <div className="sub">{fmtInt(phase.calories)} kcal/Tag</div>}
+        </div>
+      </div>
+
+      <div className="card score-mini">
+        <ScoreGauge score={week.score} size={78} />
+        <div style={{ flex: 1 }}>
+          <div className="eyebrow">Wochenscore</div>
+          <div style={{ fontSize: 18, fontWeight: 700 }}>{scoreLabel(week.score)}</div>
+          <div className="faint" style={{ fontSize: 12 }}>{week.workouts} / {WEEKLY_TARGET} Workouts · Details unter Statistik</div>
         </div>
       </div>
 

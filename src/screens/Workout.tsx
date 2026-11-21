@@ -21,9 +21,44 @@ export function newWorkoutFromTemplate(t: Template | null): Workout {
     source: 'app',
     exercises: (t?.exercises ?? []).map((e) => ({
       exerciseId: e.exerciseId,
+      group: e.group,
       sets: Array.from({ length: Math.max(1, e.sets) }, () => ({ weight: null, reps: null, done: false })),
     })),
   }
+}
+
+/** Indices of the exercises forming the superset that `i` belongs to (just [i] when not linked). */
+export function supersetOf<T extends { group?: string }>(list: T[], i: number): number[] {
+  const g = list[i]?.group
+  if (!g) return [i]
+  let a = i
+  let b = i
+  while (a > 0 && list[a - 1].group === g) a--
+  while (b < list.length - 1 && list[b + 1].group === g) b++
+  return Array.from({ length: b - a + 1 }, (_, k) => a + k)
+}
+
+/** Toggles the link between exercise i and i+1 (keeps groups contiguous). */
+export function toggleLink<T extends { group?: string }>(list: T[], i: number): T[] {
+  if (i < 0 || i >= list.length - 1) return list
+  const next = list.map((x) => ({ ...x }))
+  const linked = !!next[i].group && next[i].group === next[i + 1].group
+  if (linked) {
+    // split: everything after i gets a fresh group (or none if alone)
+    const old = next[i].group
+    const tail: number[] = []
+    for (let k = i + 1; k < next.length && next[k].group === old; k++) tail.push(k)
+    const fresh = uid()
+    for (const k of tail) next[k].group = tail.length > 1 ? fresh : undefined
+    const head = supersetOf(next, i)
+    if (head.length === 1) next[i].group = undefined
+  } else {
+    const g = next[i].group ?? next[i + 1].group ?? uid()
+    const old = next[i + 1].group
+    next[i].group = g
+    for (let k = i + 1; k < next.length && (k === i + 1 || (old && next[k].group === old)); k++) next[k].group = g
+  }
+  return next
 }
 
 function useNow(ms = 500) {
@@ -149,8 +184,23 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
         return { weight, reps: Math.max(1, reps - 2), done: false, suggested: true }
       return x
     })
-    save({ ...w, exercises: w.exercises.map((x, i) => (i === ex ? { ...x, sets } : x)) })
-    startRest()
+    const exercises = w.exercises.map((x, i) => (i === ex ? { ...x, sets } : x))
+    save({ ...w, exercises })
+    // superset: rest only after this round (set index) is done in every linked exercise
+    const round = supersetOf(exercises, ex)
+    const roundDone = round.every((k) => {
+      const other = exercises[k]
+      return other.skipped || !other.sets[set] || other.sets[set].done
+    })
+    if (roundDone) startRest()
+  }
+
+  const linkedToNext = (i: number) => !!w.exercises[i]?.group && w.exercises[i].group === w.exercises[i + 1]?.group
+  const ssClass = (i: number) => {
+    const prevLinked = i > 0 && linkedToNext(i - 1)
+    const nextLinked = linkedToNext(i)
+    if (!prevLinked && !nextLinked) return ''
+    return ' ss' + (prevLinked ? ' ss-cont' : '') + (nextLinked ? ' ss-more' : '')
   }
 
   const setSkipped = (ex: number, skipped: boolean) => {
@@ -188,8 +238,8 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
     // skipped exercises stay in the record (no values) so the history shows they were left out today
     const exercises = w.exercises
       .map((e) => e.skipped
-        ? { exerciseId: e.exerciseId, skipped: true, sets: e.sets.map(() => ({ weight: null, reps: null, done: false })) }
-        : { exerciseId: e.exerciseId, sets: e.sets.filter((s) => s.done).map(({ weight, reps, done }) => ({ weight, reps, done })) })
+        ? { exerciseId: e.exerciseId, group: e.group, skipped: true, sets: e.sets.map(() => ({ weight: null, reps: null, done: false })) }
+        : { exerciseId: e.exerciseId, group: e.group, sets: e.sets.filter((s) => s.done).map(({ weight, reps, done }) => ({ weight, reps, done })) })
       .filter((e) => e.skipped || e.sets.length)
     const done: Workout = { ...w, exercises, status: 'done', durationSec: elapsed }
     haptic(true)
@@ -240,11 +290,11 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
           )
         }
         return (
-          <div className="card ex-card" key={ei}>
+          <div className={'card ex-card' + ssClass(ei)} key={ei}>
             <div className="ex-title">
               <div>
                 <div className="name">{ex?.name ?? e.exerciseId}</div>
-                <div className="muscle">{ex?.muscle}</div>
+                <div className="muscle">{ex?.muscle}{supersetOf(w.exercises, ei).length > 1 && <span className="ss-label"> · Supersatz</span>}</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <ProgressBadges ups={live.exercises[ei]?.ups ?? 0} prs={live.exercises[ei]?.prs ?? 0} />
@@ -339,6 +389,11 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
           <h3>{exerciseById.get(w.exercises[exMenu].exerciseId)?.name}</h3>
           <div className="menu">
             <button onClick={() => { setSkipped(exMenu, true); setExMenu(null) }}>Heute nicht trainieren</button>
+            {exMenu < w.exercises.length - 1 && (
+              <button onClick={() => { save({ ...w, exercises: toggleLink(w.exercises, exMenu) }); haptic(); setExMenu(null) }}>
+                {linkedToNext(exMenu) ? 'Kopplung mit nächster Übung lösen' : 'Mit nächster Übung koppeln (Supersatz)'}
+              </button>
+            )}
             <button onClick={() => { addSet(exMenu); setExMenu(null) }}>Satz hinzufügen</button>
             <button className="danger" onClick={() => { removeExercise(exMenu); setExMenu(null) }}>Übung aus diesem Workout entfernen</button>
           </div>

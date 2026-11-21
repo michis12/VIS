@@ -23,7 +23,7 @@ export function CloudCard({ toast }: { toast: (t: string) => void }) {
 
   const snapshot = useCallback((): Snapshot => ({
     exercises: store.exercises, workouts: store.workouts, templates: store.templates,
-    weights: store.weights, phases: store.phases, settings: store.settings,
+    weights: store.weights, phases: store.phases, measurements: store.measurements, settings: store.settings,
   }), [store])
 
   useEffect(() => {
@@ -57,7 +57,8 @@ export function CloudCard({ toast }: { toast: (t: string) => void }) {
     const data = await cloud.fetchBackup(id)
     await store.importSnapshot({
       exercises: data.exercises ?? [], workouts: data.workouts ?? [], templates: data.templates ?? [],
-      weights: data.weights ?? [], phases: data.phases ?? [], settings: data.settings ?? store.settings,
+      weights: data.weights ?? [], phases: data.phases ?? [], measurements: data.measurements ?? [],
+      settings: data.settings ?? store.settings,
     })
     cloud.setCloudReady(true)
     setReady(true); setFound(null); setVersions(null)

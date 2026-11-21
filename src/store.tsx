@@ -3,7 +3,7 @@ import * as cloud from './cloud'
 import * as db from './db'
 import type { Snapshot } from './db'
 import { buildProgress } from './progress'
-import type { Exercise, Phase, Settings, Template, WeightEntry, Workout } from './types'
+import type { Exercise, Measurement, Phase, Settings, Template, WeightEntry, Workout } from './types'
 
 interface Store extends Snapshot {
   exerciseById: Map<string, Exercise>
@@ -19,6 +19,8 @@ interface Store extends Snapshot {
   deleteWeight: (date: string) => void
   savePhase: (p: Phase) => void
   deletePhase: (id: string) => void
+  saveMeasurement: (m: Measurement) => void
+  deleteMeasurement: (date: string) => void
   saveSettings: (s: Settings) => void
   importSnapshot: (s: Snapshot) => Promise<void>
 }
@@ -115,6 +117,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       deletePhase: (id) => {
         db.del('phases', id)
         mutate((s) => ({ ...s, phases: s.phases.filter((p) => p.id !== id) }))
+      },
+      saveMeasurement: (m) => {
+        db.put('measurements', m)
+        mutate((s) => ({ ...s, measurements: upsert(s.measurements, m, (x) => x.date, (x) => x.date) }))
+      },
+      deleteMeasurement: (date) => {
+        db.del('measurements', date)
+        mutate((s) => ({ ...s, measurements: s.measurements.filter((m) => m.date !== date) }))
       },
       saveSettings: (settings) => {
         db.saveSettings(settings)

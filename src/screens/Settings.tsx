@@ -20,7 +20,7 @@ export function Settings({ toast }: { toast: (t: string) => void }) {
   const exportBackup = () => {
     const snap: Snapshot = {
       exercises: store.exercises, workouts: store.workouts, templates: store.templates,
-      weights: store.weights, phases: store.phases, settings: store.settings,
+      weights: store.weights, phases: store.phases, measurements: store.measurements, settings: store.settings,
     }
     const blob = new Blob([JSON.stringify({ app: 'vis', version: 1, exportedAt: localIso(), ...snap })], { type: 'application/json' })
     const a = document.createElement('a')
@@ -39,7 +39,8 @@ export function Settings({ toast }: { toast: (t: string) => void }) {
       if (data.app !== 'vis' || !Array.isArray(data.workouts)) throw new Error('Keine VIS-Sicherung')
       await store.importSnapshot({
         exercises: data.exercises ?? [], workouts: data.workouts, templates: data.templates ?? [],
-        weights: data.weights ?? [], phases: data.phases ?? [], settings: data.settings ?? store.settings,
+        weights: data.weights ?? [], phases: data.phases ?? [], measurements: data.measurements ?? [],
+        settings: data.settings ?? store.settings,
       })
       toast('Sicherung wiederhergestellt')
     } catch (e) {

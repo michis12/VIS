@@ -17,6 +17,8 @@ export interface WorkoutExercise {
   sets: SetEntry[]
   /** "heute nicht trainieren": kept in the record without values */
   skipped?: boolean
+  /** superset: consecutive exercises sharing a group id are done round by round */
+  group?: string
 }
 
 export type WorkoutStatus = 'active' | 'done' | 'skipped'
@@ -35,7 +37,7 @@ export interface Workout {
 export interface Template {
   id: string
   name: string
-  exercises: { exerciseId: string; sets: number }[]
+  exercises: { exerciseId: string; sets: number; group?: string }[]
 }
 
 export interface WeightEntry {
@@ -43,6 +45,20 @@ export interface WeightEntry {
   kg: number
   source?: 'screenshot' | 'fitnotes' | 'app'
 }
+
+export const MEASURE_FIELDS = [
+  { key: 'arm', label: 'Oberarm', unit: 'cm' },
+  { key: 'chest', label: 'Brust', unit: 'cm' },
+  { key: 'waist', label: 'Taille', unit: 'cm' },
+  { key: 'hips', label: 'Hüfte', unit: 'cm' },
+  { key: 'thigh', label: 'Oberschenkel', unit: 'cm' },
+  { key: 'calf', label: 'Wade', unit: 'cm' },
+  { key: 'neck', label: 'Nacken', unit: 'cm' },
+  { key: 'bodyFat', label: 'Körperfett', unit: '%' },
+] as const
+export type MeasureKey = (typeof MEASURE_FIELDS)[number]['key']
+
+export type Measurement = { date: string } & Partial<Record<MeasureKey, number>>
 
 export type PhaseType = 'bulk' | 'cut' | 'maintain'
 

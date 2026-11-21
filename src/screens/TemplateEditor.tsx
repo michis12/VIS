@@ -4,7 +4,7 @@ import { shareOrDownload, templatesFile } from '../files'
 import { uid } from '../lib'
 import { useStore } from '../store'
 import type { Template } from '../types'
-import { ExercisePicker } from './Workout'
+import { ExercisePicker, toggleLink } from './Workout'
 
 export function TemplateEditor({ template, onClose }: { template: Template | null; onClose: () => void }) {
   const store = useStore()
@@ -40,8 +40,11 @@ export function TemplateEditor({ template, onClose }: { template: Template | nul
       <div className="section-title"><h2>Übungen</h2><span className="faint" style={{ fontSize: 13 }}>{t.exercises.reduce((n, e) => n + e.sets, 0)} Sätze</span></div>
       {t.exercises.map((e, i) => {
         const ex = store.exerciseById.get(e.exerciseId)
+        const linked = !!e.group && e.group === t.exercises[i + 1]?.group
+        const last = i === t.exercises.length - 1
         return (
-          <div className="card tpl-edit" key={i}>
+          <div key={i}>
+          <div className={'card tpl-edit' + (e.group && (linked || t.exercises[i - 1]?.group === e.group) ? ' tpl-ss' : '')}>
             <div className="reorder">
               <button onClick={() => move(i, -1)} disabled={i === 0} aria-label="Nach oben">▲</button>
               <button onClick={() => move(i, 1)} disabled={i === t.exercises.length - 1} aria-label="Nach unten">▼</button>
@@ -56,6 +59,12 @@ export function TemplateEditor({ template, onClose }: { template: Template | nul
               <button onClick={() => setEx(t.exercises.map((x, j) => (j === i ? { ...x, sets: Math.min(12, x.sets + 1) } : x)))}>+</button>
             </div>
             <button className="remove" onClick={() => setEx(t.exercises.filter((_, j) => j !== i))} aria-label="Entfernen">×</button>
+          </div>
+          {!last && (
+            <button className={'tpl-link' + (linked ? ' on' : '')} onClick={() => setEx(toggleLink(t.exercises, i))}>
+              {linked ? '⛓ Supersatz' : '+ koppeln'}
+            </button>
+          )}
           </div>
         )
       })}
