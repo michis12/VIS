@@ -59,7 +59,7 @@ function Shell() {
   return (
     <NavCtx.Provider value={nav}>
       <div className="app">
-        <div className="top-blur" />
+        {!content && <div className="top-blur" />}
         <div className="app" style={content ? { visibility: 'hidden' } : undefined} aria-hidden={!!content}>
           {tab === 'train' && <Home onOpenWorkout={() => setShowWorkout(true)} toast={setToast} />}
           {tab === 'stats' && <Stats />}
