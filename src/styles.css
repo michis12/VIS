@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --bg: #000;
   --surface: #0b0b0c;
   --surface-2: #141416;
@@ -28,10 +28,7 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body, #root { height: 100%; }
-/* iOS home-screen apps with a translucent status bar can report a viewport that
-   is short by about the status-bar height, so `bottom: 0` floats above the real
-   screen edge. main.tsx measures the missing height into --ios-gap (0 elsewhere). */
-:root { --ios-gap: 0px; }
+html, body { overflow: hidden; }
 body { background: var(--bg); color: var(--text); overscroll-behavior: none; font-size: 15px; line-height: 1.4; overflow-x: hidden; }
 .screen { overflow-x: hidden; }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; touch-action: manipulation; }
@@ -52,7 +49,7 @@ input { font: inherit; color: inherit; }
   max-width: 640px; width: 100%; margin: 0 auto;
 }
 .screen.no-tabs { padding-bottom: calc(var(--safe-bottom) + 140px); }
-.overlay { position: fixed; inset: 0 0 calc(0px - var(--ios-gap)) 0; z-index: 15; background: var(--bg); display: flex; flex-direction: column; animation: slide-in .26s cubic-bezier(.2,.9,.3,1); }
+.overlay { position: fixed; inset: 0 0 0 0; z-index: 15; background: var(--bg); display: flex; flex-direction: column; animation: slide-in .26s cubic-bezier(.2,.9,.3,1); }
 @keyframes slide-in { from { transform: translateX(24px); opacity: 0; } }
 
 /* frosted strip under the iOS status bar */
@@ -115,7 +112,7 @@ input { font: inherit; color: inherit; }
 
 /* ---------- tab bar ---------- */
 .tabbar {
-  position: fixed; left: 0; right: 0; bottom: calc(0px - var(--ios-gap)); z-index: 20;
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
   padding: 8px 12px calc(var(--safe-bottom) + 8px);
   background: rgba(0,0,0,.72); backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%);
   border-top: 1px solid var(--line);
@@ -204,7 +201,7 @@ input.val:focus { border-color: rgba(255,255,255,.35); }
 
 /* ---------- rest timer dock ---------- */
 .dock {
-  position: fixed; left: 12px; right: 12px; bottom: calc(var(--safe-bottom) + 12px - var(--ios-gap)); z-index: 30;
+  position: fixed; left: 12px; right: 12px; bottom: calc(var(--safe-bottom) + 12px); z-index: 30;
   max-width: 616px; margin: 0 auto;
   border-radius: 22px; padding: 14px 16px; display: flex; align-items: center; gap: 12px;
   background: rgba(22,22,24,.86); backdrop-filter: blur(30px) saturate(180%); -webkit-backdrop-filter: blur(30px) saturate(180%);
@@ -219,9 +216,9 @@ input.val:focus { border-color: rgba(255,255,255,.35); }
 @keyframes rise { from { transform: translateY(30px); opacity: 0; } }
 
 /* ---------- sheets ---------- */
-.scrim { position: fixed; inset: 0 0 calc(0px - var(--ios-gap)) 0; z-index: 50; background: rgba(0,0,0,.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); animation: fade .2s; }
+.scrim { position: fixed; inset: 0 0 0 0; z-index: 50; background: rgba(0,0,0,.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); animation: fade .2s; }
 .sheet {
-  position: fixed; left: 0; right: 0; bottom: calc(0px - var(--ios-gap)); z-index: 51; max-width: 640px; margin: 0 auto;
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 51; max-width: 640px; margin: 0 auto;
   background: rgba(20,20,22,.78); backdrop-filter: blur(36px) saturate(180%); -webkit-backdrop-filter: blur(36px) saturate(180%);
   border-top-left-radius: 26px; border-top-right-radius: 26px;
   border: 1px solid var(--line-strong); border-bottom: 0;

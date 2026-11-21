@@ -94,6 +94,10 @@ export function Settings({ toast }: { toast: (t: string) => void }) {
         </div>
         <input ref={file} type="file" accept="application/json,.json" hidden onChange={(e) => e.target.files?.[0] && importBackup(e.target.files[0])} />
       </div>
+
+      <p className="faint num" style={{ fontSize: 12, textAlign: 'center', marginTop: 28 }}>
+        VIS · Version {__BUILD__} UTC
+      </p>
     </div>
   )
 }

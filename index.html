@@ -6,7 +6,9 @@
     <meta name="theme-color" content="#000000" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- "black", not "black-translucent": the translucent bar makes iOS shrink the
+         viewport, which left a black strip under the tab bar -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="VIS" />
     <!-- icon file names carry a version so iOS cannot keep showing a cached old icon -->
     <link rel="icon" type="image/png" href="./favicon-64-v3.png" />
