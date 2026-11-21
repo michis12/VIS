@@ -26,7 +26,14 @@ export function WeeklyReport() {
       <ScoreGaugeWithSub
         score={s.score}
         label={scoreLabel(s.score)}
-        sub={`Woche ab ${shortDate(s.start)}${s.current ? ' · läuft' : ''}${prev.score ? ` · ${delta >= 0 ? '+' : ''}${delta} zur Vorwoche` : ''}`}
+        sub={
+          <>
+            {`Woche ab ${shortDate(s.start)}${s.current ? ' · läuft' : ''}`}
+            {prev.score > 0 && delta !== 0 && (
+              <span className={'week-delta' + (delta > 0 ? ' up' : '')}>{delta > 0 ? '+' : '−'}{Math.abs(delta)} zur Vorwoche</span>
+            )}
+          </>
+        }
       />
       <div className="score-parts">
         {s.parts.map((p) => (

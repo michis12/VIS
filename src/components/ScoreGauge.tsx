@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, type ReactNode } from 'react'
 
 /** 240° arc gauge for a 0–99 score, chrome fill on a dark track. */
 export function ScoreGauge({ score, size = 180, label }: { score: number; size?: number; label?: string }) {
@@ -59,7 +59,7 @@ export function ScorePill({ score, size = 34 }: { score: number; size?: number }
 }
 
 /** Gauge with a caption line below it (kept outside the arc). */
-export function ScoreGaugeWithSub({ sub, ...rest }: { score: number; size?: number; label?: string; sub: string }) {
+export function ScoreGaugeWithSub({ sub, ...rest }: { score: number; size?: number; label?: string; sub: ReactNode }) {
   return (
     <div>
       <ScoreGauge {...rest} />
