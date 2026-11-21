@@ -38,7 +38,7 @@ export async function restFinished(next?: string) {
     try {
       const reg = await navigator.serviceWorker?.getRegistration()
       const body = next ? `Weiter mit ${next}` : 'Zeit für den nächsten Satz'
-      if (reg) await reg.showNotification('Pause vorbei', { body, tag: 'rest', icon: '/icon-192.png' })
+      if (reg) await reg.showNotification('Pause vorbei', { body, tag: 'rest', icon: './icon-192-v3.png' })
       else new Notification('Pause vorbei', { body, tag: 'rest' })
     } catch {
       /* ignore */

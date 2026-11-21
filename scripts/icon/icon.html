@@ -94,7 +94,10 @@ async function save(name, size) {
 
 window.exportIcons = async () => {
   const r = []
-  for (const [n, s] of [['icon-1024.png', 1024], ['icon-512.png', 512], ['icon-192.png', 192], ['apple-touch-icon.png', 180], ['favicon-64.png', 64]]) r.push(await save(n, s))
+  // bump V (and the names in index.html / vite.config.ts) whenever the icon changes,
+  // otherwise iPhones keep showing the cached old icon
+  const V = 'v3'
+  for (const [n, s] of [['icon-1024.png', 1024], [`icon-512-${V}.png`, 512], [`icon-192-${V}.png`, 192], [`apple-touch-icon-${V}.png`, 180], [`favicon-64-${V}.png`, 64]]) r.push(await save(n, s))
   document.getElementById('log').textContent = r.join('\n')
   return r
 }
