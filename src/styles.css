@@ -133,6 +133,7 @@ input { font: inherit; color: inherit; }
 .list-row { display: flex; align-items: center; gap: 12px; padding: 14px 4px; border-bottom: 1px solid var(--line); }
 .list-row:last-child { border-bottom: 0; }
 .list-row .grow { flex: 1; min-width: 0; }
+.hist-meta { text-align: right; font-size: 12px; line-height: 1.35; color: var(--text-2); flex-shrink: 0; min-width: 64px; }
 .pill { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--surface-3); color: var(--text-2); }
 .pill.skip { color: var(--text-3); }
 

@@ -56,7 +56,7 @@ export function HistoryRow({ w, onOpen }: { w: Workout; onOpen: () => void }) {
     <button className="list-row" style={{ width: '100%', textAlign: 'left' }} onClick={onOpen}>
       {score != null && w.status === 'done' && <ScorePill score={score} />}
       <div className="grow">
-        <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px 8px' }}>
           {w.name}
           {rating && <ProgressBadges ups={rating.ups} prs={rating.prs} />}
         </div>
@@ -65,8 +65,9 @@ export function HistoryRow({ w, onOpen }: { w: Workout; onOpen: () => void }) {
       {w.status === 'skipped' ? (
         <span className="pill skip">Ausgelassen</span>
       ) : (
-        <div style={{ textAlign: 'right', fontSize: 13 }} className="muted num">
-          <div>{workoutSetCount(w)} Sätze · {fmtInt(workoutVolume(w))} kg</div>
+        <div className="hist-meta num">
+          <div>{workoutSetCount(w)} Sätze</div>
+          <div>{fmtInt(workoutVolume(w))} kg</div>
           <div className="faint">{durationLabel(w.durationSec)}</div>
         </div>
       )}
