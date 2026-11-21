@@ -1,4 +1,5 @@
 import { useId, useMemo, useRef, useState } from 'react'
+import { pastWeekScores } from '../weekly'
 import { computeMetrics, evaluate, fmtMetric, MAX_STARS, nextRank, rankFor, ULTIMATE, type AchievementState, type Glyph } from '../achievements'
 import { Avatar, ProfileEditor } from '../components/Avatar'
 import { Icon, Sheet } from '../components/ui'
@@ -65,6 +66,14 @@ const GLYPHS: Record<Glyph, React.JSX.Element> = {
   infinity: <g {...P}><path d="M16 16c-2.5-3.5-4.5-5-7-5a5 5 0 0 0 0 10c2.5 0 4.5-1.5 7-5Zm0 0c2.5 3.5 4.5 5 7 5a5 5 0 0 0 0-10c-2.5 0-4.5 1.5-7 5Z" /></g>,
   diamond: <g {...P}><path d="M9 6h14l5 7-12 14L4 13Z" /><path d="M4 13h24M12 6l-2 7 6 14 6-14-2-7" /></g>,
   swords: <g {...P}><path d="M6 6l14 14M26 6 12 20" /><path d="M18 22l4-4M14 22l-4-4" /><path d="M21 21l4 4M11 21l-4 4" /><path d="M6 6h4M6 6v4M26 6h-4M26 6v4" /></g>,
+  laurel: <g {...P}><path d="M16 27V12" /><path d="M10 26c-4-3-5-9-3-14M22 26c4-3 5-9 3-14" /><path d="M8 20c-2 0-3-1-4-3 2 0 3 1 4 3ZM7 14c-2-1-2-3-2-5 2 1 2 3 2 5ZM24 20c2 0 3-1 4-3-2 0-3 1-4 3ZM25 14c2-1 2-3 2-5-2 1-2 3-2 5Z" /><path d="M16 5l1.8 3.6 4 .6-2.9 2.8.7 4-3.6-1.9-3.6 1.9.7-4-2.9-2.8 4-.6Z" /></g>,
+  torch: <g {...P}><path d="M12 14h8l-2 14h-4Z" /><path d="M16 4c3 3 4 5 4 7a4 4 0 0 1-8 0c0-2 1-3 2-4 0 2 1 3 2 3 0-2-1-4 0-6Z" /></g>,
+  gauge: <g {...P}><path d="M5 22a11 11 0 1 1 22 0" /><path d="M16 22l6-7" /><circle cx="16" cy="22" r="1.6" /><path d="M8 22h-2M26 22h-2M16 11V9" /></g>,
+  check: <g {...P}><circle cx="16" cy="16" r="11" /><path d="M10.5 16.5l4 4 7-8.5" /></g>,
+  figure: <g {...P}><circle cx="16" cy="6" r="2.6" /><path d="M7 11c3 1 6 1.5 9 1.5s6-.5 9-1.5" /><path d="M11 12l1.5 8h7L21 12" /><path d="M12.5 20 11 28M19.5 20 21 28" /></g>,
+  link: <g {...P}><rect x="4" y="11" width="13" height="10" rx="5" /><rect x="15" y="11" width="13" height="10" rx="5" /></g>,
+  tape: <g {...P}><circle cx="13" cy="14" r="8" /><circle cx="13" cy="14" r="2.5" /><path d="M13 22h15v-4" /><path d="M18 22v-2.5M22 22v-2.5M26 22v-2.5" /></g>,
+  trend: <g {...P}><path d="M4 24l8-8 5 5 10-11" /><path d="M21 10h6v6" /></g>,
   couch: <g {...P}><path d="M7 16v-4a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v4" /><path d="M4 18a2 2 0 0 1 4 0v2h16v-2a2 2 0 0 1 4 0v6H4Z" /><path d="M7 24v3M25 24v3" /></g>,
 }
 
@@ -105,19 +114,26 @@ export function Stars({ n, size = 11 }: { n: number; size?: number }) {
   )
 }
 
+function useMetrics() {
+  const { workouts, weights, exercises, progress, phases, workoutScores, measurements } = useStore()
+  return useMemo(() => {
+    const first = workouts.find((w) => w.status === 'done')?.startedAt
+    const weeks = first ? Math.min(600, Math.ceil((Date.now() - Date.parse(first)) / (7 * 864e5)) + 1) : 0
+    const weekScores = pastWeekScores(workouts, progress.byId, weights, phases, weeks).reverse()
+    return computeMetrics(workouts, weights, exercises, progress.byId, { workoutScores, weekScores, measurements: measurements.length })
+  }, [workouts, weights, exercises, progress, phases, workoutScores, measurements])
+}
+
 export function useAchievements() {
-  const { workouts, weights, exercises, progress } = useStore()
-  return useMemo(
-    () => evaluate(computeMetrics(workouts, weights, exercises, progress.byId)),
-    [workouts, weights, exercises, progress],
-  )
+  const metrics = useMetrics()
+  return useMemo(() => evaluate(metrics), [metrics])
 }
 
 const MONTH_LETTER = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
 const MONTH_SHORT = ['Jän', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
 
 export function Profile({ toast }: { toast: (t: string) => void }) {
-  const { workouts, weights, exercises, settings } = useStore()
+  const { workouts, settings } = useStore()
   const list = useAchievements()
   const [open, setOpen] = useState<AchievementState | null>(null)
   const [ultOpen, setUltOpen] = useState(false)
@@ -125,8 +141,7 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
   const [preview, setPreview] = useState<{ url: string; file: File } | null>(null)
   const [busy, setBusy] = useState(false)
   const gridRef = useRef<HTMLDivElement>(null)
-  const { progress } = useStore()
-  const metrics = useMemo(() => computeMetrics(workouts, weights, exercises, progress.byId), [workouts, weights, exercises, progress])
+  const metrics = useMetrics()
 
   const buildShare = async () => {
     setBusy(true)
@@ -171,9 +186,10 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
   const rank = rankFor(total)
   const nr = nextRank(total)
   const byRank = (a: AchievementState, b: AchievementState) => b.stars - a.stars || b.progress - a.progress
-  const core = list.filter((a) => !a.def.fun && !a.def.body && !a.def.prog)
+  const core = list.filter((a) => !a.def.fun && !a.def.body && !a.def.prog && !a.def.score)
   const body = list.filter((a) => a.def.body).sort(byRank)
   const prog = list.filter((a) => a.def.prog).sort(byRank)
+  const scoreAch = list.filter((a) => a.def.score).sort(byRank)
   const fun = list.filter((a) => a.def.fun).sort(byRank)
   const maxed = core.filter((a) => a.stars === 5).length
   const ultimate = maxed === core.length
@@ -228,6 +244,9 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
 
       <div className="section-title"><h2>Rekorde & Fortschritt</h2><span className="faint" style={{ fontSize: 13 }}>{prog.filter((a) => a.stars > 0).length} / {prog.length} freigeschaltet</span></div>
       <div className="ach-grid">{prog.map(renderAch)}</div>
+
+      <div className="section-title"><h2>Scores & Features</h2><span className="faint" style={{ fontSize: 13 }}>{scoreAch.filter((a) => a.stars > 0).length} / {scoreAch.length} freigeschaltet</span></div>
+      <div className="ach-grid">{scoreAch.map(renderAch)}</div>
 
       <div className="section-title"><h2>Kraft & Körper</h2><span className="faint" style={{ fontSize: 13 }}>{body.filter((a) => a.stars > 0).length} / {body.length} freigeschaltet</span></div>
       <div className="ach-grid">{body.map(renderAch)}</div>

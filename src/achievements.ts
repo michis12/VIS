@@ -9,6 +9,7 @@ export type Glyph =
   | 'repeat' | 'shot' | 'couch'
   | 'barbell' | 'deadlift' | 'lion' | 'scale' | 'gorilla' | 'blade' | 'plate' | 'ring'
   | 'target' | 'stairs' | 'storm' | 'chevrons' | 'infinity' | 'diamond' | 'swords'
+  | 'laurel' | 'torch' | 'gauge' | 'check' | 'figure' | 'link' | 'tape' | 'trend'
 
 export interface AchievementDef {
   id: string
@@ -24,6 +25,8 @@ export interface AchievementDef {
   body?: boolean
   /** "Rekorde & Fortschritt" – counts for stars and rank, not for Shōgun */
   prog?: boolean
+  /** "Scores & Features" – counts for stars and rank, not for Shōgun */
+  score?: boolean
   /** custom names for the 5 tiers (instead of Bronze … Obsidian) */
   labels?: [string, string, string, string, string]
   /** footnote shown in the detail sheet */
@@ -77,6 +80,23 @@ export interface Metrics {
   improveStreak: number
   perfectWorkouts: number
   doubleHits: number
+  // scores & features
+  bestWeekScore: number
+  goodWeekStreak: number
+  eliteWeeks: number
+  upWeeks: number
+  flawless: number
+  fullBodyWeeks: number
+  supersets: number
+  measureCount: number
+}
+
+/** Extra inputs for the score/feature achievements. */
+export interface MetricExtras {
+  workoutScores?: Map<string, number>
+  /** finished weeks, oldest first */
+  weekScores?: { score: number }[]
+  measurements?: number
 }
 
 const BENCH = new Set(['bench-press-barbell', 'bench-press-smith-machine', 'decline-barbell-bench-press', 'incline-bench-press-smith-machine'])
@@ -132,6 +152,16 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'perfektionist', prog: true, name: 'Perfektionist', glyph: 'diamond', metric: 'perfectWorkouts', unit: 'perfekte Workouts', desc: 'Lückenlos besser. Workouts (ab 3 Übungen), in denen du dich bei jeder Übung verbessert hast.', tiers: [1, 5, 20, 50, 100] },
   { id: 'doppelschlag', prog: true, name: 'Doppelschlag', glyph: 'swords', metric: 'doubleHits', unit: 'Doppelschläge', desc: 'Zwei Treffer, eine Übung. Rekord und Fortschritt bei derselben Übung im selben Workout.', tiers: [10, 50, 150, 300, 500] },
 
+  // ---- scores & features
+  { id: 'wochenheld', score: true, name: 'Wochenheld', glyph: 'laurel', metric: 'bestWeekScore', unit: 'bester Wochenscore', desc: 'Die perfekte Woche. Dein höchster Wochenscore – 99 ist das Maximum.', tiers: [60, 70, 80, 90, 99] },
+  { id: 'dauerbrenner', score: true, name: 'Dauerbrenner', glyph: 'torch', metric: 'goodWeekStreak', unit: 'Wochen in Folge mit Score 60+', desc: 'Nicht nachlassen. Wochen in Folge mit einem Wochenscore von mindestens 60.', tiers: [2, 4, 8, 16, 30] },
+  { id: 'elitewochen', score: true, name: 'Elite-Wochen', glyph: 'gauge', metric: 'eliteWeeks', unit: 'Wochen mit Score 80+', desc: 'Elite ist kein Zufall. Wochen mit einem Wochenscore von mindestens 80.', tiers: [5, 15, 40, 80, 150] },
+  { id: 'aufwaerts', score: true, name: 'Aufwärtstrend', glyph: 'trend', metric: 'upWeeks', unit: 'Wochen besser als die Vorwoche', desc: 'Jede Woche ein Stück besser. Wochen mit höherem Score als die Woche davor.', tiers: [5, 15, 30, 50, 80] },
+  { id: 'makellos', score: true, name: 'Makellos', glyph: 'check', metric: 'flawless', unit: 'Workouts mit Score 90+', desc: 'Alles gegeben. Workouts mit einem Workout-Score von mindestens 90.', tiers: [1, 5, 15, 40, 80] },
+  { id: 'ganzkoerper', score: true, name: 'Ganzkörper-Gott', glyph: 'figure', metric: 'fullBodyWeeks', unit: 'Wochen mit allen Muskelgruppen', desc: 'Die Heatmap leuchtet überall. Wochen, in denen Brust, Rücken, Schultern, Beine, Bizeps, Trizeps und Bauch trainiert wurden.', tiers: [3, 10, 25, 50, 100] },
+  { id: 'duett', score: true, name: 'Duett', glyph: 'link', metric: 'supersets', unit: 'Supersätze', desc: 'Zwei Übungen, eine Pause. Gekoppelte Übungen (Supersätze) in abgeschlossenen Workouts.', tiers: [1, 10, 30, 75, 150] },
+  { id: 'massband', score: true, name: 'Maßband', glyph: 'tape', metric: 'measureCount', unit: 'Messungen', desc: 'Zahlen lügen nicht. Einträge bei den Körpermaßen.', tiers: [1, 5, 12, 25, 52] },
+
   { id: 'ausreden', fun: true, name: 'Ausreden-Meister', glyph: 'couch', metric: 'excuses', unit: 'ausgelassene Übungen', desc: '„Heute nicht.“ – Übungen, die du per „Heute nicht trainieren“ geschwänzt hast.', tiers: [1, 5, 15, 30, 60] },
 ]
 
@@ -163,6 +193,7 @@ export function computeMetrics(
   weights: WeightEntry[],
   exercises: Exercise[],
   progress?: Map<string, WorkoutProgress>,
+  extras: MetricExtras = {},
 ): Metrics {
   const done = workouts.filter((w) => w.status === 'done')
   const muscleOf = new Map(exercises.map((e) => [e.id, e.muscle]))
@@ -176,6 +207,8 @@ export function computeMetrics(
     daysIn: done.length ? Math.floor((Date.now() - new Date(done[0].startedAt).getTime()) / 864e5) : 0,
     recordSets: 0, progressSets: 0, maxRecordsWorkout: 0, maxProgressWorkout: 0, improveStreak: 0,
     perfectWorkouts: 0, doubleHits: 0,
+    bestWeekScore: 0, goodWeekStreak: 0, eliteWeeks: 0, upWeeks: 0, flawless: 0, fullBodyWeeks: 0,
+    supersets: 0, measureCount: extras.measurements ?? 0,
     // whole workouts marked as skipped (older feature) count as one excuse each
     excuses: workouts.filter((w) => w.status === 'skipped').length,
   }
@@ -263,6 +296,32 @@ export function computeMetrics(
       m.doubleHits += r.exercises.filter((e) => e.prs > 0 && e.ups > 0).length
     }
   }
+
+  // scores & features
+  const ws = extras.weekScores ?? []
+  let goodRun = 0
+  for (let i = 0; i < ws.length; i++) {
+    const s = ws[i].score
+    m.bestWeekScore = Math.max(m.bestWeekScore, s)
+    goodRun = s >= 60 ? goodRun + 1 : 0
+    m.goodWeekStreak = Math.max(m.goodWeekStreak, goodRun)
+    if (s >= 80) m.eliteWeeks++
+    if (i > 0 && s > ws[i - 1].score) m.upWeeks++
+  }
+  for (const s of extras.workoutScores?.values() ?? []) if (s >= 90) m.flawless++
+  const MAIN = ['Brust', 'Rücken', 'Schultern', 'Beine', 'Bizeps', 'Trizeps', 'Bauch']
+  const groupsByWeek = new Map<string, Set<string>>()
+  for (const w of done) {
+    const k = weekKey(w.startedAt)
+    const set = groupsByWeek.get(k) ?? new Set<string>()
+    for (const e of w.exercises) if (!e.skipped && e.sets.some(isRealSet)) set.add(muscleOf.get(e.exerciseId) ?? '')
+    groupsByWeek.set(k, set)
+    // supersets: distinct linked groups with at least two trained exercises
+    const counts = new Map<string, number>()
+    for (const e of w.exercises) if (e.group && !e.skipped && e.sets.some(isRealSet)) counts.set(e.group, (counts.get(e.group) ?? 0) + 1)
+    for (const c of counts.values()) if (c >= 2) m.supersets++
+  }
+  for (const set of groupsByWeek.values()) if (MAIN.every((g) => set.has(g))) m.fullBodyWeeks++
 
   m.exercises = used.size
   m.bestMonth = Math.max(0, ...months.values())
