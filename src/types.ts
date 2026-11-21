@@ -26,7 +26,7 @@ export interface Workout {
   startedAt: string // ISO local
   durationSec: number | null
   status: WorkoutStatus
-  source?: 'strong' | 'app'
+  source?: 'strong' | 'fitnotes' | 'app'
   exercises: WorkoutExercise[]
 }
 
@@ -39,7 +39,7 @@ export interface Template {
 export interface WeightEntry {
   date: string // YYYY-MM-DD
   kg: number
-  source?: 'screenshot' | 'app'
+  source?: 'screenshot' | 'fitnotes' | 'app'
 }
 
 export type PhaseType = 'bulk' | 'cut' | 'maintain'

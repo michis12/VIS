@@ -55,6 +55,18 @@ export async function loadAll(): Promise<Snapshot> {
     for (const e of seed.exercises) if (!(await ex.get(e.id))) ex.put(e)
     for (const id of ['tpl-push', 'tpl-pull', 'tpl-core', 'tpl-abs-arms']) tx.objectStore('templates').delete(id)
     for (const t of seed.templates) tx.objectStore('templates').put(t)
+    tx.objectStore('meta').put(2, 'seedVersion')
+    await tx.done
+  }
+  if (seeded && seedVersion < 3 && seed.version >= 3) {
+    // v3: older FitNotes history (2024) – only adds what is missing, never overwrites
+    const tx = d.transaction(['exercises', 'workouts', 'weights', 'meta'], 'readwrite')
+    const ex = tx.objectStore('exercises')
+    const wo = tx.objectStore('workouts')
+    const we = tx.objectStore('weights')
+    for (const e of seed.exercises) if (!(await ex.get(e.id))) ex.put(e)
+    for (const w of seed.workouts) if (w.source === 'fitnotes' && !(await wo.get(w.id))) wo.put(w)
+    for (const w of seed.weights) if (w.source === 'fitnotes' && !(await we.get(w.date))) we.put(w)
     tx.objectStore('meta').put(seed.version, 'seedVersion')
     await tx.done
   }
@@ -98,7 +110,7 @@ export async function replaceAll(s: Snapshot) {
   }
   tx.objectStore('meta').put(s.settings, 'settings')
   tx.objectStore('meta').put(true, 'seeded')
-  tx.objectStore('meta').put(2, 'seedVersion')
+  tx.objectStore('meta').put(3, 'seedVersion')
   await tx.done
 }
 

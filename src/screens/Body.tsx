@@ -117,7 +117,7 @@ export function Body() {
       <div className="card" style={{ padding: '4px 14px' }}>
         {[...weights].reverse().slice(0, 15).map((w) => (
           <div className="list-row" key={w.date}>
-            <div className="grow">{dateLabel(w.date)}{w.source === 'screenshot' && <span className="faint" style={{ fontSize: 12 }}> · importiert</span>}</div>
+            <div className="grow">{dateLabel(w.date)}{w.source && w.source !== 'app' &&<span className="faint" style={{ fontSize: 12 }}> · importiert</span>}</div>
             <span className="num" style={{ fontWeight: 600 }}>{fmtKg(w.kg)} kg</span>
           </div>
         ))}
