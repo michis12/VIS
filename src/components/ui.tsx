@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { haptic } from '../lib'
 
 export function Sheet({ onClose, children }: { onClose: () => void; children: ReactNode }) {
   useEffect(() => {
@@ -81,7 +82,7 @@ export function Wheel({ values, value, onChange, format = String }: {
     const i = Math.min(values.length - 1, Math.max(0, Math.round(el.scrollTop / ITEM)))
     if (i !== sel) {
       setSel(i)
-      navigator.vibrate?.(3)
+      haptic()
     }
     clearTimeout(settle.current)
     settle.current = window.setTimeout(() => onChange(values[i]), 80)
@@ -98,7 +99,7 @@ export function Wheel({ values, value, onChange, format = String }: {
             className={'wheel-item' + (i === sel ? ' sel' : '')}
             onClick={() => ref.current?.scrollTo({ top: i * ITEM, behavior: 'smooth' })}
           >
-            {format(v)}
+            <span>{format(v)}</span>
           </div>
         ))}
         <div className="wheel-pad" />

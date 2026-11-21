@@ -15,6 +15,8 @@ export interface SetEntry {
 export interface WorkoutExercise {
   exerciseId: string
   sets: SetEntry[]
+  /** "heute nicht trainieren": kept in the record without values */
+  skipped?: boolean
 }
 
 export type WorkoutStatus = 'active' | 'done' | 'skipped'

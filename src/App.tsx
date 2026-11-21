@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Icon, Toast } from './components/ui'
+import { haptic } from './lib'
 import { NavCtx, type Overlay } from './nav'
 import { Body } from './screens/Body'
 import { History } from './screens/History'
@@ -67,7 +68,7 @@ function Shell() {
           {tab === 'settings' && <Settings toast={setToast} />}
           <nav className="tabbar">
             {TABS.map((t) => (
-              <button key={t.id} className={'tab' + (tab === t.id ? ' on' : '')} onClick={() => setTab(t.id)}>
+              <button key={t.id} className={'tab' + (tab === t.id ? ' on' : '')} onClick={() => { if (t.id !== tab) haptic(); setTab(t.id) }}>
                 <t.icon />
                 {t.label}
               </button>

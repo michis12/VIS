@@ -67,6 +67,36 @@ export function weekKey(iso: string) {
   return d.toISOString().slice(0, 10)
 }
 
-export function haptic() {
-  navigator.vibrate?.(8)
+let hapticLabel: HTMLLabelElement | null = null
+
+/**
+ * Short haptic tick. Android: Vibration API. iPhone (iOS 18+): Safari has no
+ * Vibration API, but toggling a native `<input switch>` plays the system haptic,
+ * so we click a hidden one.
+ */
+export function haptic(strong = false) {
+  if (typeof navigator.vibrate === 'function') {
+    navigator.vibrate(strong ? 20 : 8)
+    return
+  }
+  try {
+    if (!hapticLabel) {
+      const input = document.createElement('input')
+      input.type = 'checkbox'
+      input.setAttribute('switch', '')
+      input.id = 'vis-haptic'
+      input.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:0;height:0'
+      input.tabIndex = -1
+      input.setAttribute('aria-hidden', 'true')
+      hapticLabel = document.createElement('label')
+      hapticLabel.htmlFor = input.id
+      hapticLabel.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:0;height:0'
+      hapticLabel.setAttribute('aria-hidden', 'true')
+      document.body.append(input, hapticLabel)
+    }
+    hapticLabel.click()
+    if (strong) setTimeout(() => hapticLabel?.click(), 90)
+  } catch {
+    /* no haptics */
+  }
 }

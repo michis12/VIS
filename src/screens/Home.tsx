@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Icon, Sheet } from '../components/ui'
-import { dateLabel, fmtInt, fmtKg, localIso, uid } from '../lib'
+import { dateLabel, fmtInt, fmtKg, localIso } from '../lib'
 import { parseTemplatesFile, pickFile, shareOrDownload, templatesFile } from '../files'
 import { useNav } from '../nav'
 import { useStore } from '../store'
@@ -34,14 +34,6 @@ export function Home({ onOpenWorkout, toast }: { onOpenWorkout: () => void; toas
     store.saveWorkout(newWorkoutFromTemplate(t))
     setChosen(null)
     onOpenWorkout()
-  }
-
-  const skip = (t: Template) => {
-    store.saveWorkout({
-      id: uid(), name: t.name, templateId: t.id, startedAt: localIso(), durationSec: null, status: 'skipped', source: 'app',
-      exercises: t.exercises.map((e) => ({ exerciseId: e.exerciseId, sets: Array.from({ length: e.sets }, () => ({ weight: null, reps: null, done: false })) })),
-    })
-    setChosen(null)
   }
 
   const lastOf = (t: Template) => [...workouts].reverse().find((w) => w.name === t.name && w.status === 'done')
@@ -141,7 +133,7 @@ export function Home({ onOpenWorkout, toast }: { onOpenWorkout: () => void; toas
             ))}
           </div>
           <button className="btn btn-chrome btn-block" onClick={() => start(chosen)}>Workout starten</button>
-          <button className="btn btn-ghost btn-block" style={{ marginTop: 10 }} onClick={() => skip(chosen)}>Heute nicht trainieren</button>
+          <p className="faint" style={{ fontSize: 12, textAlign: 'center', marginTop: 10 }}>Einzelne Übungen kannst du im Workout über ⋯ auslassen.</p>
         </Sheet>
       )}
 

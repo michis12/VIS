@@ -31,7 +31,14 @@ function db() {
 
 export const DEFAULT_SETTINGS: Settings = { restSec: 180 }
 
-type Seed = Omit<Snapshot, 'phases' | 'settings'> & { version: number }
+interface SeedFix {
+  workoutId: string
+  exerciseId: string
+  set: number
+  from: { weight: number; reps: number }
+  to: { weight: number; reps: number }
+}
+type Seed = Omit<Snapshot, 'phases' | 'settings'> & { version: number; fixes?: SeedFix[] }
 
 /** Loads everything; on first start imports the bundled history, later seed versions are migrated in. */
 export async function loadAll(): Promise<Snapshot> {
@@ -67,6 +74,22 @@ export async function loadAll(): Promise<Snapshot> {
     for (const e of seed.exercises) if (!(await ex.get(e.id))) ex.put(e)
     for (const w of seed.workouts) if (w.source === 'fitnotes' && !(await wo.get(w.id))) wo.put(w)
     for (const w of seed.weights) if (w.source === 'fitnotes' && !(await we.get(w.date))) we.put(w)
+    tx.objectStore('meta').put(3, 'seedVersion')
+    await tx.done
+  }
+  if (seeded && seedVersion < 4 && seed.version >= 4) {
+    // v4: typo fixes in imported history – only where the old typo is still unchanged
+    const tx = d.transaction(['workouts', 'meta'], 'readwrite')
+    const wo = tx.objectStore('workouts')
+    for (const f of seed.fixes ?? []) {
+      const w: Workout | undefined = await wo.get(f.workoutId)
+      const s = w?.exercises.find((e) => e.exerciseId === f.exerciseId)?.sets[f.set]
+      if (w && s && s.weight === f.from.weight && s.reps === f.from.reps) {
+        s.weight = f.to.weight
+        s.reps = f.to.reps
+        wo.put(w)
+      }
+    }
     tx.objectStore('meta').put(seed.version, 'seedVersion')
     await tx.done
   }
@@ -110,7 +133,7 @@ export async function replaceAll(s: Snapshot) {
   }
   tx.objectStore('meta').put(s.settings, 'settings')
   tx.objectStore('meta').put(true, 'seeded')
-  tx.objectStore('meta').put(3, 'seedVersion')
+  tx.objectStore('meta').put(4, 'seedVersion')
   await tx.done
 }
 

@@ -42,6 +42,7 @@ export function WorkoutScreen({ workout, onClose }: { workout: Workout; onClose:
   const [editing, setEditing] = useState<Editing | null>(null)
   const [setMenu, setSetMenu] = useState<{ ex: number; set: number } | null>(null)
   const [woMenu, setWoMenu] = useState(false)
+  const [exMenu, setExMenu] = useState<number | null>(null)
   const [finish, setFinish] = useState(false)
   const [picker, setPicker] = useState(false)
   const [restEnd, setRestEnd] = useState<number | null>(loadRestEnd)
@@ -70,7 +71,7 @@ export function WorkoutScreen({ workout, onClose }: { workout: Workout; onClose:
       setRestEnd(null)
       storeRestEnd(null)
       setRestDone(true)
-      const next = w.exercises.find((e) => e.sets.some((s) => !s.done))
+      const next = w.exercises.find((e) => !e.skipped && e.sets.some((s) => !s.done))
       restFinished(next ? exerciseById.get(next.exerciseId)?.name : undefined)
       setTimeout(() => setRestDone(false), 4000)
     }
@@ -117,7 +118,15 @@ export function WorkoutScreen({ workout, onClose }: { workout: Workout; onClose:
     startRest()
   }
 
+  const setSkipped = (ex: number, skipped: boolean) => {
+    haptic()
+    save({ ...w, exercises: w.exercises.map((x, i) => (i === ex ? { ...x, skipped: skipped || undefined } : x)) })
+  }
+
+  const removeExercise = (ex: number) => save({ ...w, exercises: w.exercises.filter((_, i) => i !== ex) })
+
   const addSet = (ex: number) => {
+    haptic()
     const e = w.exercises[ex]
     const last = e.sets[e.sets.length - 1]
     const s: SetEntry =
@@ -135,27 +144,23 @@ export function WorkoutScreen({ workout, onClose }: { workout: Workout; onClose:
   }
 
   const elapsed = Math.floor((now - new Date(w.startedAt).getTime()) / 1000)
-  const doneSets = w.exercises.reduce((n, e) => n + e.sets.filter((s) => s.done).length, 0)
-  const totalSets = w.exercises.reduce((n, e) => n + e.sets.length, 0)
+  const active = w.exercises.filter((e) => !e.skipped)
+  const doneSets = active.reduce((n, e) => n + e.sets.filter((s) => s.done).length, 0)
+  const totalSets = active.reduce((n, e) => n + e.sets.length, 0)
+  const skippedCount = w.exercises.length - active.length
 
   const finishWorkout = () => {
+    // skipped exercises stay in the record (no values) so the history shows they were left out today
     const exercises = w.exercises
-      .map((e) => ({ ...e, sets: e.sets.filter((s) => s.done).map(({ weight, reps, done }) => ({ weight, reps, done })) }))
-      .filter((e) => e.sets.length)
+      .map((e) => e.skipped
+        ? { exerciseId: e.exerciseId, skipped: true, sets: e.sets.map(() => ({ weight: null, reps: null, done: false })) }
+        : { exerciseId: e.exerciseId, sets: e.sets.filter((s) => s.done).map(({ weight, reps, done }) => ({ weight, reps, done })) })
+      .filter((e) => e.skipped || e.sets.length)
     const done: Workout = { ...w, exercises, status: 'done', durationSec: elapsed }
+    haptic(true)
     save(done)
     storeRestEnd(null)
     onClose(`${w.name} gespeichert · ${workoutSetCount(done)} Sätze`)
-  }
-
-  const skipToday = () => {
-    const exercises = w.exercises.map((e) => ({
-      ...e,
-      sets: e.sets.map(() => ({ weight: null, reps: null, done: false })),
-    }))
-    save({ ...w, exercises, status: 'skipped', durationSec: null })
-    storeRestEnd(null)
-    onClose('Als „nicht trainiert“ eingetragen')
   }
 
   const discard = () => {
@@ -172,7 +177,7 @@ export function WorkoutScreen({ workout, onClose }: { workout: Workout; onClose:
         <button className="icon-btn" onClick={() => onClose()} aria-label="Minimieren"><Icon.back /></button>
         <div className="grow">
           <div className="name">{w.name}</div>
-          <div className="wo-timer"><b>{clock(elapsed)}</b> · {doneSets}/{totalSets} Sätze</div>
+          <div className="wo-timer"><b>{clock(elapsed)}</b> · {doneSets}/{totalSets} Sätze{skippedCount ? ` · ${skippedCount} ausgelassen` : ''}</div>
         </div>
         <button className="icon-btn" onClick={() => setWoMenu(true)} aria-label="Menü"><Icon.more /></button>
         <button className="btn btn-chrome btn-sm" onClick={() => setFinish(true)}>Beenden</button>
@@ -181,6 +186,19 @@ export function WorkoutScreen({ workout, onClose }: { workout: Workout; onClose:
       {w.exercises.map((e, ei) => {
         const ex = exerciseById.get(e.exerciseId)
         const p = prev.get(e.exerciseId)
+        if (e.skipped) {
+          return (
+            <div className="card ex-card ex-skipped" key={ei}>
+              <div className="ex-title">
+                <div>
+                  <div className="name">{ex?.name ?? e.exerciseId}</div>
+                  <div className="muscle">Heute nicht trainiert · {e.sets.length} Sätze geplant</div>
+                </div>
+                <button className="btn btn-ghost btn-sm" onClick={() => setSkipped(ei, false)}>Doch trainieren</button>
+              </div>
+            </div>
+          )
+        }
         return (
           <div className="card ex-card" key={ei}>
             <div className="ex-title">
@@ -188,6 +206,7 @@ export function WorkoutScreen({ workout, onClose }: { workout: Workout; onClose:
                 <div className="name">{ex?.name ?? e.exerciseId}</div>
                 <div className="muscle">{ex?.muscle}</div>
               </div>
+              <button className="icon-btn" style={{ width: 34, height: 34 }} onClick={() => setExMenu(ei)} aria-label="Übungsmenü"><Icon.more /></button>
             </div>
             <div className="set-head"><span>Satz</span><span>Vorher</span><span>kg</span><span>Wdh</span><span /></div>
             {e.sets.map((s, si) => {
@@ -198,7 +217,7 @@ export function WorkoutScreen({ workout, onClose }: { workout: Workout; onClose:
                   <button
                     className="prev"
                     disabled={!ps}
-                    onClick={() => ps && updateSet(ei, si, { weight: ps.weight, reps: ps.reps, suggested: false })}
+                    onClick={() => { if (!ps) return; haptic(); updateSet(ei, si, { weight: ps.weight, reps: ps.reps, suggested: false }) }}
                   >
                     {ps ? `${fmtKg(ps.weight ?? 0)} × ${ps.reps}` : '–'}
                   </button>
@@ -261,12 +280,22 @@ export function WorkoutScreen({ workout, onClose }: { workout: Workout; onClose:
         </Sheet>
       )}
 
+      {exMenu != null && w.exercises[exMenu] && (
+        <Sheet onClose={() => setExMenu(null)}>
+          <h3>{exerciseById.get(w.exercises[exMenu].exerciseId)?.name}</h3>
+          <div className="menu">
+            <button onClick={() => { setSkipped(exMenu, true); setExMenu(null) }}>Heute nicht trainieren</button>
+            <button onClick={() => { addSet(exMenu); setExMenu(null) }}>Satz hinzufügen</button>
+            <button className="danger" onClick={() => { removeExercise(exMenu); setExMenu(null) }}>Übung aus diesem Workout entfernen</button>
+          </div>
+        </Sheet>
+      )}
+
       {woMenu && (
         <Sheet onClose={() => setWoMenu(false)}>
           <h3>Workout</h3>
           <div className="menu">
             <button onClick={() => { setWoMenu(false); startRest() }}>Pause jetzt starten ({clock(settings.restSec)})</button>
-            <button onClick={() => { setWoMenu(false); skipToday() }}>Heute nicht trainieren</button>
             <button className="danger" onClick={() => { setWoMenu(false); discard() }}>Workout verwerfen</button>
           </div>
         </Sheet>

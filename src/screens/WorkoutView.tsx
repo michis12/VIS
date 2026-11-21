@@ -7,7 +7,7 @@ import type { Workout } from '../types'
 import { ExercisePicker } from './Workout'
 
 type DraftSet = { wt: string; rt: string }
-type Draft = Omit<Workout, 'exercises'> & { durationMin: string; exercises: { exerciseId: string; sets: DraftSet[] }[] }
+type Draft = Omit<Workout, 'exercises'> & { durationMin: string; exercises: { exerciseId: string; skipped?: boolean; sets: DraftSet[] }[] }
 
 const num = (t: string) => {
   const v = Number(t.replace(',', '.'))
@@ -36,6 +36,7 @@ export function WorkoutView({ id }: { id: string }) {
     durationMin: w.durationSec != null ? String(Math.round(w.durationSec / 60)) : '',
     exercises: w.exercises.map((e) => ({
       exerciseId: e.exerciseId,
+      skipped: e.skipped,
       sets: e.sets.map((s) => ({ wt: s.weight == null ? '' : fmtKg(s.weight), rt: s.reps == null ? '' : String(s.reps) })),
     })),
   })
@@ -45,18 +46,20 @@ export function WorkoutView({ id }: { id: string }) {
     const { durationMin, ...rest } = draft
     const skippedNow = rest.status === 'skipped'
     const exercises = rest.exercises
-      .map((e) => ({
-        exerciseId: e.exerciseId,
-        sets: e.sets
-          .map((s) => {
-            const weight = num(s.wt)
-            const r = num(s.rt)
-            const reps = r == null ? null : Math.round(r)
-            return { weight, reps, done: !skippedNow && reps != null && reps > 0 }
-          })
-          .filter((s) => skippedNow || s.weight != null || s.reps != null),
-      }))
-      .filter((e) => e.sets.length)
+      .map((e) => e.skipped
+        ? { exerciseId: e.exerciseId, skipped: true, sets: e.sets.map(() => ({ weight: null, reps: null, done: false })) }
+        : {
+          exerciseId: e.exerciseId,
+          sets: e.sets
+            .map((s) => {
+              const weight = num(s.wt)
+              const r = num(s.rt)
+              const reps = r == null ? null : Math.round(r)
+              return { weight, reps, done: !skippedNow && reps != null && reps > 0 }
+            })
+            .filter((s) => skippedNow || s.weight != null || s.reps != null),
+        })
+      .filter((e) => e.skipped || e.sets.length)
     const min = num(durationMin)
     store.saveWorkout({ ...rest, exercises, durationSec: min && min > 0 ? Math.round(min * 60) : null })
     setDraft(null)
@@ -102,7 +105,17 @@ export function WorkoutView({ id }: { id: string }) {
           <button className={draft.status === 'skipped' ? 'on' : ''} onClick={() => setDraft({ ...draft, status: 'skipped' })}>Ausgelassen</button>
         </div>
 
-        {draft.exercises.map((e, ei) => (
+        {draft.exercises.map((e, ei) => e.skipped ? (
+          <div className="card ex-card ex-skipped" key={ei}>
+            <div className="ex-title">
+              <div>
+                <div className="name">{store.exerciseById.get(e.exerciseId)?.name ?? e.exerciseId}</div>
+                <div className="muscle">Nicht trainiert</div>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => mapEx(ei, (x) => ({ ...x, skipped: undefined, sets: x.sets.map(() => ({ wt: '', rt: '' })) }))}>Werte eintragen</button>
+            </div>
+          </div>
+        ) : (
           <div className="card ex-card" key={ei}>
             <div className="ex-title">
               <div className="name">{store.exerciseById.get(e.exerciseId)?.name ?? e.exerciseId}</div>
@@ -160,6 +173,14 @@ export function WorkoutView({ id }: { id: string }) {
       )}
 
       {w.exercises.map((e, i) => {
+        if (e.skipped && !skipped) {
+          return (
+            <div className="card ex-skipped" key={i} style={{ marginTop: 12 }}>
+              <div style={{ fontWeight: 680, fontSize: 16 }}>{store.exerciseById.get(e.exerciseId)?.name ?? e.exerciseId}</div>
+              <div className="faint" style={{ fontSize: 13 }}>Heute nicht trainiert</div>
+            </div>
+          )
+        }
         const sets = skipped ? e.sets : e.sets.filter(isRealSet)
         const best = sets.reduce((b, s) => Math.max(b, s.weight ?? 0), 0)
         return (

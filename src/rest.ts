@@ -1,3 +1,5 @@
+import { haptic } from './lib'
+
 /** Rest timer end-signal: sound + vibration + (if allowed) a system notification. */
 let ctx: AudioContext | null = null
 
@@ -30,7 +32,8 @@ function chime() {
 
 export async function restFinished(next?: string) {
   chime()
-  navigator.vibrate?.([200, 100, 200])
+  haptic(true)
+  setTimeout(() => haptic(true), 400)
   if ('Notification' in window && Notification.permission === 'granted') {
     try {
       const reg = await navigator.serviceWorker?.getRegistration()
