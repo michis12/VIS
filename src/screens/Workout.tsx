@@ -93,13 +93,15 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
     if (restEnd && now >= restEnd) {
       setRestEnd(null)
       storeRestEnd(null)
-      setRestDone(true)
       cancelRestPush() // app is open and signals itself; no push needed
-      const next = w.exercises.find((e) => !e.skipped && e.sets.some((s) => !s.done))
-      restFinished(next ? exerciseById.get(next.exerciseId)?.name : undefined)
+      // Ended a while ago = the app was in the background and the push already
+      // told you. Just tidy up instead of chiming a second time.
+      if (now - restEnd > 3000) return
+      setRestDone(true)
+      restFinished()
       setTimeout(() => setRestDone(false), 4000)
     }
-  }, [now, restEnd, w.exercises, exerciseById])
+  }, [now, restEnd])
 
   const startRest = (sec = settings.restSec) => {
     const end = Date.now() + sec * 1000

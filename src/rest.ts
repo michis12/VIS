@@ -30,20 +30,15 @@ function chime() {
   })
 }
 
-export async function restFinished(next?: string) {
+/**
+ * In-app end of rest: sound + vibration only. The system notification for a
+ * locked phone comes from the server push (push.ts); showing one here as well
+ * produced a second notification when the app was opened afterwards.
+ */
+export function restFinished() {
   chime()
   haptic(true)
   setTimeout(() => haptic(true), 400)
-  if ('Notification' in window && Notification.permission === 'granted') {
-    try {
-      const reg = await navigator.serviceWorker?.getRegistration()
-      const body = next ? `Weiter mit ${next}` : 'Zeit für den nächsten Satz'
-      if (reg) await reg.showNotification('Pause vorbei', { body, tag: 'rest', icon: './icon-192-v3.png' })
-      else new Notification('Pause vorbei', { body, tag: 'rest' })
-    } catch {
-      /* ignore */
-    }
-  }
 }
 
 const KEY = 'vis.restEnd'
