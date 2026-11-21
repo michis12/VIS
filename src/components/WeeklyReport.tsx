@@ -3,7 +3,6 @@ import { fmtInt, shortDate } from '../lib'
 import { useStore } from '../store'
 import { scoreLabel, weekScore } from '../weekly'
 import { ScoreGauge } from './ScoreGauge'
-import { AiBox } from './AiBox'
 
 export function useWeekScore(weeksAgo = 0) {
   const { workouts, progress, weights, phases } = useStore()
@@ -42,7 +41,6 @@ export function WeeklyReport() {
       <div className="faint num" style={{ fontSize: 12, marginTop: 12, textAlign: 'center' }}>
         {s.workouts} Workouts · {fmtInt(s.sets)} Sätze · {fmtInt(s.volume / 1000)} t Volumen
       </div>
-      <AiBox mode="week" weekStart={s.start} label="KI-Wochenbericht" />
     </div>
   )
 }

@@ -150,10 +150,7 @@ export function Stats() {
   return (
     <div className="screen">
       <div className="eyebrow">Fortschritt</div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h1 className="title">Statistik</h1>
-        <button className="btn btn-ghost btn-sm" onClick={() => nav.push({ kind: 'coach' })}><span className="ai-spark">✦</span> Coach</button>
-      </div>
+      <h1 className="title">Statistik</h1>
 
       <WeeklyReport />
 

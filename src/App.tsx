@@ -4,7 +4,6 @@ import { Icon, Tap, Toast } from './components/ui'
 import { haptic } from './lib'
 import { NavCtx, type Overlay } from './nav'
 import { Body } from './screens/Body'
-import { Coach } from './screens/Coach'
 import { History } from './screens/History'
 import { Measures } from './screens/Measures'
 import { Home } from './screens/Home'
@@ -57,7 +56,6 @@ function Shell() {
   else if (top?.kind === 'history') content = <History />
   else if (top?.kind === 'template') content = <TemplateEditor template={top.template} onClose={nav.pop} />
   else if (top?.kind === 'measures') content = <Measures />
-  else if (top?.kind === 'coach') content = <Coach />
 
   else if (showWorkout && active) {
     content = (

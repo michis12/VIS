@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { durationLabel, fmtInt, haptic, workoutSetCount, workoutVolume } from '../lib'
 import { useStore } from '../store'
-import { AiBox } from './AiBox'
 import { Icon, ProgressBadges } from './ui'
 
 /** Chrome confetti: flipping silver ribbons and dots, ~3 s, no loop. */
@@ -134,8 +133,6 @@ export function Celebration({ id, onClose }: { id: string; onClose: () => void }
         {!highlights.length && (
           <p className="faint" style={{ textAlign: 'center', fontSize: 13, marginTop: 12 }}>Heute keine neuen Bestwerte – Konstanz zählt genauso. 💪</p>
         )}
-
-        <AiBox mode="workout" workoutId={w.id} label="KI-Coach: Was sagt der Coach?" />
 
         <button className="btn btn-chrome btn-block" style={{ marginTop: 18 }} onClick={onClose}>Fertig</button>
       </div>
