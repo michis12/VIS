@@ -45,45 +45,41 @@ export async function pushActive(): Promise<boolean> {
   return !!(await reg?.pushManager.getSubscription())
 }
 
-const storedId = () => { try { return localStorage.getItem(KEY) } catch { return null } }
-const storeId = (id: string | null) => {
-  try { if (id) localStorage.setItem(KEY, id); else localStorage.removeItem(KEY) } catch { /* ignore */ }
+// There is at most one planned rest push per user (a DB trigger removes older
+// ones on insert). Requests run one after another so a quick cancel can't
+// overtake the insert it is meant to undo.
+let queue: Promise<unknown> = Promise.resolve()
+const enqueue = (job: () => Promise<unknown>) => {
+  queue = queue.then(job, job).catch(() => { /* offline – the in-app timer still works */ })
+  return queue
 }
+const ALL = '1970-01-01T00:00:00Z' // filter that matches every own row (RLS limits it to this user)
 
 /** Plans (or re-plans) the "Pause vorbei" push for this rest. Fire-and-forget. */
-export async function scheduleRestPush(endAt: number, nextExercise?: string) {
-  try {
+export function scheduleRestPush(endAt: number, nextExercise?: string) {
+  return enqueue(async () => {
     if (!(await pushActive()) || !(await getSession())) return
-    await cancelRestPush()
-    const { data, error } = await supabase!
-      .from('rest_pushes')
-      .insert({
-        send_at: new Date(endAt).toISOString(),
-        title: 'Pause vorbei',
-        body: nextExercise ? `Weiter mit ${nextExercise}` : 'Zeit für den nächsten Satz',
-      })
-      .select('id')
-      .single()
-    if (!error && data) storeId(data.id)
-  } catch {
-    /* offline – the in-app timer still works */
-  }
+    await supabase!.from('rest_pushes').insert({
+      send_at: new Date(endAt).toISOString(),
+      title: 'Pause vorbei',
+      body: nextExercise ? `Weiter mit ${nextExercise}` : 'Zeit für den nächsten Satz',
+    })
+  })
 }
 
 /** Moves the planned push (rest extended / shortened). */
-export async function moveRestPush(endAt: number) {
-  const id = storedId()
-  if (!id || !supabase) return
-  try {
-    await supabase.from('rest_pushes').update({ send_at: new Date(endAt).toISOString() }).eq('id', id)
-  } catch { /* ignore */ }
+export function moveRestPush(endAt: number) {
+  return enqueue(async () => {
+    if (!supabase || !(await getSession())) return
+    await supabase.from('rest_pushes').update({ send_at: new Date(endAt).toISOString() }).gte('send_at', ALL)
+  })
 }
 
-export async function cancelRestPush() {
-  const id = storedId()
-  storeId(null)
-  if (!id || !supabase) return
-  try {
-    await supabase.from('rest_pushes').delete().eq('id', id)
-  } catch { /* ignore */ }
+/** Removes every planned rest push of this user. */
+export function cancelRestPush() {
+  try { localStorage.removeItem(KEY) } catch { /* old versions stored an id here */ }
+  return enqueue(async () => {
+    if (!supabase || !(await getSession())) return
+    await supabase.from('rest_pushes').delete().gte('send_at', ALL)
+  })
 }
