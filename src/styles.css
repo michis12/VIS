@@ -324,5 +324,9 @@ label.lbl { display: block; font-size: 12px; font-weight: 600; letter-spacing: .
 .medal { flex-shrink: 0; filter: drop-shadow(0 6px 14px rgba(0,0,0,.6)); }
 .medal.ultimate:not(.locked) { filter: drop-shadow(0 0 18px rgba(255,255,255,.35)); }
 
+.sync-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-3); flex-shrink: 0; }
+.sync-dot[data-on='1'] { background: var(--good); box-shadow: 0 0 10px rgba(143,209,158,.6); }
+.btn:disabled { opacity: .45; }
+
 .phase-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .phase-bulk { background: var(--bulk); } .phase-cut { background: var(--cut); } .phase-maintain { background: var(--maintain); }

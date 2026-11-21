@@ -1,0 +1,104 @@
+<!doctype html>
+<!-- Renders the VIS app icon on a canvas and posts PNGs to scripts/icon/save_server.py -->
+<html>
+<head>
+<meta charset="utf-8" />
+<title>VIS icon</title>
+<style>
+  body { margin: 0; background: #222; display: flex; gap: 24px; padding: 24px; align-items: flex-start; font: 13px system-ui; color: #aaa; }
+  canvas { width: 384px; height: 384px; border-radius: 86px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+</style>
+</head>
+<body>
+<canvas id="c" width="1024" height="1024"></canvas>
+<div id="log">rendering…</div>
+<script>
+const S = 1024
+const c = document.getElementById('c')
+const ctx = c.getContext('2d')
+
+function blobs(g, blur) {
+  g.save()
+  g.filter = `blur(${blur}px)`
+  const spots = [
+    { x: 280, y: 250, r: 230, col: 'rgba(199,199,204,1)' },
+    { x: 780, y: 760, r: 260, col: 'rgba(142,142,147,1)' },
+    { x: 830, y: 210, r: 120, col: 'rgba(242,242,247,0.7)' },
+    { x: 200, y: 860, r: 140, col: 'rgba(99,99,102,1)' },
+  ]
+  for (const s of spots) {
+    g.fillStyle = s.col
+    g.beginPath(); g.arc(s.x, s.y, s.r, 0, Math.PI * 2); g.fill()
+  }
+  g.restore()
+}
+
+// 1. black base
+ctx.fillStyle = '#000'
+ctx.fillRect(0, 0, S, S)
+// 2. soft gray light behind the glass
+blobs(ctx, 90)
+// 3. frosted glass sheet across the whole icon: heavier blur + dark tint
+const glass = document.createElement('canvas')
+glass.width = glass.height = S
+const gg = glass.getContext('2d')
+gg.fillStyle = '#000'; gg.fillRect(0, 0, S, S)
+blobs(gg, 190)
+ctx.globalAlpha = 0.85
+ctx.drawImage(glass, 0, 0)
+ctx.globalAlpha = 1
+ctx.fillStyle = 'rgba(0,0,0,0.30)'
+ctx.fillRect(0, 0, S, S)
+// subtle top sheen like light on glass
+const sheen = ctx.createLinearGradient(0, 0, 0, S)
+sheen.addColorStop(0, 'rgba(255,255,255,0.10)')
+sheen.addColorStop(0.45, 'rgba(255,255,255,0.0)')
+ctx.fillStyle = sheen
+ctx.fillRect(0, 0, S, S)
+// 4. fine grain so the blur reads as material, not a gradient
+const img = ctx.getImageData(0, 0, S, S)
+let seed = 7
+const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
+for (let i = 0; i < img.data.length; i += 4) {
+  const n = (rnd() - 0.5) * 7
+  img.data[i] += n; img.data[i + 1] += n; img.data[i + 2] += n
+}
+ctx.putImageData(img, 0, 0)
+// 5. VIS wordmark
+ctx.save()
+ctx.textAlign = 'center'
+ctx.textBaseline = 'middle'
+ctx.font = '600 300px "Segoe UI Variable Display", "Segoe UI", "SF Pro Display", Inter, system-ui, sans-serif'
+ctx.letterSpacing = '34px'
+const tg = ctx.createLinearGradient(0, 380, 0, 650)
+tg.addColorStop(0, '#ffffff')
+tg.addColorStop(0.55, '#e5e5ea')
+tg.addColorStop(1, '#a1a1a6')
+ctx.shadowColor = 'rgba(0,0,0,0.45)'
+ctx.shadowBlur = 40
+ctx.shadowOffsetY = 10
+ctx.fillStyle = tg
+ctx.fillText('VIS', S / 2 + 17, S / 2 + 14) // +17 re-centres trailing letter-spacing
+ctx.restore()
+
+async function save(name, size) {
+  const out = document.createElement('canvas')
+  out.width = out.height = size
+  const o = out.getContext('2d')
+  o.imageSmoothingQuality = 'high'
+  o.drawImage(c, 0, 0, size, size)
+  const blob = await new Promise((r) => out.toBlob(r, 'image/png'))
+  const res = await fetch('http://127.0.0.1:8765/' + name, { method: 'POST', body: blob })
+  return name + ': ' + res.status
+}
+
+window.exportIcons = async () => {
+  const r = []
+  for (const [n, s] of [['icon-1024.png', 1024], ['icon-512.png', 512], ['icon-192.png', 192], ['apple-touch-icon.png', 180], ['favicon-64.png', 64]]) r.push(await save(n, s))
+  document.getElementById('log').textContent = r.join('\n')
+  return r
+}
+document.getElementById('log').textContent = 'ready'
+</script>
+</body>
+</html>

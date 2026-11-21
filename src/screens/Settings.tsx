@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { CloudCard } from '../components/CloudCard'
 import { clock, localIso } from '../lib'
 import { useStore } from '../store'
 import type { Snapshot } from '../db'
@@ -71,6 +72,9 @@ export function Settings({ toast }: { toast: (t: string) => void }) {
         </div>
         {perm === 'default' && <button className="btn btn-ghost btn-sm" onClick={askNotify}>Erlauben</button>}
       </div>
+
+      <div className="section-title"><h2>Cloud</h2></div>
+      <CloudCard toast={toast} />
 
       <div className="section-title"><h2>Daten</h2></div>
       <div className="card">

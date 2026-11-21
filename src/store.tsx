@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import * as cloud from './cloud'
 import * as db from './db'
 import type { Snapshot } from './db'
 import type { Exercise, Phase, Settings, Template, WeightEntry, Workout } from './types'
@@ -39,6 +40,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const mutate = useCallback((fn: (s: Snapshot) => Snapshot) => setSnap((s) => (s ? fn(s) : s)), [])
+
+  // cloud backup: upload 15 s after the last change, and right away when the app goes to the background
+  const latest = useRef<Snapshot | null>(null)
+  const dirty = useRef(false)
+  useEffect(() => {
+    if (!snap) return
+    if (latest.current) dirty.current = true
+    latest.current = snap
+    if (!cloud.cloudConfigured || !cloud.cloudReady()) return
+    const t = setTimeout(() => flush(), 15000)
+    return () => clearTimeout(t)
+  }, [snap])
+  const flush = useCallback(() => {
+    if (!dirty.current || !latest.current || !cloud.cloudReady()) return
+    dirty.current = false
+    cloud.upload(latest.current).catch(() => { dirty.current = true })
+  }, [])
+  useEffect(() => {
+    const onHide = () => document.visibilityState === 'hidden' && flush()
+    document.addEventListener('visibilitychange', onHide)
+    window.addEventListener('pagehide', flush)
+    return () => {
+      document.removeEventListener('visibilitychange', onHide)
+      window.removeEventListener('pagehide', flush)
+    }
+  }, [flush])
 
   const store = useMemo<Store | null>(() => {
     if (!snap) return null
