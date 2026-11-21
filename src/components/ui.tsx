@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { haptic } from '../lib'
 
+const IS_TOUCH_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+
 export function Sheet({ onClose, children }: { onClose: () => void; children: ReactNode }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -92,7 +94,7 @@ export function Wheel({ values, value, onChange, format = String }: {
     const i = Math.min(values.length - 1, Math.max(0, Math.round(el.scrollTop / ITEM)))
     if (i !== sel) {
       setSel(i)
-      haptic()
+      if (!IS_TOUCH_IOS) haptic() // Android: tick per step; iOS ignores haptics outside gestures
     }
     clearTimeout(settle.current)
     settle.current = window.setTimeout(() => onChange(values[i]), 80)
@@ -101,7 +103,8 @@ export function Wheel({ values, value, onChange, format = String }: {
   return (
     <div className="wheel">
       <div className="wheel-band" />
-      <div className="wheel-scroll" ref={ref} onScroll={onScroll}>
+      {/* iOS only allows haptics inside a gesture, so tick on touchend as well */}
+      <div className="wheel-scroll" ref={ref} onScroll={onScroll} onTouchEnd={() => haptic()}>
         <div className="wheel-pad" />
         {values.map((v, i) => (
           <div

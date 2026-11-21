@@ -67,35 +67,39 @@ export function weekKey(iso: string) {
   return d.toISOString().slice(0, 10)
 }
 
-let hapticLabel: HTMLLabelElement | null = null
+const IS_IOS =
+  typeof navigator !== 'undefined' &&
+  (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
 
 /**
- * Short haptic tick. Android: Vibration API. iPhone (iOS 18+): Safari has no
- * Vibration API, but toggling a native `<input switch>` plays the system haptic,
- * so we click a hidden one.
+ * iOS 18+: Safari has no working Vibration API, but toggling a native
+ * `<input type="checkbox" switch>` plays the system haptic. Same approach as the
+ * `ios-haptics` package: a fresh, hidden label wrapping the switch, clicked and
+ * removed again. Only fires inside a user gesture (tap / touchend), and only with
+ * "System Haptics" enabled in iOS settings.
  */
+function iosTick() {
+  const label = document.createElement('label')
+  label.setAttribute('aria-hidden', 'true')
+  label.style.display = 'none'
+  const input = document.createElement('input')
+  input.type = 'checkbox'
+  input.setAttribute('switch', '')
+  label.appendChild(input)
+  document.head.appendChild(label)
+  label.click()
+  document.head.removeChild(label)
+}
+
+/** Short haptic tick; `strong` = double tick. */
 export function haptic(strong = false) {
-  if (typeof navigator.vibrate === 'function') {
-    navigator.vibrate(strong ? 20 : 8)
-    return
-  }
   try {
-    if (!hapticLabel) {
-      const input = document.createElement('input')
-      input.type = 'checkbox'
-      input.setAttribute('switch', '')
-      input.id = 'vis-haptic'
-      input.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:0;height:0'
-      input.tabIndex = -1
-      input.setAttribute('aria-hidden', 'true')
-      hapticLabel = document.createElement('label')
-      hapticLabel.htmlFor = input.id
-      hapticLabel.style.cssText = 'position:fixed;opacity:0;pointer-events:none;width:0;height:0'
-      hapticLabel.setAttribute('aria-hidden', 'true')
-      document.body.append(input, hapticLabel)
+    if (IS_IOS) {
+      iosTick()
+      if (strong) setTimeout(iosTick, 90)
+      return
     }
-    hapticLabel.click()
-    if (strong) setTimeout(() => hapticLabel?.click(), 90)
+    navigator.vibrate?.(strong ? 20 : 8)
   } catch {
     /* no haptics */
   }
