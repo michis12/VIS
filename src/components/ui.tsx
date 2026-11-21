@@ -37,6 +37,12 @@ export const Icon = {
   share: () => (
     <svg viewBox="0 0 24 24" width="20" height="20" {...P}><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5" /><path d="M8 11H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-2" /></svg>
   ),
+  up: ({ size = 14 }: { size?: number }) => (
+    <svg viewBox="0 0 24 24" width={size} height={size} {...P} strokeWidth={2.6}><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5" /></svg>
+  ),
+  cup: ({ size = 14 }: { size?: number }) => (
+    <svg viewBox="0 0 24 24" width={size} height={size} {...P} strokeWidth={2.2}><path d="M8 4h8v6a4 4 0 0 1-8 0Z" /><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 14v4M8 20h8" /></svg>
+  ),
   trophy: () => (
     <svg viewBox="0 0 24 24" {...P}><path d="M8 4h8v6a4 4 0 0 1-8 0Z" /><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 14v4M8 20h8" /></svg>
   ),
@@ -109,6 +115,27 @@ export function Wheel({ values, value, onChange, format = String }: {
         <div className="wheel-pad" />
       </div>
     </div>
+  )
+}
+
+/** Counters for records (trophy) and progress (arrow). Renders nothing when both are 0. */
+export function ProgressBadges({ ups, prs, big = false }: { ups: number; prs: number; big?: boolean }) {
+  if (!ups && !prs) return null
+  return (
+    <span className={'pbadges' + (big ? ' big' : '')}>
+      {prs > 0 && <span className="pbadge pr" title={`${prs} Rekord${prs > 1 ? 'e' : ''}`}><Icon.cup size={big ? 16 : 12} />{prs}</span>}
+      {ups > 0 && <span className="pbadge up" title={`${ups}× Fortschritt`}><Icon.up size={big ? 16 : 12} />{ups}</span>}
+    </span>
+  )
+}
+
+/** Small marker on a set number. */
+export function SetMark({ flag }: { flag: 'up' | 'pr' | null | undefined }) {
+  if (!flag) return null
+  return (
+    <span className={'set-mark ' + flag} aria-label={flag === 'pr' ? 'Rekord' : 'Fortschritt'}>
+      {flag === 'pr' ? <Icon.cup size={10} /> : <Icon.up size={10} />}
+    </span>
   )
 }
 

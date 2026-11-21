@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Icon, Sheet, Wheel } from '../components/ui'
-import { clock, fmtKg, haptic, isRealSet, localIso, uid, workoutSetCount, workoutVolume, fmtInt } from '../lib'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Icon, ProgressBadges, SetMark, Sheet, Wheel } from '../components/ui'
+import { clock, fmtKg, haptic, isRealSet, localIso, uid, workoutVolume, fmtInt } from '../lib'
+import { rateWorkout } from '../progress'
 import { loadRestEnd, restFinished, storeRestEnd, unlockAudio } from '../rest'
 import { useStore } from '../store'
 import type { SetEntry, Template, Workout } from '../types'
@@ -35,7 +36,12 @@ function useNow(ms = 500) {
 
 type Editing = { ex: number; set: number; focus: 'weight' | 'reps' }
 
-export function WorkoutScreen({ workout, onClose }: { workout: Workout; onClose: (msg?: string) => void }) {
+export function WorkoutScreen({ workout, onClose, onFinished }: {
+  workout: Workout
+  onClose: (msg?: string) => void
+  /** called after the workout was saved as done (shows the celebration) */
+  onFinished: (id: string) => void
+}) {
   const store = useStore()
   const { exerciseById, workouts, settings } = store
   const now = useNow()
@@ -52,6 +58,22 @@ export function WorkoutScreen({ workout, onClose }: { workout: Workout; onClose:
   const save = (next: Workout) => store.saveWorkout(next)
 
   /** previous sets per exercise from the most recent other finished workout */
+  // live rating against all finished workouts
+  const live = useMemo(() => rateWorkout(w, store.progress.state), [w, store.progress.state])
+  const [prFlash, setPrFlash] = useState(false)
+  const lastPrs = useRef(live.prs)
+  const flashTimer = useRef<number>(0)
+  useEffect(() => {
+    if (live.prs > lastPrs.current) {
+      haptic(true)
+      setPrFlash(true)
+      clearTimeout(flashTimer.current)
+      flashTimer.current = window.setTimeout(() => setPrFlash(false), 2200)
+    }
+    lastPrs.current = live.prs
+  }, [live.prs])
+  useEffect(() => () => clearTimeout(flashTimer.current), [])
+
   const prev = useMemo(() => {
     const map = new Map<string, SetEntry[]>()
     for (let i = workouts.length - 1; i >= 0; i--) {
@@ -160,7 +182,7 @@ export function WorkoutScreen({ workout, onClose }: { workout: Workout; onClose:
     haptic(true)
     save(done)
     storeRestEnd(null)
-    onClose(`${w.name} gespeichert · ${workoutSetCount(done)} Sätze`)
+    onFinished(done.id)
   }
 
   const discard = () => {
@@ -177,7 +199,10 @@ export function WorkoutScreen({ workout, onClose }: { workout: Workout; onClose:
         <button className="icon-btn" onClick={() => onClose()} aria-label="Minimieren"><Icon.back /></button>
         <div className="grow">
           <div className="name">{w.name}</div>
-          <div className="wo-timer"><b>{clock(elapsed)}</b> · {doneSets}/{totalSets} Sätze{skippedCount ? ` · ${skippedCount} ausgelassen` : ''}</div>
+          <div className="wo-timer" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span><b>{clock(elapsed)}</b> · {doneSets}/{totalSets} Sätze{skippedCount ? ` · ${skippedCount} ausgelassen` : ''}</span>
+            <ProgressBadges ups={live.ups} prs={live.prs} />
+          </div>
         </div>
         <button className="icon-btn" onClick={() => setWoMenu(true)} aria-label="Menü"><Icon.more /></button>
         <button className="btn btn-chrome btn-sm" onClick={() => setFinish(true)}>Beenden</button>
@@ -206,14 +231,20 @@ export function WorkoutScreen({ workout, onClose }: { workout: Workout; onClose:
                 <div className="name">{ex?.name ?? e.exerciseId}</div>
                 <div className="muscle">{ex?.muscle}</div>
               </div>
-              <button className="icon-btn" style={{ width: 34, height: 34 }} onClick={() => setExMenu(ei)} aria-label="Übungsmenü"><Icon.more /></button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <ProgressBadges ups={live.exercises[ei]?.ups ?? 0} prs={live.exercises[ei]?.prs ?? 0} />
+                <button className="icon-btn" style={{ width: 34, height: 34 }} onClick={() => setExMenu(ei)} aria-label="Übungsmenü"><Icon.more /></button>
+              </div>
             </div>
             <div className="set-head"><span>Satz</span><span>Vorher</span><span>kg</span><span>Wdh</span><span /></div>
             {e.sets.map((s, si) => {
               const ps = p?.[si]
               return (
                 <div className={'set-row' + (s.done ? ' done' : '')} key={si}>
-                  <button className="set-no" onClick={() => setSetMenu({ ex: ei, set: si })}>{si + 1}</button>
+                  <button className="set-no" onClick={() => setSetMenu({ ex: ei, set: si })}>
+                    {si + 1}
+                    <SetMark flag={live.exercises[ei]?.flags[si]} />
+                  </button>
                   <button
                     className="prev"
                     disabled={!ps}
@@ -247,6 +278,8 @@ export function WorkoutScreen({ workout, onClose }: { workout: Workout; onClose:
       <button className="btn btn-ghost btn-block" style={{ marginTop: 16 }} onClick={() => setPicker(true)}>
         <Icon.plus /> Übung hinzufügen
       </button>
+
+      {prFlash && <div className="pr-flash"><Icon.cup size={18} /> Neuer Rekord!</div>}
 
       {(restEnd || restDone) && (
         <RestDock

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Icon } from '../components/ui'
+import { Icon, ProgressBadges } from '../components/ui'
 import { dateLabel, durationLabel, fmtInt, workoutSetCount, workoutVolume } from '../lib'
 import { useNav } from '../nav'
 import { useStore } from '../store'
@@ -48,10 +48,14 @@ export function History() {
 }
 
 export function HistoryRow({ w, onOpen }: { w: Workout; onOpen: () => void }) {
+  const rating = useStore().progress.byId.get(w.id)
   return (
     <button className="list-row" style={{ width: '100%', textAlign: 'left' }} onClick={onOpen}>
       <div className="grow">
-        <div style={{ fontWeight: 600 }}>{w.name}</div>
+        <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+          {w.name}
+          {rating && <ProgressBadges ups={rating.ups} prs={rating.prs} />}
+        </div>
         <div className="faint" style={{ fontSize: 13 }}>{dateLabel(w.startedAt)}</div>
       </div>
       {w.status === 'skipped' ? (

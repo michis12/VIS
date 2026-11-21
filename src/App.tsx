@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Celebration } from './components/Celebration'
 import { Icon, Toast } from './components/ui'
 import { haptic } from './lib'
 import { NavCtx, type Overlay } from './nav'
@@ -29,6 +30,7 @@ function Shell() {
   const [showWorkout, setShowWorkout] = useState(!!active)
   const [stack, setStack] = useState<Overlay[]>([])
   const [toast, setToast] = useState<string | null>(null)
+  const [celebrate, setCelebrate] = useState<string | null>(null)
   const clearToast = useCallback(() => setToast(null), [])
   const nav = useMemo(() => ({
     push: (o: Overlay) => setStack((s) => [...s, o]),
@@ -53,7 +55,13 @@ function Shell() {
   else if (top?.kind === 'history') content = <History />
   else if (top?.kind === 'template') content = <TemplateEditor template={top.template} onClose={nav.pop} />
   else if (showWorkout && active) {
-    content = <WorkoutScreen workout={active} onClose={(msg) => { setShowWorkout(false); if (msg) setToast(msg) }} />
+    content = (
+      <WorkoutScreen
+        workout={active}
+        onClose={(msg) => { setShowWorkout(false); if (msg) setToast(msg) }}
+        onFinished={(id) => { setShowWorkout(false); setCelebrate(id) }}
+      />
+    )
   }
 
   return (
@@ -77,6 +85,7 @@ function Shell() {
         </div>
         {content && <div className="overlay" key={stack.length + (showWorkout ? 'w' : '')}>{content}</div>}
         {toast && <Toast text={toast} onDone={clearToast} />}
+        {celebrate && <Celebration id={celebrate} onClose={() => setCelebrate(null)} />}
       </div>
     </NavCtx.Provider>
   )

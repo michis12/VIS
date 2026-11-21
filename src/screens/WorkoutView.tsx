@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Icon } from '../components/ui'
+import { Icon, ProgressBadges } from '../components/ui'
 import { dateLabel, durationLabel, fmtInt, fmtKg, isRealSet, workoutSetCount, workoutVolume } from '../lib'
 import { useNav } from '../nav'
 import { useStore } from '../store'
@@ -151,6 +151,7 @@ export function WorkoutView({ id }: { id: string }) {
 
   // ---------- view mode ----------
   const skipped = w.status === 'skipped'
+  const rating = store.progress.byId.get(w.id)
   return (
     <div className="screen no-tabs">
       <div className="wo-head">
@@ -162,10 +163,17 @@ export function WorkoutView({ id }: { id: string }) {
         {w.status !== 'active' && <button className="btn btn-ghost btn-sm" onClick={startEdit}>Bearbeiten</button>}
       </div>
 
+      {rating && (rating.ups > 0 || rating.prs > 0) && (
+        <div className="card" style={{ marginTop: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <span className="muted" style={{ fontSize: 14 }}>Fortschritt in diesem Workout</span>
+          <ProgressBadges ups={rating.ups} prs={rating.prs} big />
+        </div>
+      )}
+
       {skipped ? (
         <div className="card muted" style={{ marginTop: 18 }}>An diesem Tag wurde nicht trainiert.</div>
       ) : (
-        <div className="grid-3" style={{ marginTop: 18 }}>
+        <div className="grid-3" style={{ marginTop: 12 }}>
           <div className="card kpi"><div className="label">Dauer</div><div className="value" style={{ fontSize: 20 }}>{durationLabel(w.durationSec)}</div></div>
           <div className="card kpi"><div className="label">Sätze</div><div className="value" style={{ fontSize: 20 }}>{workoutSetCount(w)}</div></div>
           <div className="card kpi"><div className="label">Volumen</div><div className="value" style={{ fontSize: 20 }}>{fmtInt(workoutVolume(w))}<small>kg</small></div></div>
@@ -181,19 +189,30 @@ export function WorkoutView({ id }: { id: string }) {
             </div>
           )
         }
-        const sets = skipped ? e.sets : e.sets.filter(isRealSet)
-        const best = sets.reduce((b, s) => Math.max(b, s.weight ?? 0), 0)
+        // keep original indices so the progress flags line up with the sets
+        const sets = e.sets.map((s, idx) => ({ s, flag: rating?.exercises[i]?.flags[idx] ?? null })).filter(({ s }) => skipped || isRealSet(s))
+        const best = sets.reduce((b, { s }) => Math.max(b, s.weight ?? 0), 0)
+        const exr = rating?.exercises[i]
         return (
           <div className="card" key={i} style={{ marginTop: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 6 }}>
               <div style={{ fontWeight: 680, fontSize: 16 }}>{store.exerciseById.get(e.exerciseId)?.name ?? e.exerciseId}</div>
-              {!skipped && <span className="faint num" style={{ fontSize: 12 }}>max {fmtKg(best)} kg</span>}
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {exr && <ProgressBadges ups={exr.ups} prs={exr.prs} />}
+                {!skipped && <span className="faint num" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>max {fmtKg(best)} kg</span>}
+              </span>
             </div>
             {skipped ? (
               <div className="faint" style={{ fontSize: 13 }}>{e.sets.length} Sätze geplant</div>
             ) : (
-              sets.map((s, j) => (
-                <div key={j} className="pr-row num"><span className="faint">Satz {j + 1}</span><span><b>{fmtKg(s.weight ?? 0)}</b> kg × <b>{s.reps}</b></span></div>
+              sets.map(({ s, flag }, j) => (
+                <div key={j} className="pr-row num">
+                  <span className="faint" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    Satz {j + 1}
+                    {flag && <span className={'pbadge ' + flag} style={{ height: 20, padding: '0 7px 0 5px', fontSize: 11 }}>{flag === 'pr' ? <><Icon.cup size={11} /> Rekord</> : <><Icon.up size={11} /> mehr</>}</span>}
+                  </span>
+                  <span><b>{fmtKg(s.weight ?? 0)}</b> kg × <b>{s.reps}</b></span>
+                </div>
               ))
             )}
           </div>
