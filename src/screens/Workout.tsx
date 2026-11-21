@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Icon, ProgressBadges, SetMark, Sheet, Tap, Wheel } from '../components/ui'
 import { clock, fmtKg, haptic, isRealSet, localIso, uid, workoutVolume, fmtInt } from '../lib'
 import { rateWorkout } from '../progress'
+import { cancelRestPush, moveRestPush, scheduleRestPush } from '../push'
 import { loadRestEnd, restFinished, storeRestEnd, unlockAudio } from '../rest'
 import { useStore } from '../store'
 import type { SetEntry, Template, Workout } from '../types'
@@ -93,6 +94,7 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
       setRestEnd(null)
       storeRestEnd(null)
       setRestDone(true)
+      cancelRestPush() // app is open and signals itself; no push needed
       const next = w.exercises.find((e) => !e.skipped && e.sets.some((s) => !s.done))
       restFinished(next ? exerciseById.get(next.exerciseId)?.name : undefined)
       setTimeout(() => setRestDone(false), 4000)
@@ -104,6 +106,15 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
     setRestEnd(end)
     storeRestEnd(end)
     setRestDone(false)
+    // server push so the end of the rest also reaches a locked phone
+    const next = w.exercises.find((e) => !e.skipped && e.sets.some((s) => !s.done))
+    scheduleRestPush(end, next ? exerciseById.get(next.exerciseId)?.name : undefined)
+  }
+  const stopRest = () => {
+    setRestEnd(null)
+    storeRestEnd(null)
+    setRestDone(false)
+    cancelRestPush()
   }
 
   const updateSet = (ex: number, set: number, patch: Partial<SetEntry>) => {
@@ -182,12 +193,14 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
     haptic(true)
     save(done)
     storeRestEnd(null)
+    cancelRestPush()
     onFinished(done.id)
   }
 
   const discard = () => {
     store.deleteWorkout(w.id)
     storeRestEnd(null)
+    cancelRestPush()
     onClose('Workout verworfen')
   }
 
@@ -286,8 +299,14 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
           left={restLeft}
           total={settings.restSec}
           done={restDone}
-          onAdd={(d) => restEnd && (setRestEnd(restEnd + d * 1000), storeRestEnd(restEnd + d * 1000))}
-          onSkip={() => { setRestEnd(null); storeRestEnd(null); setRestDone(false) }}
+          onAdd={(d) => {
+            if (!restEnd) return
+            const end = restEnd + d * 1000
+            setRestEnd(end)
+            storeRestEnd(end)
+            moveRestPush(end)
+          }}
+          onSkip={stopRest}
         />
       )}
 

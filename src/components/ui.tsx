@@ -107,13 +107,14 @@ export function Wheel({ values, value, onChange, format = String }: {
       <div className="wheel-scroll" ref={ref} onScroll={onScroll} onTouchEnd={() => haptic()}>
         <div className="wheel-pad" />
         {values.map((v, i) => (
-          <div
+          // each value is a Tap (native switch inside): tapping a number jumps there and vibrates on iPhone
+          <Tap
             key={v}
             className={'wheel-item' + (i === sel ? ' sel' : '')}
             onClick={() => ref.current?.scrollTo({ top: i * ITEM, behavior: 'smooth' })}
           >
             <span>{format(v)}</span>
-          </div>
+          </Tap>
         ))}
         <div className="wheel-pad" />
       </div>

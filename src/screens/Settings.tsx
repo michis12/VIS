@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { CloudCard } from '../components/CloudCard'
+import { enablePush, pushActive, pushSupported } from '../push'
 import { clock, localIso } from '../lib'
 import { useStore } from '../store'
 import type { Snapshot } from '../db'
@@ -11,7 +12,10 @@ export function Settings({ toast }: { toast: (t: string) => void }) {
   const [perm, setPerm] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported')
   const [lastBackup, setLastBackup] = useState(() => { try { return localStorage.getItem('vis.lastBackup') } catch { return null } })
 
+  const [pushOn, setPushOn] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
   useEffect(() => { navigator.storage?.persisted?.().then(setPersisted) }, [])
+  useEffect(() => { pushActive().then(setPushOn) }, [])
 
   const exportBackup = () => {
     const snap: Snapshot = {
@@ -44,8 +48,19 @@ export function Settings({ toast }: { toast: (t: string) => void }) {
   }
 
   const askNotify = async () => {
-    if (typeof Notification === 'undefined') return
-    setPerm(await Notification.requestPermission())
+    setPushBusy(true)
+    try {
+      const r = await enablePush()
+      if (typeof Notification !== 'undefined') setPerm(Notification.permission)
+      if (r === 'ok') { setPushOn(true); toast('Push bei Pausenende aktiviert') }
+      else if (r === 'login') toast('Bitte zuerst unten bei Cloud anmelden')
+      else if (r === 'denied') toast('Mitteilungen wurden nicht erlaubt')
+      else toast('Push wird hier nicht unterstützt')
+    } catch (e) {
+      toast('Push-Fehler: ' + (e as Error).message)
+    } finally {
+      setPushBusy(false)
+    }
   }
 
   const rest = store.settings.restSec
@@ -65,12 +80,21 @@ export function Settings({ toast }: { toast: (t: string) => void }) {
       </div>
       <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ flex: 1 }}>
-          Benachrichtigung bei Pausenende
+          Push bei Pausenende
           <div className="faint" style={{ fontSize: 13 }}>
-            {perm === 'granted' ? 'Aktiv' : perm === 'denied' ? 'In den iOS-Einstellungen blockiert' : perm === 'unsupported' ? 'Erst nach „Zum Home-Bildschirm“ verfügbar' : 'Noch nicht erlaubt'}
+            {pushOn
+              ? 'Aktiv – kommt auch bei gesperrtem Handy'
+              : perm === 'denied'
+                ? 'In den iOS-Einstellungen blockiert (Mitteilungen → VIS)'
+                : !pushSupported()
+                  ? 'Nur in der App vom Home-Bildschirm (iOS 16.4+)'
+                  : 'Braucht Cloud-Anmeldung unten'}
           </div>
         </div>
-        {perm === 'default' && <button className="btn btn-ghost btn-sm" onClick={askNotify}>Erlauben</button>}
+        {!pushOn && perm !== 'denied' && pushSupported() && (
+          <button className="btn btn-ghost btn-sm" disabled={pushBusy} onClick={askNotify}>Erlauben</button>
+        )}
+        {pushOn && <span className="sync-dot" data-on="1" />}
       </div>
 
       <div className="section-title"><h2>Cloud</h2></div>
