@@ -44,7 +44,7 @@ input { font: inherit; color: inherit; }
 /* ---------- layout ---------- */
 .app { height: 100%; display: flex; flex-direction: column; --pad-top: calc(var(--safe-top) + 28px); }
 .screen {
-  flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  flex: 1; overflow-y: auto;
   padding: var(--pad-top) 16px calc(var(--tab-h) + var(--safe-bottom) + 28px);
   max-width: 640px; width: 100%; margin: 0 auto;
 }
@@ -261,6 +261,8 @@ input.val:focus { border-color: rgba(255,255,255,.35); }
 /* iOS gives date/time inputs an intrinsic min width that overflows narrow containers */
 input[type='date'], input[type='datetime-local'] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; text-align: left; }
 input[type='date']::-webkit-date-and-time-value, input[type='datetime-local']::-webkit-date-and-time-value { text-align: left; }
+/* iOS draws the value of an appearance:none date input at the top; centre it in the 48px field */
+.input[type='date'], .input[type='datetime-local'] { line-height: 46px; padding-top: 0; padding-bottom: 0; }
 .input {
   width: 100%; min-width: 0; height: 48px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line-strong);
   padding: 0 14px; font-size: 16px; outline: none;

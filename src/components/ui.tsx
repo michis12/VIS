@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { haptic } from '../lib'
 
 export function Sheet({ onClose, children }: { onClose: () => void; children: ReactNode }) {
@@ -7,14 +8,17 @@ export function Sheet({ onClose, children }: { onClose: () => void; children: Re
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
-  return (
+  // Rendered into <body>: inside a scrolling screen iOS traps position:fixed
+  // children below the tab bar, which then covered the sheet's buttons.
+  return createPortal(
     <>
       <div className="scrim" onClick={onClose} />
       <div className="sheet" role="dialog">
         <div className="grab" />
         {children}
       </div>
-    </>
+    </>,
+    document.body,
   )
 }
 
