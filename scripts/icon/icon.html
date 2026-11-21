@@ -68,9 +68,9 @@ ctx.putImageData(img, 0, 0)
 ctx.save()
 ctx.textAlign = 'center'
 ctx.textBaseline = 'middle'
-ctx.font = '600 300px "Segoe UI Variable Display", "Segoe UI", "SF Pro Display", Inter, system-ui, sans-serif'
-ctx.letterSpacing = '34px'
-const tg = ctx.createLinearGradient(0, 380, 0, 650)
+ctx.font = '900 430px "Segoe UI Black", "Segoe UI Variable Display", "Segoe UI", "SF Pro Display", Inter, system-ui, sans-serif'
+ctx.letterSpacing = '6px'
+const tg = ctx.createLinearGradient(0, 330, 0, 700)
 tg.addColorStop(0, '#ffffff')
 tg.addColorStop(0.55, '#e5e5ea')
 tg.addColorStop(1, '#a1a1a6')
@@ -78,7 +78,7 @@ ctx.shadowColor = 'rgba(0,0,0,0.45)'
 ctx.shadowBlur = 40
 ctx.shadowOffsetY = 10
 ctx.fillStyle = tg
-ctx.fillText('VIS', S / 2 + 17, S / 2 + 14) // +17 re-centres trailing letter-spacing
+ctx.fillText('VIS', S / 2 + 3, S / 2 + 18) // +3 re-centres trailing letter-spacing
 ctx.restore()
 
 async function save(name, size) {
