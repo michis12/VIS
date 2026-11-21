@@ -1,4 +1,5 @@
 import { e1rm, fmtInt, isRealSet, weekKey, workoutSetCount, workoutVolume } from './lib'
+import type { WorkoutProgress } from './progress'
 import type { Exercise, WeightEntry, Workout } from './types'
 
 export type Glyph =
@@ -7,6 +8,7 @@ export type Glyph =
   | 'beer' | 'ghost' | 'tree' | 'heart' | 'rocket' | 'chair' | 'pyramid' | 'drumstick' | 'flex'
   | 'repeat' | 'shot' | 'couch'
   | 'barbell' | 'deadlift' | 'lion' | 'scale' | 'gorilla' | 'blade' | 'plate' | 'ring'
+  | 'target' | 'stairs' | 'storm' | 'chevrons' | 'infinity' | 'diamond' | 'swords'
 
 export interface AchievementDef {
   id: string
@@ -20,6 +22,8 @@ export interface AchievementDef {
   fun?: boolean
   /** "Kraft & Körper" – counts for stars and rank, not for Shōgun */
   body?: boolean
+  /** "Rekorde & Fortschritt" – counts for stars and rank, not for Shōgun */
+  prog?: boolean
   /** custom names for the 5 tiers (instead of Bronze … Obsidian) */
   labels?: [string, string, string, string, string]
   /** footnote shown in the detail sheet */
@@ -65,6 +69,14 @@ export interface Metrics {
   bodyLoss: number
   heavySets: number
   daysIn: number
+  // records & progress (from progress.ts)
+  recordSets: number
+  progressSets: number
+  maxRecordsWorkout: number
+  maxProgressWorkout: number
+  improveStreak: number
+  perfectWorkouts: number
+  doubleHits: number
 }
 
 const BENCH = new Set(['bench-press-barbell', 'bench-press-smith-machine', 'decline-barbell-bench-press', 'incline-bench-press-smith-machine'])
@@ -111,6 +123,15 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'hunderter', body: true, name: '100er-Club', glyph: 'plate', metric: 'heavySets', unit: 'Sätze mit 100+ kg', desc: 'Dreistellig oder gar nicht. Sätze mit mindestens 100 kg.', tiers: [25, 100, 250, 500, 1000] },
   { id: 'treue', body: true, name: 'Treueschwur', glyph: 'ring', metric: 'daysIn', unit: 'Tage seit dem ersten Workout', desc: 'Bis dass der Muskelkater uns scheidet. Tage seit deinem ersten Workout.', tiers: [30, 182, 365, 730, 1825], labels: ['1 Monat', '½ Jahr', '1 Jahr', '2 Jahre', '5 Jahre'] },
 
+  // ---- records & progress
+  { id: 'rekordjaeger', prog: true, name: 'Rekordjäger', glyph: 'target', metric: 'recordSets', unit: 'Rekord-Sätze', desc: 'Jeder Bestwert zählt. Sätze mit neuem Höchstgewicht oder bestem geschätzten 1RM einer Übung.', tiers: [25, 100, 300, 600, 1000] },
+  { id: 'stufenlaeufer', prog: true, name: 'Stufenläufer', glyph: 'stairs', metric: 'progressSets', unit: 'Fortschritts-Sätze', desc: 'Stufe um Stufe nach oben. Sätze, die besser waren als derselbe Satz beim letzten Mal.', tiers: [50, 250, 750, 1500, 3000] },
+  { id: 'rekordflut', prog: true, name: 'Rekordflut', glyph: 'storm', metric: 'maxRecordsWorkout', unit: 'Rekorde in einem Workout', desc: 'Ein Gewitter aus Bestwerten. Die meisten Rekord-Sätze in einem einzigen Training.', tiers: [2, 4, 7, 12, 18] },
+  { id: 'fortschrittsrausch', prog: true, name: 'Fortschrittsrausch', glyph: 'chevrons', metric: 'maxProgressWorkout', unit: 'Fortschritte in einem Workout', desc: 'Alles geht nach oben. Die meisten Fortschritts-Sätze in einem einzigen Training.', tiers: [3, 6, 10, 16, 24] },
+  { id: 'unaufhaltsam', prog: true, name: 'Unaufhaltsam', glyph: 'infinity', metric: 'improveStreak', unit: 'Workouts in Folge mit Verbesserung', desc: 'Kein Training ohne Plus. Workouts in Folge mit mindestens einem Fortschritt oder Rekord.', tiers: [5, 15, 40, 80, 150] },
+  { id: 'perfektionist', prog: true, name: 'Perfektionist', glyph: 'diamond', metric: 'perfectWorkouts', unit: 'perfekte Workouts', desc: 'Lückenlos besser. Workouts (ab 3 Übungen), in denen du dich bei jeder Übung verbessert hast.', tiers: [1, 5, 20, 50, 100] },
+  { id: 'doppelschlag', prog: true, name: 'Doppelschlag', glyph: 'swords', metric: 'doubleHits', unit: 'Doppelschläge', desc: 'Zwei Treffer, eine Übung. Rekord und Fortschritt bei derselben Übung im selben Workout.', tiers: [10, 50, 150, 300, 500] },
+
   { id: 'ausreden', fun: true, name: 'Ausreden-Meister', glyph: 'couch', metric: 'excuses', unit: 'ausgelassene Übungen', desc: '„Heute nicht.“ – Übungen, die du per „Heute nicht trainieren“ geschwänzt hast.', tiers: [1, 5, 15, 30, 60] },
 ]
 
@@ -137,7 +158,12 @@ const RANK_MIN = RANKS.map((r) => ({ ...r, min: Math.ceil(r.share * MAX_STARS) }
 /** Sets above this are treated as typos (e.g. 1174 kg). */
 const MAX_PLAUSIBLE_KG = 500
 
-export function computeMetrics(workouts: Workout[], weights: WeightEntry[], exercises: Exercise[]): Metrics {
+export function computeMetrics(
+  workouts: Workout[],
+  weights: WeightEntry[],
+  exercises: Exercise[],
+  progress?: Map<string, WorkoutProgress>,
+): Metrics {
   const done = workouts.filter((w) => w.status === 'done')
   const muscleOf = new Map(exercises.map((e) => [e.id, e.muscle]))
   const nameOf = new Map(exercises.map((e) => [e.id, e.name]))
@@ -148,6 +174,8 @@ export function computeMetrics(workouts: Workout[], weights: WeightEntry[], exer
     curlSets: 0, highReps: 0, schnaps: 0,
     benchE1rm: 0, deadliftE1rm: 0, bestWeek: 0, maxBodyweight: 0, bodyGain: 0, bodyLoss: 0, heavySets: 0,
     daysIn: done.length ? Math.floor((Date.now() - new Date(done[0].startedAt).getTime()) / 864e5) : 0,
+    recordSets: 0, progressSets: 0, maxRecordsWorkout: 0, maxProgressWorkout: 0, improveStreak: 0,
+    perfectWorkouts: 0, doubleHits: 0,
     // whole workouts marked as skipped (older feature) count as one excuse each
     excuses: workouts.filter((w) => w.status === 'skipped').length,
   }
@@ -218,6 +246,24 @@ export function computeMetrics(workouts: Workout[], weights: WeightEntry[], exer
       if (prev == null || top > prev) best.set(e.exerciseId, top)
     }
   }
+  // records & progress
+  if (progress) {
+    let improveRun = 0
+    for (const w of done) {
+      const r = progress.get(w.id)
+      if (!r) continue
+      m.recordSets += r.prs
+      m.progressSets += r.ups
+      m.maxRecordsWorkout = Math.max(m.maxRecordsWorkout, r.prs)
+      m.maxProgressWorkout = Math.max(m.maxProgressWorkout, r.ups)
+      improveRun = r.ups + r.prs > 0 ? improveRun + 1 : 0
+      m.improveStreak = Math.max(m.improveStreak, improveRun)
+      const trained = r.exercises.filter((_, i) => !w.exercises[i].skipped && w.exercises[i].sets.some(isRealSet))
+      if (trained.length >= 3 && trained.every((e) => e.ups + e.prs > 0)) m.perfectWorkouts++
+      m.doubleHits += r.exercises.filter((e) => e.prs > 0 && e.ups > 0).length
+    }
+  }
+
   m.exercises = used.size
   m.bestMonth = Math.max(0, ...months.values())
   m.bestWeek = Math.max(0, ...weeks.values())

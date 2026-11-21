@@ -57,6 +57,14 @@ const GLYPHS: Record<Glyph, React.JSX.Element> = {
   blade: <g {...P}><path d="M6 26 22 10c2-2 5-2 5-2s0 3-2 5L9 29Z" /><path d="M4 24l4 4M18 14l2 2" /></g>,
   plate: <g {...P}><circle cx="16" cy="16" r="11.5" /><circle cx="16" cy="16" r="2.5" /><path d="M16 4.5v3M16 24.5v3M4.5 16h3M24.5 16h3" /></g>,
   ring: <g {...P}><circle cx="16" cy="19" r="8" /><path d="M12 7l4-3 4 3-4 4Z" /></g>,
+  // records & progress
+  target: <g {...P}><circle cx="16" cy="16" r="11" /><circle cx="16" cy="16" r="6.5" /><circle cx="16" cy="16" r="2" fill="currentColor" /><path d="M16 2v5M16 25v5M2 16h5M25 16h5" /></g>,
+  stairs: <g {...P}><path d="M4 27h6v-6h6v-6h6V9h6" /><path d="M21 4h7v7" /><path d="M28 4 20 12" /></g>,
+  storm: <g {...P}><path d="M9 17a5 5 0 0 1 .6-10 7 7 0 0 1 13.2 1.6A4.5 4.5 0 0 1 22.5 17" /><path d="M17 13l-4 7h5l-3 7" /></g>,
+  chevrons: <g {...P}><path d="M8 13l8-7 8 7M8 20l8-7 8 7M8 27l8-7 8 7" /></g>,
+  infinity: <g {...P}><path d="M16 16c-2.5-3.5-4.5-5-7-5a5 5 0 0 0 0 10c2.5 0 4.5-1.5 7-5Zm0 0c2.5 3.5 4.5 5 7 5a5 5 0 0 0 0-10c-2.5 0-4.5 1.5-7 5Z" /></g>,
+  diamond: <g {...P}><path d="M9 6h14l5 7-12 14L4 13Z" /><path d="M4 13h24M12 6l-2 7 6 14 6-14-2-7" /></g>,
+  swords: <g {...P}><path d="M6 6l14 14M26 6 12 20" /><path d="M18 22l4-4M14 22l-4-4" /><path d="M21 21l4 4M11 21l-4 4" /><path d="M6 6h4M6 6v4M26 6h-4M26 6v4" /></g>,
   couch: <g {...P}><path d="M7 16v-4a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v4" /><path d="M4 18a2 2 0 0 1 4 0v2h16v-2a2 2 0 0 1 4 0v6H4Z" /><path d="M7 24v3M25 24v3" /></g>,
 }
 
@@ -98,8 +106,11 @@ export function Stars({ n, size = 11 }: { n: number; size?: number }) {
 }
 
 export function useAchievements() {
-  const { workouts, weights, exercises } = useStore()
-  return useMemo(() => evaluate(computeMetrics(workouts, weights, exercises)), [workouts, weights, exercises])
+  const { workouts, weights, exercises, progress } = useStore()
+  return useMemo(
+    () => evaluate(computeMetrics(workouts, weights, exercises, progress.byId)),
+    [workouts, weights, exercises, progress],
+  )
 }
 
 const MONTH_LETTER = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
@@ -114,7 +125,8 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
   const [preview, setPreview] = useState<{ url: string; file: File } | null>(null)
   const [busy, setBusy] = useState(false)
   const gridRef = useRef<HTMLDivElement>(null)
-  const metrics = useMemo(() => computeMetrics(workouts, weights, exercises), [workouts, weights, exercises])
+  const { progress } = useStore()
+  const metrics = useMemo(() => computeMetrics(workouts, weights, exercises, progress.byId), [workouts, weights, exercises, progress])
 
   const buildShare = async () => {
     setBusy(true)
@@ -159,8 +171,9 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
   const rank = rankFor(total)
   const nr = nextRank(total)
   const byRank = (a: AchievementState, b: AchievementState) => b.stars - a.stars || b.progress - a.progress
-  const core = list.filter((a) => !a.def.fun && !a.def.body)
+  const core = list.filter((a) => !a.def.fun && !a.def.body && !a.def.prog)
   const body = list.filter((a) => a.def.body).sort(byRank)
+  const prog = list.filter((a) => a.def.prog).sort(byRank)
   const fun = list.filter((a) => a.def.fun).sort(byRank)
   const maxed = core.filter((a) => a.stars === 5).length
   const ultimate = maxed === core.length
@@ -212,6 +225,9 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
 
       <div className="section-title"><h2>Achievements</h2><span className="faint" style={{ fontSize: 13 }}>{core.filter((a) => a.stars > 0).length} / {core.length} freigeschaltet</span></div>
       <div className="ach-grid" ref={gridRef}>{sorted.map(renderAch)}</div>
+
+      <div className="section-title"><h2>Rekorde & Fortschritt</h2><span className="faint" style={{ fontSize: 13 }}>{prog.filter((a) => a.stars > 0).length} / {prog.length} freigeschaltet</span></div>
+      <div className="ach-grid">{prog.map(renderAch)}</div>
 
       <div className="section-title"><h2>Kraft & Körper</h2><span className="faint" style={{ fontSize: 13 }}>{body.filter((a) => a.stars > 0).length} / {body.length} freigeschaltet</span></div>
       <div className="ach-grid">{body.map(renderAch)}</div>
