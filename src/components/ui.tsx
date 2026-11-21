@@ -1,0 +1,110 @@
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+
+export function Sheet({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+  return (
+    <>
+      <div className="scrim" onClick={onClose} />
+      <div className="sheet" role="dialog">
+        <div className="grab" />
+        {children}
+      </div>
+    </>
+  )
+}
+
+const P = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' } as const
+
+export const Icon = {
+  dumbbell: () => (
+    <svg viewBox="0 0 24 24" {...P}><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11" /></svg>
+  ),
+  chart: () => (
+    <svg viewBox="0 0 24 24" {...P}><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>
+  ),
+  body: () => (
+    <svg viewBox="0 0 24 24" {...P}><path d="M12 3a8 8 0 1 0 0 18 8 8 0 0 0 0-18Z" /><path d="M12 7v5l3 2" /></svg>
+  ),
+  gear: () => (
+    <svg viewBox="0 0 24 24" {...P}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" /></svg>
+  ),
+  check: () => (
+    <svg viewBox="0 0 24 24" width="20" height="20" {...P} strokeWidth={2.6}><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
+  ),
+  chevron: () => (
+    <svg viewBox="0 0 24 24" width="18" height="18" {...P}><path d="m9 6 6 6-6 6" /></svg>
+  ),
+  back: () => (
+    <svg viewBox="0 0 24 24" width="22" height="22" {...P}><path d="m15 6-6 6 6 6" /></svg>
+  ),
+  more: () => (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
+  ),
+  plus: () => (
+    <svg viewBox="0 0 24 24" width="18" height="18" {...P}><path d="M12 5v14M5 12h14" /></svg>
+  ),
+}
+
+/** iOS-style scroll-snap wheel. */
+export function Wheel({ values, value, onChange, format = String }: {
+  values: number[]
+  value: number
+  onChange: (v: number) => void
+  format?: (v: number) => string
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const ITEM = 44
+  const idx = Math.max(0, values.findIndex((v) => v >= value - 1e-9))
+  const [sel, setSel] = useState(idx)
+  const settle = useRef<number>(0)
+
+  useEffect(() => {
+    ref.current?.scrollTo({ top: idx * ITEM })
+    setSel(idx)
+    // only on mount / external value jumps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const onScroll = () => {
+    const el = ref.current
+    if (!el) return
+    const i = Math.min(values.length - 1, Math.max(0, Math.round(el.scrollTop / ITEM)))
+    if (i !== sel) {
+      setSel(i)
+      navigator.vibrate?.(3)
+    }
+    clearTimeout(settle.current)
+    settle.current = window.setTimeout(() => onChange(values[i]), 80)
+  }
+
+  return (
+    <div className="wheel">
+      <div className="wheel-band" />
+      <div className="wheel-scroll" ref={ref} onScroll={onScroll}>
+        <div className="wheel-pad" />
+        {values.map((v, i) => (
+          <div
+            key={v}
+            className={'wheel-item' + (i === sel ? ' sel' : '')}
+            onClick={() => ref.current?.scrollTo({ top: i * ITEM, behavior: 'smooth' })}
+          >
+            {format(v)}
+          </div>
+        ))}
+        <div className="wheel-pad" />
+      </div>
+    </div>
+  )
+}
+
+export function Toast({ text, onDone }: { text: string; onDone: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 1800)
+    return () => clearTimeout(t)
+  }, [onDone])
+  return <div className="toast">{text}</div>
+}

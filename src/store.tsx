@@ -1,0 +1,105 @@
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import * as db from './db'
+import type { Snapshot } from './db'
+import type { Exercise, Phase, Settings, Template, WeightEntry, Workout } from './types'
+
+interface Store extends Snapshot {
+  exerciseById: Map<string, Exercise>
+  active: Workout | undefined
+  saveWorkout: (w: Workout) => void
+  deleteWorkout: (id: string) => void
+  saveTemplate: (t: Template) => void
+  deleteTemplate: (id: string) => void
+  saveExercise: (e: Exercise) => void
+  saveWeight: (w: WeightEntry) => void
+  deleteWeight: (date: string) => void
+  savePhase: (p: Phase) => void
+  deletePhase: (id: string) => void
+  saveSettings: (s: Settings) => void
+  importSnapshot: (s: Snapshot) => Promise<void>
+}
+
+const Ctx = createContext<Store | null>(null)
+
+function upsert<T>(list: T[], item: T, key: (t: T) => string, sortKey?: (t: T) => string) {
+  const k = key(item)
+  const next = list.filter((x) => key(x) !== k)
+  next.push(item)
+  if (sortKey) next.sort((a, b) => sortKey(a).localeCompare(sortKey(b)))
+  return next
+}
+
+export function StoreProvider({ children }: { children: ReactNode }) {
+  const [snap, setSnap] = useState<Snapshot | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    db.loadAll().then(setSnap, (e) => setError(String(e)))
+    db.requestPersistence()
+  }, [])
+
+  const mutate = useCallback((fn: (s: Snapshot) => Snapshot) => setSnap((s) => (s ? fn(s) : s)), [])
+
+  const store = useMemo<Store | null>(() => {
+    if (!snap) return null
+    return {
+      ...snap,
+      exerciseById: new Map(snap.exercises.map((e) => [e.id, e])),
+      active: snap.workouts.find((w) => w.status === 'active'),
+      saveWorkout: (w) => {
+        db.put('workouts', w)
+        mutate((s) => ({ ...s, workouts: upsert(s.workouts, w, (x) => x.id, (x) => x.startedAt) }))
+      },
+      deleteWorkout: (id) => {
+        db.del('workouts', id)
+        mutate((s) => ({ ...s, workouts: s.workouts.filter((w) => w.id !== id) }))
+      },
+      saveTemplate: (t) => {
+        db.put('templates', t)
+        mutate((s) => ({ ...s, templates: upsert(s.templates, t, (x) => x.id) }))
+      },
+      deleteTemplate: (id) => {
+        db.del('templates', id)
+        mutate((s) => ({ ...s, templates: s.templates.filter((t) => t.id !== id) }))
+      },
+      saveExercise: (e) => {
+        db.put('exercises', e)
+        mutate((s) => ({ ...s, exercises: upsert(s.exercises, e, (x) => x.id, (x) => x.name) }))
+      },
+      saveWeight: (w) => {
+        db.put('weights', w)
+        mutate((s) => ({ ...s, weights: upsert(s.weights, w, (x) => x.date, (x) => x.date) }))
+      },
+      deleteWeight: (date) => {
+        db.del('weights', date)
+        mutate((s) => ({ ...s, weights: s.weights.filter((w) => w.date !== date) }))
+      },
+      savePhase: (p) => {
+        db.put('phases', p)
+        mutate((s) => ({ ...s, phases: upsert(s.phases, p, (x) => x.id, (x) => x.start) }))
+      },
+      deletePhase: (id) => {
+        db.del('phases', id)
+        mutate((s) => ({ ...s, phases: s.phases.filter((p) => p.id !== id) }))
+      },
+      saveSettings: (settings) => {
+        db.saveSettings(settings)
+        mutate((s) => ({ ...s, settings }))
+      },
+      importSnapshot: async (s) => {
+        await db.replaceAll(s)
+        setSnap(await db.loadAll())
+      },
+    }
+  }, [snap, mutate])
+
+  if (error) return <div className="boot">Daten konnten nicht geladen werden: {error}</div>
+  if (!store) return <div className="boot"><div className="boot-mark">VIS</div></div>
+  return <Ctx.Provider value={store}>{children}</Ctx.Provider>
+}
+
+export function useStore() {
+  const s = useContext(Ctx)
+  if (!s) throw new Error('StoreProvider missing')
+  return s
+}
