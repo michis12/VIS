@@ -56,7 +56,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
       saveTemplate: (t) => {
         db.put('templates', t)
-        mutate((s) => ({ ...s, templates: upsert(s.templates, t, (x) => x.id) }))
+        mutate((s) => ({ ...s, templates: upsert(s.templates, t, (x) => x.id, (x) => x.name) }))
       },
       deleteTemplate: (id) => {
         db.del('templates', id)

@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { Icon, Sheet } from '../components/ui'
-import { dateLabel, durationLabel, fmtInt, fmtKg, isRealSet, localIso, uid, workoutSetCount, workoutVolume } from '../lib'
+import { dateLabel, fmtInt, fmtKg, localIso, uid } from '../lib'
+import { useNav } from '../nav'
 import { useStore } from '../store'
-import type { Template, Workout } from '../types'
+import type { Template } from '../types'
+import { HistoryRow } from './History'
 import { newWorkoutFromTemplate } from './Workout'
 
 export function Home({ onOpenWorkout }: { onOpenWorkout: () => void }) {
   const store = useStore()
+  const nav = useNav()
   const { templates, workouts, exerciseById, active, weights, phases } = store
   const [chosen, setChosen] = useState<Template | null>(null)
-  const [detail, setDetail] = useState<Workout | null>(null)
 
   const start = (t: Template | null) => {
     store.saveWorkout(newWorkoutFromTemplate(t))
@@ -26,7 +28,7 @@ export function Home({ onOpenWorkout }: { onOpenWorkout: () => void }) {
   }
 
   const lastOf = (t: Template) => [...workouts].reverse().find((w) => w.name === t.name && w.status === 'done')
-  const recent = [...workouts].filter((w) => w.status !== 'active').reverse().slice(0, 12)
+  const recent = [...workouts].filter((w) => w.status !== 'active').reverse().slice(0, 8)
   const lastWeight = weights[weights.length - 1]
   const phase = phases[phases.length - 1]
   const hour = new Date().getHours()
@@ -59,12 +61,15 @@ export function Home({ onOpenWorkout }: { onOpenWorkout: () => void }) {
         </div>
       </div>
 
-      <div className="section-title"><h2>Training starten</h2></div>
+      <div className="section-title">
+        <h2>Training starten</h2>
+        <button className="link" onClick={() => nav.push({ kind: 'template', template: null })}>+ Neues Template</button>
+      </div>
       {templates.map((t) => {
         const last = lastOf(t)
         return (
           <button key={t.id} className="card tpl" style={{ width: '100%', textAlign: 'left' }} onClick={() => !active && setChosen(t)} disabled={!!active}>
-            <div className="tpl-badge"><span className="chrome-text">{t.name.slice(0, 2).toUpperCase()}</span></div>
+            <div className="tpl-badge"><span className="chrome-text">{badge(t.name)}</span></div>
             <div className="tpl-main">
               <div className="name">{t.name}</div>
               <div className="meta">{t.exercises.map((e) => exerciseById.get(e.exerciseId)?.name).join(' · ')}</div>
@@ -80,29 +85,20 @@ export function Home({ onOpenWorkout }: { onOpenWorkout: () => void }) {
         </button>
       )}
 
-      <div className="section-title"><h2>Verlauf</h2></div>
+      <div className="section-title">
+        <h2>Verlauf</h2>
+        <button className="link" onClick={() => nav.push({ kind: 'history' })}>Alle anzeigen</button>
+      </div>
       <div className="card" style={{ padding: '4px 14px' }}>
-        {recent.map((w) => (
-          <button key={w.id} className="list-row" style={{ width: '100%', textAlign: 'left' }} onClick={() => setDetail(w)}>
-            <div className="grow">
-              <div style={{ fontWeight: 600 }}>{w.name}</div>
-              <div className="faint" style={{ fontSize: 13 }}>{dateLabel(w.startedAt)}</div>
-            </div>
-            {w.status === 'skipped' ? (
-              <span className="pill skip">Ausgelassen</span>
-            ) : (
-              <div style={{ textAlign: 'right', fontSize: 13 }} className="muted num">
-                <div>{workoutSetCount(w)} Sätze</div>
-                <div className="faint">{durationLabel(w.durationSec)}</div>
-              </div>
-            )}
-          </button>
-        ))}
+        {recent.map((w) => <HistoryRow key={w.id} w={w} onOpen={() => nav.push({ kind: 'workout', id: w.id })} />)}
       </div>
 
       {chosen && (
         <Sheet onClose={() => setChosen(null)}>
-          <h3>{chosen.name}</h3>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h3>{chosen.name}</h3>
+            <button className="link muted" onClick={() => { const t = chosen; setChosen(null); nav.push({ kind: 'template', template: t }) }}>Bearbeiten</button>
+          </div>
           <p className="muted" style={{ marginBottom: 14 }}>{chosen.exercises.length} Übungen · {chosen.exercises.reduce((n, e) => n + e.sets, 0)} Sätze</p>
           <div className="menu" style={{ marginBottom: 16 }}>
             {chosen.exercises.map((e, i) => (
@@ -117,32 +113,14 @@ export function Home({ onOpenWorkout }: { onOpenWorkout: () => void }) {
         </Sheet>
       )}
 
-      {detail && <WorkoutDetail w={detail} onClose={() => setDetail(null)} />}
     </div>
   )
 }
 
-export const phaseName = (t: string) => (t === 'bulk' ? 'Bulk' : t === 'cut' ? 'Cut' : 'Erhalt')
-
-function WorkoutDetail({ w, onClose }: { w: Workout; onClose: () => void }) {
-  const store = useStore()
-  const [confirm, setConfirm] = useState(false)
-  return (
-    <Sheet onClose={onClose}>
-      <h3>{w.name}</h3>
-      <p className="muted">{dateLabel(w.startedAt)} · {w.status === 'skipped' ? 'Nicht trainiert' : `${durationLabel(w.durationSec)} · ${fmtInt(workoutVolume(w))} kg Volumen`}</p>
-      {w.exercises.map((e, i) => (
-        <div key={i} style={{ marginTop: 16 }}>
-          <div style={{ fontWeight: 650, marginBottom: 4 }}>{store.exerciseById.get(e.exerciseId)?.name}</div>
-          {e.sets.filter(isRealSet).map((s, j) => (
-            <div key={j} className="pr-row num"><span className="faint">Satz {j + 1}</span><span>{fmtKg(s.weight ?? 0)} kg × {s.reps}</span></div>
-          ))}
-          {w.status === 'skipped' && <div className="faint" style={{ fontSize: 13 }}>{e.sets.length} Sätze geplant</div>}
-        </div>
-      ))}
-      <button className="btn btn-danger btn-block" style={{ marginTop: 22 }} onClick={() => (confirm ? (store.deleteWorkout(w.id), onClose()) : setConfirm(true))}>
-        {confirm ? 'Wirklich löschen?' : 'Eintrag löschen'}
-      </button>
-    </Sheet>
-  )
+/** "Day 1 Upper" -> "1U", "Push" -> "PU" */
+function badge(name: string) {
+  const parts = name.split(/[\s\-+_]+/).filter(Boolean).map((p) => (/^\d+$/.test(p) ? p : p[0]))
+  return (parts.length >= 2 ? parts.slice(-2).join('') : name.slice(0, 2)).toUpperCase()
 }
+
+export const phaseName =(t: string) => (t === 'bulk' ? 'Bulk' : t === 'cut' ? 'Cut' : 'Erhalt')

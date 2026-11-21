@@ -66,8 +66,10 @@ export function Body() {
         </div>
       </div>
 
-      <div className="chips" style={{ marginTop: 16 }}>
-        {RANGES.map((r) => <button key={r.id} className={'chip' + (r.id === range ? ' on' : '')} onClick={() => setRange(r.id)}>{r.l}</button>)}
+      <div className="sticky-blur" style={{ marginTop: 6 }}>
+        <div className="chips">
+          {RANGES.map((r) => <button key={r.id} className={'chip' + (r.id === range ? ' on' : '')} onClick={() => setRange(r.id)}>{r.l}</button>)}
+        </div>
       </div>
       <div className="card" style={{ marginTop: 12 }}>
         <LineChart points={pts} height={220} yFmt={(v) => fmtKg(Math.round(v * 10) / 10)} unit="kg" bands={bands} />

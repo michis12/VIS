@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { BarChart, LineChart } from '../components/charts'
+import { Icon } from '../components/ui'
+import { useNav } from '../nav'
 import { dateLabel, durationLabel, e1rm, fmtInt, fmtKg, isRealSet, shortDate, weekKey, workoutSetCount, workoutVolume } from '../lib'
 import { useStore } from '../store'
 
@@ -14,6 +16,7 @@ const WD = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 
 export function Stats() {
   const { workouts, exerciseById, exercises } = useStore()
+  const nav = useNav()
   const [range, setRange] = useState<(typeof RANGES)[number]['id']>('6m')
   const days = RANGES.find((r) => r.id === range)!.days
   const since = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10)
@@ -147,8 +150,10 @@ export function Stats() {
       <div className="eyebrow">Fortschritt</div>
       <h1 className="title">Statistik</h1>
 
-      <div className="chips">
-        {RANGES.map((r) => <button key={r.id} className={'chip' + (r.id === range ? ' on' : '')} onClick={() => setRange(r.id)}>{r.label}</button>)}
+      <div className="sticky-blur">
+        <div className="chips">
+          {RANGES.map((r) => <button key={r.id} className={'chip' + (r.id === range ? ' on' : '')} onClick={() => setRange(r.id)}>{r.label}</button>)}
+        </div>
       </div>
 
       <div className="grid-2" style={{ marginTop: 14 }}>
@@ -234,9 +239,25 @@ export function Stats() {
       <div className="section-title"><h2>Längste Workouts</h2></div>
       <div className="card" style={{ padding: '4px 14px' }}>
         {[...inRange].filter((w) => w.durationSec).sort((a, b) => (b.durationSec ?? 0) - (a.durationSec ?? 0)).slice(0, 5).map((w) => (
-          <div className="list-row" key={w.id}><div className="grow">{w.name}<div className="faint" style={{ fontSize: 13 }}>{dateLabel(w.startedAt)}</div></div><span className="num muted">{durationLabel(w.durationSec)}</span></div>
+          <button className="list-row" style={{ width: '100%', textAlign: 'left' }} key={w.id} onClick={() => nav.push({ kind: 'workout', id: w.id })}>
+            <div className="grow">{w.name}<div className="faint" style={{ fontSize: 13 }}>{dateLabel(w.startedAt)}</div></div>
+            <span className="num muted">{durationLabel(w.durationSec)}</span>
+            <span className="chev"><Icon.chevron /></span>
+          </button>
         ))}
       </div>
+
+      <div className="section-title"><h2>Größtes Volumen</h2></div>
+      <div className="card" style={{ padding: '4px 14px' }}>
+        {[...inRange].sort((a, b) => workoutVolume(b) - workoutVolume(a)).slice(0, 5).map((w) => (
+          <button className="list-row" style={{ width: '100%', textAlign: 'left' }} key={w.id} onClick={() => nav.push({ kind: 'workout', id: w.id })}>
+            <div className="grow">{w.name}<div className="faint" style={{ fontSize: 13 }}>{dateLabel(w.startedAt)}</div></div>
+            <span className="num muted">{fmtInt(workoutVolume(w))} kg</span>
+            <span className="chev"><Icon.chevron /></span>
+          </button>
+        ))}
+      </div>
+      <button className="btn btn-ghost btn-block" style={{ marginTop: 14 }} onClick={() => nav.push({ kind: 'history' })}>Gesamten Verlauf ansehen</button>
     </div>
   )
 }

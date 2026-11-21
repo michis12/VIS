@@ -31,17 +31,31 @@ function db() {
 
 export const DEFAULT_SETTINGS: Settings = { restSec: 180 }
 
-/** Loads everything; on first start imports the bundled history. */
+type Seed = Omit<Snapshot, 'phases' | 'settings'> & { version: number }
+
+/** Loads everything; on first start imports the bundled history, later seed versions are migrated in. */
 export async function loadAll(): Promise<Snapshot> {
   const d = await db()
-  if (!(await d.get('meta', 'seeded'))) {
-    const seed = (await import('./data/seed.json')).default as unknown as Omit<Snapshot, 'phases' | 'settings'>
+  const seeded = await d.get('meta', 'seeded')
+  const seedVersion: number = (await d.get('meta', 'seedVersion')) ?? (seeded ? 1 : 0)
+  const seed = (await import('./data/seed.json')).default as unknown as Seed
+  if (!seeded) {
     const tx = d.transaction(['exercises', 'workouts', 'templates', 'weights', 'meta'], 'readwrite')
     for (const e of seed.exercises) tx.objectStore('exercises').put(e)
     for (const w of seed.workouts) tx.objectStore('workouts').put(w)
     for (const t of seed.templates) tx.objectStore('templates').put(t)
     for (const w of seed.weights) tx.objectStore('weights').put(w)
     tx.objectStore('meta').put(true, 'seeded')
+    tx.objectStore('meta').put(seed.version, 'seedVersion')
+    await tx.done
+  } else if (seedVersion < 2 && seed.version >= 2) {
+    // v2: provisional templates replaced by the real split, new exercises added
+    const tx = d.transaction(['exercises', 'templates', 'meta'], 'readwrite')
+    const ex = tx.objectStore('exercises')
+    for (const e of seed.exercises) if (!(await ex.get(e.id))) ex.put(e)
+    for (const id of ['tpl-push', 'tpl-pull', 'tpl-core', 'tpl-abs-arms']) tx.objectStore('templates').delete(id)
+    for (const t of seed.templates) tx.objectStore('templates').put(t)
+    tx.objectStore('meta').put(seed.version, 'seedVersion')
     await tx.done
   }
   const [exercises, workouts, templates, weights, phases, settings] = await Promise.all([
@@ -53,6 +67,7 @@ export async function loadAll(): Promise<Snapshot> {
     d.get('meta', 'settings'),
   ])
   workouts.sort((a, b) => a.startedAt.localeCompare(b.startedAt))
+  templates.sort((a, b) => a.name.localeCompare(b.name, 'de', { numeric: true }))
   weights.sort((a, b) => a.date.localeCompare(b.date))
   phases.sort((a, b) => a.start.localeCompare(b.start))
   return { exercises, workouts, templates, weights, phases, settings: { ...DEFAULT_SETTINGS, ...settings } }
@@ -83,6 +98,7 @@ export async function replaceAll(s: Snapshot) {
   }
   tx.objectStore('meta').put(s.settings, 'settings')
   tx.objectStore('meta').put(true, 'seeded')
+  tx.objectStore('meta').put(2, 'seedVersion')
   await tx.done
 }
 
