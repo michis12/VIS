@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Icon, ProgressBadges, SetMark, Sheet, Wheel } from '../components/ui'
+import { Icon, ProgressBadges, SetMark, Sheet, Tap, Wheel } from '../components/ui'
 import { clock, fmtKg, haptic, isRealSet, localIso, uid, workoutVolume, fmtInt } from '../lib'
 import { rateWorkout } from '../progress'
 import { loadRestEnd, restFinished, storeRestEnd, unlockAudio } from '../rest'
@@ -205,7 +205,7 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
           </div>
         </div>
         <button className="icon-btn" onClick={() => setWoMenu(true)} aria-label="Menü"><Icon.more /></button>
-        <button className="btn btn-chrome btn-sm" onClick={() => setFinish(true)}>Beenden</button>
+        <Tap className="btn btn-chrome btn-sm" onClick={() => setFinish(true)}>Beenden</Tap>
       </div>
 
       {w.exercises.map((e, ei) => {
@@ -245,13 +245,13 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
                     {si + 1}
                     <SetMark flag={live.exercises[ei]?.flags[si]} />
                   </button>
-                  <button
+                  <Tap
                     className="prev"
                     disabled={!ps}
                     onClick={() => { if (!ps) return; haptic(); updateSet(ei, si, { weight: ps.weight, reps: ps.reps, suggested: false }) }}
                   >
                     {ps ? `${fmtKg(ps.weight ?? 0)} × ${ps.reps}` : '–'}
-                  </button>
+                  </Tap>
                   <button
                     className={'val' + (s.weight == null ? ' empty' : s.suggested ? ' suggested' : '')}
                     onClick={() => setEditing({ ex: ei, set: si, focus: 'weight' })}
@@ -264,13 +264,13 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
                   >
                     {s.reps != null ? s.reps : ps ? ps.reps : 'Wdh'}
                   </button>
-                  <button className={'check' + (s.done ? ' on' : '')} onClick={() => complete(ei, si)} aria-label="Satz bestätigen">
+                  <Tap className={'check' + (s.done ? ' on' : '')} onClick={() => complete(ei, si)} aria-label="Satz bestätigen">
                     <Icon.check />
-                  </button>
+                  </Tap>
                 </div>
               )
             })}
-            <button className="add-set" onClick={() => addSet(ei)}>+ Satz hinzufügen</button>
+            <Tap className="add-set" onClick={() => addSet(ei)}>+ Satz hinzufügen</Tap>
           </div>
         )
       })}
@@ -439,7 +439,7 @@ function SetEditor({ initial, fallback, title, onClose, onApply, onComplete }: {
       )}
       <div className="grid-2">
         <button className="btn btn-ghost" onClick={() => onApply(values())}>Übernehmen</button>
-        <button className="btn btn-chrome" onClick={() => onComplete(values())}><Icon.check /> Satz fertig</button>
+        <Tap className="btn btn-chrome" onClick={() => onComplete(values())}><Icon.check /> Satz fertig</Tap>
       </div>
     </Sheet>
   )

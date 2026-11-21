@@ -191,6 +191,14 @@ input.val:focus { border-color: rgba(255,255,255,.35); }
   background: var(--surface-2); border: 1px solid var(--line-strong); color: var(--text-3);
 }
 .check.on { background: var(--chrome); color: #000; border: 0; }
+/* Tap: element with an invisible native switch for iOS haptics */
+.tap { cursor: pointer; user-select: none; -webkit-user-select: none; position: relative; }
+.tap-disabled { opacity: .45; pointer-events: none; }
+label.prev { display: block; }
+label.add-set { display: grid; place-items: center; }
+/* stays a real native switch (no appearance:none), just invisible; taps land on the label */
+.haptic-sink { position: absolute; top: 0; left: 0; width: 1px; height: 1px; margin: 0; opacity: 0.0001; pointer-events: none; }
+
 /* progress / record markers */
 .pbadges { display: inline-flex; gap: 6px; align-items: center; flex-shrink: 0; }
 .pbadge {

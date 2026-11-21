@@ -121,6 +121,41 @@ export function Wheel({ values, value, onChange, format = String }: {
   )
 }
 
+/**
+ * A tappable element that carries an invisible native iOS switch. The user's own
+ * tap toggles the switch, and iOS (18+) plays its system haptic for that – this
+ * works even where programmatic "haptic tricks" are blocked. Renders as a <label>
+ * with button semantics; the click the label forwards to the switch is ignored so
+ * `onClick` fires exactly once per tap.
+ */
+export function Tap({ onClick, className, children, disabled, ...rest }: {
+  onClick: () => void
+  className?: string
+  children: ReactNode
+  disabled?: boolean
+  'aria-label'?: string
+  style?: React.CSSProperties
+}) {
+  return (
+    <label
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-disabled={disabled || undefined}
+      className={(className ?? '') + ' tap' + (disabled ? ' tap-disabled' : '')}
+      onClick={(e) => {
+        if ((e.target as HTMLElement).tagName === 'INPUT') return // forwarded click
+        if (disabled) { e.preventDefault(); return }
+        onClick()
+      }}
+      onKeyDown={(e) => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick() } }}
+      {...rest}
+    >
+      <input type="checkbox" {...{ switch: '' }} className="haptic-sink" tabIndex={-1} aria-hidden="true" disabled={disabled} />
+      {children}
+    </label>
+  )
+}
+
 /** Counters for records (trophy) and progress (arrow). Renders nothing when both are 0. */
 export function ProgressBadges({ ups, prs, big = false }: { ups: number; prs: number; big?: boolean }) {
   if (!ups && !prs) return null
