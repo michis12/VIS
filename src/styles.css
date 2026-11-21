@@ -42,10 +42,10 @@ input { font: inherit; color: inherit; }
 .boot-mark { font-size: 34px; font-weight: 800; letter-spacing: 0.32em; }
 
 /* ---------- layout ---------- */
-.app { height: 100%; display: flex; flex-direction: column; }
+.app { height: 100%; display: flex; flex-direction: column; --pad-top: calc(var(--safe-top) + 28px); }
 .screen {
   flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
-  padding: calc(var(--safe-top) + 18px) 16px calc(var(--tab-h) + var(--safe-bottom) + 28px);
+  padding: var(--pad-top) 16px calc(var(--tab-h) + var(--safe-bottom) + 28px);
   max-width: 640px; width: 100%; margin: 0 auto;
 }
 .screen.no-tabs { padding-bottom: calc(var(--safe-bottom) + 140px); }
@@ -59,7 +59,7 @@ input { font: inherit; color: inherit; }
 }
 /* sticky frosted filter row */
 .sticky-blur {
-  position: sticky; top: calc(-1 * (var(--safe-top) + 18px)); z-index: 8;
+  position: sticky; top: calc(-1 * var(--pad-top)); z-index: 8;
   margin: 0 -16px; padding: calc(var(--safe-top) + 10px) 16px 10px;
   background: rgba(0,0,0,.6); backdrop-filter: blur(22px) saturate(160%); -webkit-backdrop-filter: blur(22px) saturate(160%);
 }
@@ -161,7 +161,7 @@ input.val:focus { border-color: rgba(255,255,255,.35); }
 
 /* ---------- workout ---------- */
 .wo-head {
-  position: sticky; top: calc(-1 * (var(--safe-top) + 18px)); z-index: 10; margin: calc(-1 * (var(--safe-top) + 18px)) -16px 0;
+  position: sticky; top: calc(-1 * var(--pad-top)); z-index: 10; margin: calc(-1 * var(--pad-top)) -16px 0;
   padding: calc(var(--safe-top) + 12px) 16px 12px;
   background: rgba(0,0,0,.78); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
   border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 12px;
