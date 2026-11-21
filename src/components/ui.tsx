@@ -29,6 +29,9 @@ export const Icon = {
   body: () => (
     <svg viewBox="0 0 24 24" {...P}><path d="M12 3a8 8 0 1 0 0 18 8 8 0 0 0 0-18Z" /><path d="M12 7v5l3 2" /></svg>
   ),
+  share: () => (
+    <svg viewBox="0 0 24 24" width="20" height="20" {...P}><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5" /><path d="M8 11H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-2" /></svg>
+  ),
   trophy: () => (
     <svg viewBox="0 0 24 24" {...P}><path d="M8 4h8v6a4 4 0 0 1-8 0Z" /><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 14v4M8 20h8" /></svg>
   ),

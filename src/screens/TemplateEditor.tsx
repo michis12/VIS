@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Icon } from '../components/ui'
+import { shareOrDownload, templatesFile } from '../files'
 import { uid } from '../lib'
 import { useStore } from '../store'
 import type { Template } from '../types'
@@ -60,8 +61,14 @@ export function TemplateEditor({ template, onClose }: { template: Template | nul
       })}
       <button className="btn btn-ghost btn-block" style={{ marginTop: 12 }} onClick={() => setPicker(true)}><Icon.plus /> Übung hinzufügen</button>
 
+      {canSave && (
+        <button className="btn btn-ghost btn-block" style={{ marginTop: 28 }}
+          onClick={() => shareOrDownload(templatesFile([{ ...t, name: t.name.trim() }], store.exerciseById), t.name)}>
+          Template exportieren / teilen
+        </button>
+      )}
       {!isNew && (
-        <button className="btn btn-danger btn-block" style={{ marginTop: 28 }}
+        <button className="btn btn-danger btn-block" style={{ marginTop: 12 }}
           onClick={() => (confirmDelete ? (store.deleteTemplate(t.id), onClose()) : setConfirmDelete(true))}>
           {confirmDelete ? 'Wirklich löschen?' : 'Template löschen'}
         </button>

@@ -60,10 +60,10 @@ function Shell() {
       <div className="app">
         <div className="top-blur" />
         <div className="app" style={content ? { visibility: 'hidden' } : undefined} aria-hidden={!!content}>
-          {tab === 'train' && <Home onOpenWorkout={() => setShowWorkout(true)} />}
+          {tab === 'train' && <Home onOpenWorkout={() => setShowWorkout(true)} toast={setToast} />}
           {tab === 'stats' && <Stats />}
           {tab === 'body' && <Body />}
-          {tab === 'profile' && <Profile />}
+          {tab === 'profile' && <Profile toast={setToast} />}
           {tab === 'settings' && <Settings toast={setToast} />}
           <nav className="tabbar">
             {TABS.map((t) => (

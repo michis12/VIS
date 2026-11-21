@@ -53,4 +53,7 @@ export interface Phase {
 
 export interface Settings {
   restSec: number
+  name?: string
+  /** square JPEG data URL, 256 px */
+  avatar?: string
 }

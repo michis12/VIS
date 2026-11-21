@@ -324,6 +324,18 @@ label.lbl { display: block; font-size: 12px; font-weight: 600; letter-spacing: .
 .medal { flex-shrink: 0; filter: drop-shadow(0 6px 14px rgba(0,0,0,.6)); }
 .medal.ultimate:not(.locked) { filter: drop-shadow(0 0 18px rgba(255,255,255,.35)); }
 
+.avatar {
+  border-radius: 50%; overflow: hidden; display: grid; place-items: center; flex-shrink: 0; font-weight: 800;
+  background: var(--chrome-soft); border: 1px solid var(--line-strong);
+  box-shadow: 0 0 0 3px #000, 0 0 0 4px rgba(255,255,255,.35), 0 10px 30px rgba(0,0,0,.6);
+}
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.profile-head { display: flex; align-items: center; gap: 16px; margin: 6px 0 20px; }
+.profile-head .who { flex: 1; min-width: 0; }
+.profile-head .nm { font-size: 26px; font-weight: 750; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.share-preview { width: 100%; border-radius: 18px; margin-top: 12px; border: 1px solid var(--line-strong); display: block; }
+
 .sync-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-3); flex-shrink: 0; }
 .sync-dot[data-on='1'] { background: var(--good); box-shadow: 0 0 10px rgba(143,209,158,.6); }
 .btn:disabled { opacity: .45; }

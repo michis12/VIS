@@ -1,6 +1,9 @@
-import { useId, useMemo, useState } from 'react'
+import { useId, useMemo, useRef, useState } from 'react'
 import { ACHIEVEMENTS, computeMetrics, evaluate, fmtMetric, nextRank, rankFor, ULTIMATE, type AchievementState, type Glyph } from '../achievements'
-import { Sheet } from '../components/ui'
+import { Avatar, ProfileEditor } from '../components/Avatar'
+import { Icon, Sheet } from '../components/ui'
+import { shareOrDownload } from '../files'
+import { renderShareCard } from '../shareCard'
 import { dateLabel, fmtInt } from '../lib'
 import { useStore } from '../store'
 
@@ -41,7 +44,7 @@ export function Medal({ glyph, stars, size = 64, ultimate = false }: { glyph: Gl
   const locked = stars === 0
   const hex = 'M32 3 57 17.5v29L32 61 7 46.5v-29Z'
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" className={'medal' + (locked ? ' locked' : '') + (ultimate ? ' ultimate' : '')}>
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 64 64" className={'medal' + (locked ? ' locked' : '') + (ultimate ? ' ultimate' : '')}>
       <defs>
         <linearGradient id={`g${id}`} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0" stopColor={t.a} />
@@ -77,11 +80,57 @@ export function useAchievements() {
   return useMemo(() => evaluate(computeMetrics(workouts, weights, exercises)), [workouts, weights, exercises])
 }
 
-export function Profile() {
-  const { workouts } = useStore()
+const MONTH_LETTER = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
+const MONTH_SHORT = ['Jän', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
+
+export function Profile({ toast }: { toast: (t: string) => void }) {
+  const { workouts, weights, exercises, settings } = useStore()
   const list = useAchievements()
   const [open, setOpen] = useState<AchievementState | null>(null)
   const [ultOpen, setUltOpen] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [preview, setPreview] = useState<{ url: string; file: File } | null>(null)
+  const [busy, setBusy] = useState(false)
+  const gridRef = useRef<HTMLDivElement>(null)
+  const metrics = useMemo(() => computeMetrics(workouts, weights, exercises), [workouts, weights, exercises])
+
+  const buildShare = async () => {
+    setBusy(true)
+    try {
+      const medals = [...(gridRef.current?.querySelectorAll('svg.medal') ?? [])].slice(0, 3).map((s) => s.outerHTML)
+      const now = new Date()
+      const months = Array.from({ length: 12 }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1)
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+        return { label: MONTH_LETTER[d.getMonth()], value: workouts.filter((w) => w.status === 'done' && w.startedAt.startsWith(key)).length }
+      })
+      const sinceDate = first ? new Date(first.startedAt) : null
+      const blob = await renderShareCard({
+        name: settings.name || 'Athlet',
+        avatar: settings.avatar,
+        rank: rank.name,
+        stars: total,
+        maxStars: max,
+        since: sinceDate ? `${MONTH_SHORT[sinceDate.getMonth()]} ${sinceDate.getFullYear()}` : undefined,
+        kpis: [
+          { label: 'Workouts', value: fmtInt(metrics.workouts) },
+          { label: 'Volumen', value: fmtInt(metrics.volumeT), unit: 't' },
+          { label: 'Sätze', value: fmtInt(metrics.sets) },
+          { label: 'Trainingszeit', value: fmtInt(metrics.hours), unit: 'h' },
+          { label: 'Beste Serie', value: String(metrics.streak), unit: 'Wo.' },
+          { label: 'Rekorde', value: fmtInt(metrics.prs) },
+        ],
+        top: sorted.slice(0, 3).map((a, i) => ({ name: a.def.name, stars: a.stars, svg: medals[i] ?? '' })),
+        months,
+      })
+      const file = new File([blob], `VIS-Profil-${new Date().toISOString().slice(0, 10)}.png`, { type: 'image/png' })
+      setPreview({ url: URL.createObjectURL(blob), file })
+    } catch (e) {
+      toast('Bild konnte nicht erstellt werden: ' + (e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const total = list.reduce((n, a) => n + a.stars, 0)
   const max = ACHIEVEMENTS.length * 5
@@ -94,8 +143,17 @@ export function Profile() {
 
   return (
     <div className="screen">
-      <div className="eyebrow">Profil</div>
-      <h1 className="title">Ehrenhalle</h1>
+      <div className="eyebrow">Profil · Ehrenhalle</div>
+      <div className="profile-head">
+        <Avatar size={76} onClick={() => setEditing(true)} />
+        <div className="who">
+          <div className="nm">{settings.name || 'Dein Name'}</div>
+          <button className="link muted" style={{ fontSize: 14 }} onClick={() => setEditing(true)}>Profil bearbeiten</button>
+        </div>
+        <button className="icon-btn" onClick={buildShare} disabled={busy} aria-label="Profil teilen" style={{ width: 44, height: 44 }}>
+          <Icon.share />
+        </button>
+      </div>
 
       <div className="card chrome-edge rank-card">
         <div className="rank-glow" />
@@ -119,7 +177,7 @@ export function Profile() {
       </button>
 
       <div className="section-title"><h2>Achievements</h2><span className="faint" style={{ fontSize: 13 }}>{list.filter((a) => a.stars > 0).length} freigeschaltet</span></div>
-      <div className="ach-grid">
+      <div className="ach-grid" ref={gridRef}>
         {sorted.map((a) => (
           <button key={a.def.id} className={'ach' + (a.stars === 0 ? ' locked' : '')} onClick={() => setOpen(a)}>
             <Medal glyph={a.def.glyph} stars={a.stars} />
@@ -164,6 +222,23 @@ export function Profile() {
               </div>
             ))}
           </div>
+        </Sheet>
+      )}
+
+      <button className="btn btn-chrome btn-block" style={{ marginTop: 22 }} onClick={buildShare} disabled={busy}>
+        <Icon.share /> {busy ? 'Erstelle Bild…' : 'Profil-Dashboard teilen'}
+      </button>
+
+      {editing && <ProfileEditor onClose={() => setEditing(false)} />}
+
+      {preview && (
+        <Sheet onClose={() => { URL.revokeObjectURL(preview.url); setPreview(null) }}>
+          <h3>Dein Dashboard</h3>
+          <img src={preview.url} alt="Profil-Dashboard" className="share-preview" />
+          <button className="btn btn-chrome btn-block" style={{ marginTop: 14 }} onClick={async () => {
+            const r = await shareOrDownload(preview.file, 'Mein VIS-Profil')
+            if (r === 'downloaded') toast('Bild gespeichert')
+          }}><Icon.share /> Teilen</button>
         </Sheet>
       )}
 

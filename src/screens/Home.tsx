@@ -1,17 +1,34 @@
 import { useState } from 'react'
 import { Icon, Sheet } from '../components/ui'
 import { dateLabel, fmtInt, fmtKg, localIso, uid } from '../lib'
+import { parseTemplatesFile, pickFile, shareOrDownload, templatesFile } from '../files'
 import { useNav } from '../nav'
 import { useStore } from '../store'
 import type { Template } from '../types'
 import { HistoryRow } from './History'
 import { newWorkoutFromTemplate } from './Workout'
 
-export function Home({ onOpenWorkout }: { onOpenWorkout: () => void }) {
+export function Home({ onOpenWorkout, toast }: { onOpenWorkout: () => void; toast: (t: string) => void }) {
   const store = useStore()
   const nav = useNav()
   const { templates, workouts, exerciseById, active, weights, phases } = store
   const [chosen, setChosen] = useState<Template | null>(null)
+  const [manage, setManage] = useState(false)
+
+  const importTemplates = async () => {
+    setManage(false)
+    const file = await pickFile('application/json,.json')
+    if (!file) return
+    try {
+      const { templates: imported, newExercises } = await parseTemplatesFile(file, store.exercises)
+      if (!imported.length) throw new Error('Keine Templates in der Datei')
+      for (const e of newExercises) store.saveExercise(e)
+      for (const t of imported) store.saveTemplate(t)
+      toast(`${imported.length} Template${imported.length > 1 ? 's' : ''} importiert`)
+    } catch (e) {
+      toast((e as Error).message)
+    }
+  }
 
   const start = (t: Template | null) => {
     store.saveWorkout(newWorkoutFromTemplate(t))
@@ -63,7 +80,7 @@ export function Home({ onOpenWorkout }: { onOpenWorkout: () => void }) {
 
       <div className="section-title">
         <h2>Training starten</h2>
-        <button className="link" onClick={() => nav.push({ kind: 'template', template: null })}>+ Neues Template</button>
+        <button className="link" onClick={() => setManage(true)}>Verwalten</button>
       </div>
       {templates.map((t) => {
         const last = lastOf(t)
@@ -92,6 +109,21 @@ export function Home({ onOpenWorkout }: { onOpenWorkout: () => void }) {
       <div className="card" style={{ padding: '4px 14px' }}>
         {recent.map((w) => <HistoryRow key={w.id} w={w} onOpen={() => nav.push({ kind: 'workout', id: w.id })} />)}
       </div>
+
+      {manage && (
+        <Sheet onClose={() => setManage(false)}>
+          <h3>Templates</h3>
+          <div className="menu">
+            <button onClick={() => { setManage(false); nav.push({ kind: 'template', template: null }) }}><Icon.plus /> Neues Template</button>
+            <button onClick={importTemplates}>Template-Datei importieren</button>
+            <button disabled={!templates.length} onClick={async () => {
+              setManage(false)
+              const r = await shareOrDownload(templatesFile(templates, exerciseById), 'VIS Templates')
+              if (r === 'downloaded') toast('Templates gespeichert')
+            }}>Alle Templates exportieren</button>
+          </div>
+        </Sheet>
+      )}
 
       {chosen && (
         <Sheet onClose={() => setChosen(null)}>
