@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { BarChart, LineChart } from '../components/charts'
 import { MuscleMap } from '../components/MuscleMap'
+import { PhaseList } from '../components/PhaseScores'
 import { ScoreGauge } from '../components/ScoreGauge'
 import { pastWeekScores } from '../weekly'
 import { Icon, ProgressBadges } from '../components/ui'
@@ -274,6 +275,8 @@ export function Stats() {
           <span className="chev"><Icon.chevron /></span>
         </button>
       )}
+
+      <PhaseList />
 
       <div className="section-title"><h2>Trainingstage</h2><span className="faint" style={{ fontSize: 13 }}>52 Wochen</span></div>
       <div className="card">

@@ -32,6 +32,7 @@ function Shell() {
   const [showWorkout, setShowWorkout] = useState(!!active)
   const [stack, setStack] = useState<Overlay[]>([])
   const [toast, setToast] = useState<string | null>(null)
+  const [bodyFocus, setBodyFocus] = useState<'phase' | null>(null)
   const [celebrate, setCelebrate] = useState<string | null>(null)
   const clearToast = useCallback(() => setToast(null), [])
   const nav = useMemo(() => ({
@@ -74,14 +75,14 @@ function Shell() {
       <div className="app">
         {!content && <div className="top-blur" />}
         <div className="app" style={content ? { visibility: 'hidden' } : undefined} aria-hidden={!!content}>
-          {tab === 'train' && <Home onOpenWorkout={() => setShowWorkout(true)} onOpenStats={() => { haptic(); setTab('stats') }} toast={setToast} />}
+          {tab === 'train' && <Home onOpenWorkout={() => setShowWorkout(true)} onOpenStats={() => { haptic(); setTab('stats') }} onOpenBody={(f) => { haptic(); setBodyFocus(f ?? null); setTab('body') }} toast={setToast} />}
           {tab === 'stats' && <Stats />}
-          {tab === 'body' && <Body />}
+          {tab === 'body' && <Body focus={bodyFocus} />}
           {tab === 'profile' && <Profile toast={setToast} />}
           {tab === 'settings' && <Settings toast={setToast} />}
           <nav className="tabbar">
             {TABS.map((t) => (
-              <Tap key={t.id} className={'tab' + (tab === t.id ? ' on' : '')} onClick={() => { if (t.id !== tab) haptic(); setTab(t.id) }}>
+              <Tap key={t.id} className={'tab' + (tab === t.id ? ' on' : '')} onClick={() => { if (t.id !== tab) haptic(); setBodyFocus(null); setTab(t.id) }}>
                 <t.icon />
                 {t.label}
               </Tap>

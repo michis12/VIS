@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { LineChart, type Band } from '../components/charts'
 import { Icon, Sheet, Wheel } from '../components/ui'
 import { dateLabel, fmtInt, fmtKg, shortDate, today, uid } from '../lib'
 import { useNav } from '../nav'
+import { CurrentPhaseScore } from '../components/PhaseScores'
 import { useStore } from '../store'
 import type { Phase, PhaseType } from '../types'
 import { phaseName } from './Home'
@@ -11,7 +12,11 @@ const KG = Array.from({ length: 1201 }, (_, i) => Math.round((40 + i / 10) * 10)
 const RANGES = [{ id: 90, l: '3 Monate' }, { id: 182, l: '6 Monate' }, { id: 365, l: '1 Jahr' }, { id: 99999, l: 'Alles' }]
 const COLORS: Record<PhaseType, string> = { bulk: '#e3b26b', cut: '#7fb2e5', maintain: '#a1a1a6' }
 
-export function Body() {
+export function Body({ focus }: { focus?: 'phase' | null }) {
+  const phaseRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (focus === 'phase') phaseRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  }, [focus])
   const store = useStore()
   const nav = useNav()
   const { weights, phases } = store
@@ -84,7 +89,7 @@ export function Body() {
         )}
       </div>
 
-      <div className="section-title">
+      <div className="section-title" ref={phaseRef} style={{ scrollMarginTop: 'calc(var(--safe-top) + 24px)' }}>
         <h2>Phase</h2>
         <button className="link" onClick={() => setEditPhase({ id: uid(), type: current?.type === 'bulk' ? 'cut' : 'bulk', start: today(), calories: current?.calories ?? 2800 })}>Neue Phase</button>
       </div>
@@ -94,6 +99,7 @@ export function Body() {
             <span className={'phase-dot phase-' + current.type} style={{ width: 12, height: 12 }} />
             <span style={{ fontSize: 22, fontWeight: 700 }}>{phaseName(current.type)}</span>
             <span className="muted" style={{ marginLeft: 'auto' }}>seit {shortDate(current.start)}</span>
+            <CurrentPhaseScore id={current.id} />
           </div>
           <div className="grid-2" style={{ marginTop: 14 }}>
             <div><div className="faint" style={{ fontSize: 12 }}>Kalorienziel</div><div className="num" style={{ fontSize: 20, fontWeight: 650 }}>{fmtInt(current.calories)} kcal</div></div>

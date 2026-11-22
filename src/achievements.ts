@@ -10,6 +10,7 @@ export type Glyph =
   | 'barbell' | 'deadlift' | 'lion' | 'scale' | 'gorilla' | 'blade' | 'plate' | 'ring'
   | 'target' | 'stairs' | 'storm' | 'chevrons' | 'infinity' | 'diamond' | 'swords'
   | 'laurel' | 'torch' | 'gauge' | 'check' | 'figure' | 'link' | 'tape' | 'trend'
+  | 'phase' | 'bulk' | 'shred'
 
 export interface AchievementDef {
   id: string
@@ -89,6 +90,9 @@ export interface Metrics {
   fullBodyWeeks: number
   supersets: number
   measureCount: number
+  bestPhase: number
+  cleanBulks: number
+  cleanCuts: number
 }
 
 /** Extra inputs for the score/feature achievements. */
@@ -97,6 +101,8 @@ export interface MetricExtras {
   /** finished weeks, oldest first */
   weekScores?: { score: number }[]
   measurements?: number
+  /** scored bulk/cut/maintenance phases */
+  phaseScores?: { type: string; score: number; weeks: number }[]
 }
 
 const BENCH = new Set(['bench-press-barbell', 'bench-press-smith-machine', 'decline-barbell-bench-press', 'incline-bench-press-smith-machine'])
@@ -160,6 +166,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'makellos', score: true, name: 'Makellos', glyph: 'check', metric: 'flawless', unit: 'Workouts mit Score 90+', desc: 'Alles gegeben. Workouts mit einem Workout-Score von mindestens 90.', tiers: [1, 5, 15, 40, 80] },
   { id: 'ganzkoerper', score: true, name: 'Ganzkörper-Gott', glyph: 'figure', metric: 'fullBodyWeeks', unit: 'Wochen mit allen Muskelgruppen', desc: 'Die Heatmap leuchtet überall. Wochen, in denen Brust, Rücken, Schultern, Beine, Bizeps, Trizeps und Bauch trainiert wurden.', tiers: [3, 10, 25, 50, 100] },
   { id: 'duett', score: true, name: 'Duett', glyph: 'link', metric: 'supersets', unit: 'Supersätze', desc: 'Zwei Übungen, eine Pause. Gekoppelte Übungen (Supersätze) in abgeschlossenen Workouts.', tiers: [1, 10, 30, 75, 150] },
+  { id: 'phasenmeister', score: true, name: 'Phasen-Meister', glyph: 'phase', metric: 'bestPhase', unit: 'bester Phasen-Score', desc: 'Bulk, Cut oder Erhalt – richtig durchgezogen. Dein höchster Phasen-Score (ab 2 Wochen).', tiers: [50, 60, 70, 80, 90] },
+  { id: 'saubererbulk', score: true, name: 'Sauberer Bulk', glyph: 'bulk', metric: 'cleanBulks', unit: 'Bulks mit Score 70+', desc: 'Optimal zugenommen und dabei stärker geworden. Bulk-Phasen (ab 4 Wochen) mit Score 70+.', tiers: [1, 2, 3, 5, 8] },
+  { id: 'shredded', score: true, name: 'Shredded', glyph: 'shred', metric: 'cleanCuts', unit: 'Cuts mit Score 70+', desc: 'Fett runter, Kraft bleibt. Cut-Phasen (ab 4 Wochen) mit Score 70+.', tiers: [1, 2, 3, 5, 8] },
   { id: 'massband', score: true, name: 'Maßband', glyph: 'tape', metric: 'measureCount', unit: 'Messungen', desc: 'Zahlen lügen nicht. Einträge bei den Körpermaßen.', tiers: [1, 5, 12, 25, 52] },
 
   { id: 'ausreden', fun: true, name: 'Ausreden-Meister', glyph: 'couch', metric: 'excuses', unit: 'ausgelassene Übungen', desc: '„Heute nicht.“ – Übungen, die du per „Heute nicht trainieren“ geschwänzt hast.', tiers: [1, 5, 15, 30, 60] },
@@ -209,6 +218,7 @@ export function computeMetrics(
     perfectWorkouts: 0, doubleHits: 0,
     bestWeekScore: 0, goodWeekStreak: 0, eliteWeeks: 0, upWeeks: 0, flawless: 0, fullBodyWeeks: 0,
     supersets: 0, measureCount: extras.measurements ?? 0,
+    bestPhase: 0, cleanBulks: 0, cleanCuts: 0,
     // whole workouts marked as skipped (older feature) count as one excuse each
     excuses: workouts.filter((w) => w.status === 'skipped').length,
   }
@@ -309,6 +319,13 @@ export function computeMetrics(
     if (i > 0 && s > ws[i - 1].score) m.upWeeks++
   }
   for (const s of extras.workoutScores?.values() ?? []) if (s >= 90) m.flawless++
+  for (const p of extras.phaseScores ?? []) {
+    if (p.weeks >= 2) m.bestPhase = Math.max(m.bestPhase, p.score)
+    if (p.weeks >= 4 && p.score >= 70) {
+      if (p.type === 'bulk') m.cleanBulks++
+      if (p.type === 'cut') m.cleanCuts++
+    }
+  }
   const MAIN = ['Brust', 'Rücken', 'Schultern', 'Beine', 'Bizeps', 'Trizeps', 'Bauch']
   const groupsByWeek = new Map<string, Set<string>>()
   for (const w of done) {

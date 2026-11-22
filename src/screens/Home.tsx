@@ -11,7 +11,12 @@ import type { Template } from '../types'
 import { HistoryRow } from './History'
 import { newWorkoutFromTemplate } from './Workout'
 
-export function Home({ onOpenWorkout, onOpenStats, toast }: { onOpenWorkout: () => void; onOpenStats: () => void; toast: (t: string) => void }) {
+export function Home({ onOpenWorkout, onOpenStats, onOpenBody, toast }: {
+  onOpenWorkout: () => void
+  onOpenStats: () => void
+  onOpenBody: (focus?: 'phase') => void
+  toast: (t: string) => void
+}) {
   const store = useStore()
   const nav = useNav()
   const { templates, workouts, exerciseById, active, weights, phases } = store
@@ -61,17 +66,19 @@ export function Home({ onOpenWorkout, onOpenStats, toast }: { onOpenWorkout: () 
       )}
 
       <div className="grid-2">
-        <div className="card kpi">
+        <button className="card kpi kpi-link" onClick={() => onOpenBody()}>
           <div className="label">Gewicht</div>
           <div className="value">{lastWeight ? fmtKg(lastWeight.kg) : '–'}<small>kg</small></div>
-        </div>
-        <div className="card kpi">
+          <span className="kpi-chev"><Icon.chevron /></span>
+        </button>
+        <button className="card kpi kpi-link" onClick={() => onOpenBody('phase')}>
+          <span className="kpi-chev"><Icon.chevron /></span>
           <div className="label">Phase</div>
           <div className="value" style={{ fontSize: 22, marginTop: 10 }}>
             {phase ? <><span className={'phase-dot phase-' + phase.type} /> {phaseName(phase.type)}</> : <span className="faint">Nicht gesetzt</span>}
           </div>
           {phase && <div className="sub">{fmtInt(phase.calories)} kcal/Tag</div>}
-        </div>
+        </button>
       </div>
 
       <button className="card score-mini" style={{ width: '100%', textAlign: 'left' }} onClick={onOpenStats}>
