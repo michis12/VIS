@@ -4,10 +4,19 @@ import { clock, fmtKg, haptic, isRealSet, localIso, uid, workoutVolume, fmtInt }
 import { rateWorkout } from '../progress'
 import { cancelRestPush, moveRestPush, scheduleRestPush } from '../push'
 import { loadRestEnd, restFinished, storeRestEnd, unlockAudio } from '../rest'
+import { useNav } from '../nav'
 import { useStore } from '../store'
 import type { SetEntry, Template, Workout } from '../types'
 
-const KG = Array.from({ length: 601 }, (_, i) => i / 2)
+const KG_BAR = Array.from({ length: 121 }, (_, i) => i * 2.5) // 0–300 kg in 2,5er Schritten
+const KG_DB = Array.from({ length: 41 }, (_, i) => i * 2) // Kurzhanteln: 0–80 kg in 2er Schritten
+export const isDumbbell = (name = '') => /dumb+ell|kurzhantel/i.test(name)
+/** Wheel values for an exercise; a current value off the grid (e.g. 21 kg) is kept as its own stop. */
+function kgSteps(dumbbell: boolean, ...keep: (number | null | undefined)[]) {
+  const base = dumbbell ? KG_DB : KG_BAR
+  const extra = keep.filter((v): v is number => v != null && v >= 0 && !base.includes(v))
+  return extra.length ? [...base, ...extra].sort((a, b) => a - b) : base
+}
 const REPS = Array.from({ length: 51 }, (_, i) => i)
 
 export function newWorkoutFromTemplate(t: Template | null): Workout {
@@ -79,6 +88,7 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
   onFinished: (id: string) => void
 }) {
   const store = useStore()
+  const nav = useNav()
   const { exerciseById, workouts, settings } = store
   const now = useNow()
   const [editing, setEditing] = useState<Editing | null>(null)
@@ -292,10 +302,10 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
         return (
           <div className={'card ex-card' + ssClass(ei)} key={ei}>
             <div className="ex-title">
-              <div>
-                <div className="name">{ex?.name ?? e.exerciseId}</div>
+              <button className="ex-link" onClick={() => nav.push({ kind: 'exercise', id: e.exerciseId })}>
+                <div className="name">{ex?.name ?? e.exerciseId} <span className="faint" style={{ fontSize: 13, fontWeight: 500 }}>›</span></div>
                 <div className="muscle">{ex?.muscle}{supersetOf(w.exercises, ei).length > 1 && <span className="ss-label"> · Supersatz</span>}</div>
-              </div>
+              </button>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <ProgressBadges ups={live.exercises[ei]?.ups ?? 0} prs={live.exercises[ei]?.prs ?? 0} />
                 <button className="icon-btn" style={{ width: 34, height: 34 }} onClick={() => setExMenu(ei)} aria-label="Übungsmenü"><Icon.more /></button>
@@ -368,6 +378,7 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
           initial={w.exercises[ed.ex].sets[ed.set]}
           fallback={prev.get(w.exercises[ed.ex].exerciseId)?.[ed.set]}
           title={`${exerciseById.get(w.exercises[ed.ex].exerciseId)?.name ?? ''} · Satz ${ed.set + 1}`}
+          dumbbell={isDumbbell(exerciseById.get(w.exercises[ed.ex].exerciseId)?.name)}
           onClose={() => setEditing(null)}
           onApply={(v) => { updateSet(ed.ex, ed.set, { ...v, suggested: false }); setEditing(null) }}
           onComplete={(v) => { complete(ed.ex, ed.set, v); setEditing(null) }}
@@ -467,10 +478,11 @@ function RestDock({ left, total, done, onAdd, onSkip }: {
   )
 }
 
-function SetEditor({ initial, fallback, title, onClose, onApply, onComplete }: {
+function SetEditor({ initial, fallback, title, dumbbell, onClose, onApply, onComplete }: {
   initial: SetEntry
   fallback?: SetEntry
   title: string
+  dumbbell: boolean
   onClose: () => void
   onApply: (v: { weight: number; reps: number }) => void
   onComplete: (v: { weight: number; reps: number }) => void
@@ -478,7 +490,8 @@ function SetEditor({ initial, fallback, title, onClose, onApply, onComplete }: {
   const [mode, setMode] = useState<'wheel' | 'keys'>(() => {
     try { return (localStorage.getItem('vis.inputMode') as 'wheel' | 'keys') || 'wheel' } catch { return 'wheel' }
   })
-  const [weight, setWeight] = useState(initial.weight ?? fallback?.weight ?? 20)
+  const [weight, setWeight] = useState(initial.weight ?? fallback?.weight ?? (dumbbell ? 10 : 20))
+  const [kgValues] = useState(() => kgSteps(dumbbell, initial.weight, fallback?.weight))
   const [reps, setReps] = useState(initial.reps ?? fallback?.reps ?? 8)
   const [wText, setWText] = useState(fmtKg(weight))
   const [rText, setRText] = useState(String(reps))
@@ -504,7 +517,7 @@ function SetEditor({ initial, fallback, title, onClose, onApply, onComplete }: {
       </div>
       {mode === 'wheel' ? (
         <div className="wheels">
-          <div className="wheel-col"><div className="cap">kg</div><Wheel values={KG} value={weight} onChange={setWeight} format={fmtKg} /></div>
+          <div className="wheel-col"><div className="cap">kg</div><Wheel values={kgValues} value={weight} onChange={setWeight} format={fmtKg} /></div>
           <div className="wheel-col"><div className="cap">Wdh</div><Wheel values={REPS} value={reps} onChange={setReps} /></div>
         </div>
       ) : (

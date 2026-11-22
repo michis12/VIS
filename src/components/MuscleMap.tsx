@@ -73,6 +73,47 @@ const BACK: Region[] = [
 const PERIODS = [{ days: 7, label: '7 Tage', full: 12 }, { days: 30, label: '30 Tage', full: 45 }]
 const MIRROR = 'translate(120 0) scale(-1 1)'
 
+/** Front + back figure; `fill` colors each muscle group, tapping selects a group. */
+export function MuscleFigures({ fill, sel = null, onSel }: { fill: (group: string) => string; sel?: string | null; onSel?: (g: string | null) => void }) {
+  const half = (regions: Region[]) =>
+    regions.map((r, i) => (
+      <path
+        key={i}
+        d={r.d}
+        fill={fill(r.group)}
+        stroke={sel === r.group ? '#fff' : '#050505'}
+        strokeWidth={sel === r.group ? 0.9 : 0.7}
+        strokeLinejoin="round"
+        className={onSel ? 'mm-region' : undefined}
+        onClick={onSel ? () => onSel(sel === r.group ? null : r.group) : undefined}
+      />
+    ))
+
+  const figure = (regions: Region[], title: string) => (
+    <div className="mm-fig">
+      <svg viewBox="12 0 96 234" role="img" aria-label={`Muskeln ${title}`} shapeRendering="geometricPrecision">
+        <g>
+          {/* outline first, then the fills on top – hides the seam where the halves meet */}
+          <path d={SILHOUETTE} fill="none" stroke="#2e2e31" strokeWidth="1.4" />
+          <path d={SILHOUETTE} fill="none" stroke="#2e2e31" strokeWidth="1.4" transform={MIRROR} />
+          <path d={SILHOUETTE} fill="#151517" />
+          <path d={SILHOUETTE} fill="#151517" transform={MIRROR} />
+          {half(regions)}
+          <g transform={MIRROR}>{half(regions)}</g>
+        </g>
+      </svg>
+      <div className="faint mm-cap">{title}</div>
+    </div>
+  )
+
+  return (
+    <div className="mm-figs">
+      {figure(FRONT, 'Vorne')}
+      {figure(BACK, 'Hinten')}
+    </div>
+  )
+}
+
 export function MuscleMap() {
   const { workouts, exerciseById } = useStore()
   const [p, setP] = useState(0)
@@ -97,37 +138,6 @@ export function MuscleMap() {
     return v > 0 ? `rgba(238,238,242,${(0.18 + 0.78 * v).toFixed(2)})` : 'rgba(255,255,255,0.06)'
   }
 
-  const half = (regions: Region[]) =>
-    regions.map((r, i) => (
-      <path
-        key={i}
-        d={r.d}
-        fill={fill(r.group)}
-        stroke={sel === r.group ? '#fff' : '#050505'}
-        strokeWidth={sel === r.group ? 0.9 : 0.7}
-        strokeLinejoin="round"
-        className="mm-region"
-        onClick={() => setSel(sel === r.group ? null : r.group)}
-      />
-    ))
-
-  const figure = (regions: Region[], title: string) => (
-    <div className="mm-fig">
-      <svg viewBox="12 0 96 234" role="img" aria-label={`Muskeln ${title}`} shapeRendering="geometricPrecision">
-        <g>
-          {/* outline first, then the fills on top – hides the seam where the halves meet */}
-          <path d={SILHOUETTE} fill="none" stroke="#2e2e31" strokeWidth="1.4" />
-          <path d={SILHOUETTE} fill="none" stroke="#2e2e31" strokeWidth="1.4" transform={MIRROR} />
-          <path d={SILHOUETTE} fill="#151517" />
-          <path d={SILHOUETTE} fill="#151517" transform={MIRROR} />
-          {half(regions)}
-          <g transform={MIRROR}>{half(regions)}</g>
-        </g>
-      </svg>
-      <div className="faint mm-cap">{title}</div>
-    </div>
-  )
-
   const ranked = [...sets.entries()].sort((a, b) => b[1] - a[1])
   const neglected = ['Brust', 'Rücken', 'Schultern', 'Beine', 'Bizeps', 'Trizeps', 'Bauch'].filter((g) => !sets.get(g))
 
@@ -136,10 +146,7 @@ export function MuscleMap() {
       <div className="chips" style={{ margin: 0, padding: 0 }}>
         {PERIODS.map((x, i) => <button key={x.days} className={'chip' + (i === p ? ' on' : '')} onClick={() => setP(i)}>{x.label}</button>)}
       </div>
-      <div className="mm-figs">
-        {figure(FRONT, 'Vorne')}
-        {figure(BACK, 'Hinten')}
-      </div>
+      <MuscleFigures fill={fill} sel={sel} onSel={setSel} />
       <div className="mm-info">
         {sel ? (
           <span><b>{sel}</b> · {sets.get(sel) ?? 0} Sätze</span>

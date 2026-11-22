@@ -3,7 +3,7 @@ import { BarChart, LineChart } from '../components/charts'
 import { MuscleMap } from '../components/MuscleMap'
 import { ScoreGauge } from '../components/ScoreGauge'
 import { pastWeekScores } from '../weekly'
-import { Icon } from '../components/ui'
+import { Icon, ProgressBadges } from '../components/ui'
 import { WeeklyReport } from '../components/WeeklyReport'
 import { useNav } from '../nav'
 import { dateLabel, durationLabel, e1rm, fmtInt, fmtKg, isRealSet, shortDate, weekKey, workoutSetCount, workoutVolume } from '../lib'
@@ -164,6 +164,36 @@ export function Stats() {
     return { series: recent, volSeries: cut(volSeries), best, heaviest, mostReps, sets, change, repPR: [...repPR.entries()].sort((a, b) => a[0] - b[0]), sessions: series.length }
   }, [ex, done, since])
 
+  // records & progress in the selected range
+  const [pmode, setPmode] = useState<'both' | 'pr' | 'up'>('both')
+  const prog = useMemo(() => {
+    let prs = 0, ups = 0
+    let best: { w: (typeof inRange)[number]; n: number } | null = null
+    const perEx = new Map<string, { prs: number; ups: number }>()
+    const perWeek = new Map<string, { prs: number; ups: number }>()
+    for (const w of inRange) {
+      const r = progress.byId.get(w.id)
+      if (!r) continue
+      prs += r.prs
+      ups += r.ups
+      const n = r.prs * 2 + r.ups
+      if (n > 0 && (!best || n > best.n)) best = { w, n }
+      const wk = weekKey(w.startedAt)
+      const pw = perWeek.get(wk) ?? { prs: 0, ups: 0 }
+      pw.prs += r.prs; pw.ups += r.ups
+      perWeek.set(wk, pw)
+      w.exercises.forEach((e, i) => {
+        const x = r.exercises[i]
+        if (!x || (!x.prs && !x.ups)) return
+        const pe = perEx.get(e.exerciseId) ?? { prs: 0, ups: 0 }
+        pe.prs += x.prs; pe.ups += x.ups
+        perEx.set(e.exerciseId, pe)
+      })
+    }
+    const top = [...perEx.entries()].sort((a, b) => b[1].prs * 2 + b[1].ups - (a[1].prs * 2 + a[1].ups)).slice(0, 5)
+    return { prs, ups, best, top, perWeek, per: inRange.length ? (prs + ups) / inRange.length : 0 }
+  }, [inRange, progress])
+
   const maxMuscle = Math.max(1, ...muscles.map((m) => m[1]))
   const maxSplit = Math.max(1, ...splits.map((m) => m[1]))
 
@@ -201,6 +231,49 @@ export function Stats() {
         <Kpi label="Volumen" value={fmtInt(k.vol / 1000)} unit="t" sub={`${fmtInt(k.sets)} Sätze`} />
         <Kpi label="Ø Dauer" value={k.avgDur ? String(Math.round(k.avgDur / 60)) : '–'} unit="min" sub={k.skipped ? `${k.skipped}× ausgelassen` : 'pro Workout'} />
       </div>
+
+      <div className="section-title"><h2>Fortschritt & Rekorde</h2></div>
+      <div className="grid-3">
+        <Kpi label="Rekorde" value={fmtInt(prog.prs)} small />
+        <Kpi label="Fortschritte" value={fmtInt(prog.ups)} small />
+        <Kpi label="Pro Workout" value={prog.per.toFixed(1).replace('.', ',')} sub="Rek. + Fort." small />
+      </div>
+      <div className="card" style={{ marginTop: 12 }}>
+        <div className="segmented" style={{ marginBottom: 10 }}>
+          <button className={pmode === 'both' ? 'on' : ''} onClick={() => setPmode('both')}>Beides</button>
+          <button className={pmode === 'pr' ? 'on' : ''} onClick={() => setPmode('pr')}>Rekorde</button>
+          <button className={pmode === 'up' ? 'on' : ''} onClick={() => setPmode('up')}>Fortschritte</button>
+        </div>
+        <BarChart
+          bars={weekly.map((w) => {
+            const p = prog.perWeek.get(w.key) ?? { prs: 0, ups: 0 }
+            return { label: w.label, value: pmode === 'pr' ? p.prs : pmode === 'up' ? p.ups : p.prs + p.ups, tip: `Woche ab ${w.label}` }
+          })}
+          unit={pmode === 'pr' ? 'Rekorde' : pmode === 'up' ? 'Fortschritte' : 'Rek. + Fort.'}
+        />
+      </div>
+      {prog.top.length > 0 && (
+        <div className="card" style={{ marginTop: 12, padding: '4px 14px' }}>
+          <div className="eyebrow" style={{ padding: '10px 0 2px' }}>Am meisten verbessert</div>
+          {prog.top.map(([id, p]) => (
+            <button key={id} className="list-row" style={{ width: '100%', textAlign: 'left' }} onClick={() => nav.push({ kind: 'exercise', id })}>
+              <div className="grow" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exerciseById.get(id)?.name ?? id}</div>
+              <ProgressBadges ups={p.ups} prs={p.prs} />
+              <span className="chev"><Icon.chevron /></span>
+            </button>
+          ))}
+        </div>
+      )}
+      {prog.best && (
+        <button className="card list-row" style={{ width: '100%', textAlign: 'left', marginTop: 12, padding: '12px 14px' }} onClick={() => nav.push({ kind: 'workout', id: prog.best!.w.id })}>
+          <div className="grow">
+            <div className="faint" style={{ fontSize: 12 }}>Stärkstes Workout</div>
+            <div style={{ fontWeight: 600 }}>{prog.best.w.name} <span className="faint" style={{ fontWeight: 400, fontSize: 13 }}>· {dateLabel(prog.best.w.startedAt)}</span></div>
+          </div>
+          <ProgressBadges ups={progress.byId.get(prog.best.w.id)?.ups ?? 0} prs={progress.byId.get(prog.best.w.id)?.prs ?? 0} />
+          <span className="chev"><Icon.chevron /></span>
+        </button>
+      )}
 
       <div className="section-title"><h2>Trainingstage</h2><span className="faint" style={{ fontSize: 13 }}>52 Wochen</span></div>
       <div className="card">
@@ -240,6 +313,9 @@ export function Stats() {
             </div>
             <LineChart points={exStats.series} yFmt={(v) => String(Math.round(v))} unit="kg e1RM" dots />
           </div>
+          <button className="btn btn-ghost btn-block" style={{ marginTop: 12 }} onClick={() => ex && nav.push({ kind: 'exercise', id: ex })}>
+            Komplette Übersicht & Verlauf <Icon.chevron />
+          </button>
           <div className="grid-3" style={{ marginTop: 12 }}>
             <Kpi label="Schwerster" value={fmtKg(exStats.heaviest.w)} unit="kg" sub={`× ${exStats.heaviest.r} Wdh`} small />
             <Kpi label="Meiste Wdh" value={String(exStats.mostReps.r)} sub={`bei ${fmtKg(exStats.mostReps.w)} kg`} small />

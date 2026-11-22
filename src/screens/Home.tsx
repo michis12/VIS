@@ -11,7 +11,7 @@ import type { Template } from '../types'
 import { HistoryRow } from './History'
 import { newWorkoutFromTemplate } from './Workout'
 
-export function Home({ onOpenWorkout, toast }: { onOpenWorkout: () => void; toast: (t: string) => void }) {
+export function Home({ onOpenWorkout, onOpenStats, toast }: { onOpenWorkout: () => void; onOpenStats: () => void; toast: (t: string) => void }) {
   const store = useStore()
   const nav = useNav()
   const { templates, workouts, exerciseById, active, weights, phases } = store
@@ -74,14 +74,15 @@ export function Home({ onOpenWorkout, toast }: { onOpenWorkout: () => void; toas
         </div>
       </div>
 
-      <div className="card score-mini">
+      <button className="card score-mini" style={{ width: '100%', textAlign: 'left' }} onClick={onOpenStats}>
         <ScoreGauge score={week.score} size={78} />
         <div style={{ flex: 1 }}>
           <div className="eyebrow">Wochenscore</div>
           <div style={{ fontSize: 18, fontWeight: 700 }}>{scoreLabel(week.score)}</div>
-          <div className="faint" style={{ fontSize: 12 }}>{week.workouts} / {WEEKLY_TARGET} Workouts · Details unter Statistik</div>
+          <div className="faint" style={{ fontSize: 12 }}>{week.workouts} / {WEEKLY_TARGET} Workouts · Zusammensetzung ansehen</div>
         </div>
-      </div>
+        <span className="chev"><Icon.chevron /></span>
+      </button>
 
       <div className="section-title">
         <h2>Training starten</h2>

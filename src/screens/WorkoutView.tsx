@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ScorePill } from '../components/ScoreGauge'
+import { WorkoutScoreButton } from '../components/WorkoutScoreSheet'
 import { Icon, ProgressBadges } from '../components/ui'
 import { dateLabel, durationLabel, fmtInt, fmtKg, isRealSet, workoutSetCount, workoutVolume } from '../lib'
 import { useNav } from '../nav'
@@ -161,7 +161,7 @@ export function WorkoutView({ id }: { id: string }) {
           <div className="name">{w.name}</div>
           <div className="wo-timer">{dateLabel(w.startedAt)} · {w.startedAt.slice(11, 16)} Uhr</div>
         </div>
-        {w.status === 'done' && store.workoutScores.has(w.id) && <ScorePill score={store.workoutScores.get(w.id)!} size={36} />}
+        {w.status === 'done' && <WorkoutScoreButton id={w.id} size={36} />}
         {w.status !== 'active' && <button className="btn btn-ghost btn-sm" onClick={startEdit}>Bearbeiten</button>}
       </div>
 
@@ -198,7 +198,9 @@ export function WorkoutView({ id }: { id: string }) {
         return (
           <div className="card" key={i} style={{ marginTop: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <div style={{ fontWeight: 680, fontSize: 16 }}>{store.exerciseById.get(e.exerciseId)?.name ?? e.exerciseId}</div>
+              <button className="ex-link" style={{ fontWeight: 680, fontSize: 16 }} onClick={() => nav.push({ kind: 'exercise', id: e.exerciseId })}>
+                {store.exerciseById.get(e.exerciseId)?.name ?? e.exerciseId} <span className="faint" style={{ fontSize: 13 }}>›</span>
+              </button>
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {exr && <ProgressBadges ups={exr.ups} prs={exr.prs} />}
                 {!skipped && <span className="faint num" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>max {fmtKg(best)} kg</span>}

@@ -4,6 +4,7 @@ import { Icon, Tap, Toast } from './components/ui'
 import { haptic } from './lib'
 import { NavCtx, type Overlay } from './nav'
 import { Body } from './screens/Body'
+import { ExerciseDetail } from './screens/ExerciseDetail'
 import { History } from './screens/History'
 import { Measures } from './screens/Measures'
 import { Home } from './screens/Home'
@@ -56,6 +57,7 @@ function Shell() {
   else if (top?.kind === 'history') content = <History />
   else if (top?.kind === 'template') content = <TemplateEditor template={top.template} onClose={nav.pop} />
   else if (top?.kind === 'measures') content = <Measures />
+  else if (top?.kind === 'exercise') content = <ExerciseDetail key={top.id} id={top.id} />
 
   else if (showWorkout && active) {
     content = (
@@ -72,7 +74,7 @@ function Shell() {
       <div className="app">
         {!content && <div className="top-blur" />}
         <div className="app" style={content ? { visibility: 'hidden' } : undefined} aria-hidden={!!content}>
-          {tab === 'train' && <Home onOpenWorkout={() => setShowWorkout(true)} toast={setToast} />}
+          {tab === 'train' && <Home onOpenWorkout={() => setShowWorkout(true)} onOpenStats={() => { haptic(); setTab('stats') }} toast={setToast} />}
           {tab === 'stats' && <Stats />}
           {tab === 'body' && <Body />}
           {tab === 'profile' && <Profile toast={setToast} />}

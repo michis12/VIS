@@ -6,6 +6,7 @@ export type Overlay =
   | { kind: 'history' }
   | { kind: 'template'; template: Template | null }
   | { kind: 'measures' }
+  | { kind: 'exercise'; id: string }
 
 export interface Nav {
   push: (o: Overlay) => void

@@ -10,8 +10,28 @@ import type { Workout } from './types'
  */
 const clamp = (v: number) => Math.max(0, Math.min(1, v))
 
+export interface WorkoutScoreDetail {
+  score: number
+  vol: number
+  baseVol: number
+  volPts: number
+  ups: number
+  prs: number
+  gain: number
+  baseGain: number
+  gainPts: number
+  trained: number
+  planned: number
+  fullPts: number
+}
+
 export function buildWorkoutScores(workouts: Workout[], progress: Map<string, WorkoutProgress>) {
-  const scores = new Map<string, number>()
+  const details = buildWorkoutScoreDetails(workouts, progress)
+  return new Map([...details].map(([id, d]) => [id, d.score]))
+}
+
+export function buildWorkoutScoreDetails(workouts: Workout[], progress: Map<string, WorkoutProgress>) {
+  const scores = new Map<string, WorkoutScoreDetail>()
   const volByName = new Map<string, number[]>()
   const recentVol: number[] = []
   const recentGain: number[] = []
@@ -33,7 +53,10 @@ export function buildWorkoutScores(workouts: Workout[], progress: Map<string, Wo
     const gainPts = baseGain ? clamp(gain / baseGain / 1.8) * 40 : gain > 0 ? 30 : 15
     const fullPts = planned ? clamp(trained / planned) * 20 : 0
 
-    scores.set(w.id, trained ? Math.min(99, Math.round(volPts + gainPts + fullPts)) : 0)
+    scores.set(w.id, {
+      score: trained ? Math.min(99, Math.round(volPts + gainPts + fullPts)) : 0,
+      vol, baseVol, volPts, ups: r?.ups ?? 0, prs: r?.prs ?? 0, gain, baseGain, gainPts, trained, planned, fullPts,
+    })
 
     same.push(vol)
     volByName.set(w.name, same)
