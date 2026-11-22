@@ -109,6 +109,18 @@ export function ExerciseDetail({ id }: { id: string }) {
 
   const recent = [...sessions].reverse()
 
+  // plateau: recent sessions in a row without progress or record
+  const plateau = useMemo(() => {
+    let n = 0
+    for (let i = sessions.length - 1; i >= 0; i--) {
+      if (sessions[i].flags.some((f) => f)) break
+      n++
+    }
+    const last = sessions[sessions.length - 1]
+    const fresh = last && Date.now() - new Date(last.date).getTime() < 45 * 864e5
+    return n >= 6 && fresh ? n : 0
+  }, [sessions])
+
   return (
     <div className="screen no-tabs">
       <div className="wo-head">
@@ -132,6 +144,12 @@ export function ExerciseDetail({ id }: { id: string }) {
               <div className="sub" style={{ color: stats.ups ? 'var(--good)' : undefined }}>{stats.ups} Fortschritte</div>
             </div>
           </div>
+
+          {plateau > 0 && (
+            <div className="hint">
+              <span>Seit <b>{plateau} Einheiten</b> kein Fortschritt – Wdh-Bereich wechseln oder 1 Woche leichter trainieren.</span>
+            </div>
+          )}
 
           <div className="section-title"><h2>Entwicklung</h2>
             {change != null && (

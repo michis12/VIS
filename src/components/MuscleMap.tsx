@@ -70,6 +70,7 @@ const BACK: Region[] = [
   { group: 'Waden', d: 'M38.6 171 C43 167 48.6 168.6 50.4 177 C50.6 187 48.8 195 45.8 200.6 C43.6 201 41.4 198.6 40.2 194.6 C38 186 37.6 178 38.6 171 Z' },
 ]
 
+const MAIN = ['Brust', 'Rücken', 'Schultern', 'Beine', 'Bizeps', 'Trizeps', 'Bauch']
 const PERIODS = [{ days: 7, label: '7 Tage', full: 12 }, { days: 30, label: '30 Tage', full: 45 }]
 const MIRROR = 'translate(120 0) scale(-1 1)'
 
@@ -139,7 +140,24 @@ export function MuscleMap() {
   }
 
   const ranked = [...sets.entries()].sort((a, b) => b[1] - a[1])
-  const neglected = ['Brust', 'Rücken', 'Schultern', 'Beine', 'Bizeps', 'Trizeps', 'Bauch'].filter((g) => !sets.get(g))
+
+  // main groups you normally train but haven't for a while (≥ 8 days)
+  const neglected = useMemo(() => {
+    const lastDay = new Map<string, number>()
+    for (const w of workouts) {
+      if (w.status !== 'done') continue
+      const t = new Date(w.startedAt).getTime()
+      for (const e of w.exercises) {
+        const g = exerciseById.get(e.exerciseId)?.muscle
+        if (g && e.sets.some(isRealSet)) lastDay.set(g, Math.max(lastDay.get(g) ?? 0, t))
+      }
+    }
+    return MAIN
+      .map((g) => ({ g, days: lastDay.has(g) ? Math.floor((Date.now() - lastDay.get(g)!) / 864e5) : null }))
+      .filter((x): x is { g: string; days: number } => x.days != null && x.days >= 8 && x.days <= 90)
+      .sort((a, b) => b.days - a.days)
+      .slice(0, 2)
+  }, [workouts, exerciseById])
 
   return (
     <div className="card mm">
@@ -151,11 +169,16 @@ export function MuscleMap() {
         {sel ? (
           <span><b>{sel}</b> · {sets.get(sel) ?? 0} Sätze</span>
         ) : ranked.length ? (
-          <span className="muted">Am meisten: <b>{ranked[0][0]}</b> ({ranked[0][1]} Sätze){neglected.length ? ` · Ohne Sätze: ${neglected.slice(0, 3).join(', ')}` : ''}</span>
+          <span className="muted">Am meisten: <b>{ranked[0][0]}</b> ({ranked[0][1]} Sätze)</span>
         ) : (
           <span className="faint">Keine Sätze in diesem Zeitraum</span>
         )}
       </div>
+      {neglected.length > 0 && (
+        <div className="hint" style={{ justifyContent: 'center' }}>
+          <span>{neglected.map((x, i) => <span key={x.g}>{i ? ' · ' : ''}<b>{x.g}</b> seit {x.days} Tagen</span>)} nicht trainiert</span>
+        </div>
+      )}
       <div className="mm-legend"><span>0</span><div className="mm-scale" /><span>{period.full}+ Sätze</span></div>
     </div>
   )

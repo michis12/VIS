@@ -506,3 +506,9 @@ label.lbl { display: block; font-size: 12px; font-weight: 600; letter-spacing: .
 .kpi-link:active { transform: scale(.98); }
 .kpi-chev { position: absolute; top: 14px; right: 12px; color: var(--text-3); display: flex; }
 .kpi-chev svg { width: 15px; height: 15px; }
+
+/* subtle one-line tip */
+.hint { display: flex; align-items: baseline; gap: 7px; font-size: 12.5px; line-height: 1.4; color: var(--text-2); margin-top: 10px; text-align: left; }
+.hint::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--text-3); flex-shrink: 0; transform: translateY(-1px); }
+.hint.good::before { background: var(--good); }
+.hint b { color: var(--text); font-weight: 600; }

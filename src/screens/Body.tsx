@@ -3,7 +3,7 @@ import { LineChart, type Band } from '../components/charts'
 import { Icon, Sheet, Wheel } from '../components/ui'
 import { dateLabel, fmtInt, fmtKg, shortDate, today, uid } from '../lib'
 import { useNav } from '../nav'
-import { CurrentPhaseScore } from '../components/PhaseScores'
+import { CurrentPhaseScore, usePhaseScores } from '../components/PhaseScores'
 import { useStore } from '../store'
 import type { Phase, PhaseType } from '../types'
 import { phaseName } from './Home'
@@ -42,6 +42,26 @@ export function Body({ focus }: { focus?: 'phase' | null }) {
   })), [phases])
 
   const current = phases[phases.length - 1]
+  const daysSinceWeigh = last ? Math.floor((Date.now() - new Date(last.date + 'T12:00:00').getTime()) / 864e5) : null
+
+  // calorie tip when the weight trend doesn't fit the phase (≥ 2 weeks of data)
+  const phaseScores = usePhaseScores()
+  const kcalTip = useMemo(() => {
+    const ps = phaseScores.find((p) => p.phase.id === current?.id)
+    if (!ps || !current || ps.weeks < 2 || ps.ratePct == null || !ps.startKg) return null
+    const r = ps.ratePct
+    const [lo, hi] = current.type === 'bulk' ? [0.2, 0.5] : current.type === 'cut' ? [-1.0, -0.5] : [-0.15, 0.15]
+    if (r >= lo && r <= hi) return null
+    const target = r < lo ? lo + 0.05 : hi - 0.05
+    // ~7700 kcal per kg body weight
+    const kcal = Math.round((((target - r) / 100) * ps.startKg * 7700) / 7 / 50) * 50
+    const k = Math.max(-500, Math.min(500, kcal))
+    if (Math.abs(k) < 100) return null
+    const what = current.type === 'bulk' ? (r < lo ? 'Bulk zu langsam' : 'Bulk zu schnell')
+      : current.type === 'cut' ? (r > hi ? 'Cut zu langsam' : 'Cut zu schnell')
+      : r > hi ? 'Gewicht steigt' : 'Gewicht sinkt'
+    return { what, k, next: current.calories + k }
+  }, [phaseScores, current])
   const phaseStartWeight = current ? weights.find((w) => w.date >= current.start)?.kg : undefined
 
   return (
@@ -71,6 +91,9 @@ export function Body({ focus }: { focus?: 'phase' | null }) {
             )
           })}
         </div>
+        {daysSinceWeigh != null && daysSinceWeigh >= 5 && (
+          <div className="hint"><span>Seit <b>{daysSinceWeigh} Tagen</b> nicht gewogen – regelmäßig wiegen hält den Phasen-Score genau.</span></div>
+        )}
       </div>
 
       <div className="sticky-blur" style={{ marginTop: 6 }}>
@@ -105,6 +128,9 @@ export function Body({ focus }: { focus?: 'phase' | null }) {
             <div><div className="faint" style={{ fontSize: 12 }}>Kalorienziel</div><div className="num" style={{ fontSize: 20, fontWeight: 650 }}>{fmtInt(current.calories)} kcal</div></div>
             <div><div className="faint" style={{ fontSize: 12 }}>Veränderung in Phase</div><div className="num" style={{ fontSize: 20, fontWeight: 650 }}>{phaseStartWeight != null && last ? `${last.kg - phaseStartWeight > 0 ? '+' : ''}${fmtKg(Math.round((last.kg - phaseStartWeight) * 10) / 10)} kg` : '–'}</div></div>
           </div>
+          {kcalTip && (
+            <div className="hint"><span>{kcalTip.what} → ca. <b>{kcalTip.k > 0 ? '+' : '−'}{Math.abs(kcalTip.k)} kcal/Tag</b> (auf {fmtInt(kcalTip.next)} kcal)</span></div>
+          )}
         </button>
       ) : (
         <div className="card muted">Noch keine Phase gesetzt. Leg fest, ob du gerade im Bulk, Cut oder Erhalt bist.</div>
