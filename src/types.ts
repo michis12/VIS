@@ -66,7 +66,31 @@ export interface Phase {
   id: string
   type: PhaseType
   start: string // YYYY-MM-DD
+  /** current calories (= last entry of calorieLog) */
   calories: number
+  /** calorie changes within the same phase, oldest first; first entry starts at `start` */
+  calorieLog?: { from: string; kcal: number }[]
+}
+
+/** Calorie steps of a phase (always at least one, starting at the phase start). */
+export function calorieSteps(p: Phase): { from: string; kcal: number }[] {
+  const log = (p.calorieLog ?? []).filter((e) => e.from >= p.start).sort((a, b) => a.from.localeCompare(b.from))
+  if (!log.length || log[0].from !== p.start) log.unshift({ from: p.start, kcal: log[0]?.kcal ?? p.calories })
+  return log
+}
+
+/** Time-weighted average calories of a phase up to `end` (exclusive). */
+export function avgCalories(p: Phase, end: string): number {
+  const steps = calorieSteps(p)
+  const t = (iso: string) => new Date(iso + 'T12:00:00').getTime()
+  let sum = 0, days = 0
+  steps.forEach((s, i) => {
+    const to = Math.min(t(steps[i + 1]?.from ?? end), t(end))
+    const d = Math.max(0, (to - t(s.from)) / 864e5)
+    sum += s.kcal * d
+    days += d
+  })
+  return days ? Math.round(sum / days) : p.calories
 }
 
 export interface Settings {

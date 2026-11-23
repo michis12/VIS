@@ -516,3 +516,7 @@ label.lbl { display: block; font-size: 12px; font-weight: 600; letter-spacing: .
 .hint::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--text-3); flex-shrink: 0; transform: translateY(-1px); }
 .hint.good::before { background: var(--good); }
 .hint b { color: var(--text); font-weight: 600; }
+
+.kcal-step { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 36px; gap: 8px; align-items: center; margin-top: 8px; }
+.kcal-step .kcal-from { font-size: 13px; }
+.kcal-step .icon-btn { width: 36px; height: 36px; font-size: 20px; }

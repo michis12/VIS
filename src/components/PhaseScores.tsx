@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { dateLabel, fmtInt, shortDate } from '../lib'
 import { phaseName, scorePhases, type PhaseScore } from '../phaseScore'
 import { useStore } from '../store'
+import { avgCalories, calorieSteps } from '../types'
 import { scoreLabel } from '../weekly'
 import { LineChart } from './charts'
 import { ScoreGaugeWithSub, ScorePill } from './ScoreGauge'
@@ -39,10 +40,14 @@ export function PhaseList() {
   const avg = rated.length ? Math.round(rated.reduce((n, p) => n + p.score, 0) / rated.length) : null
   // calories as steps over time, phases as colored bands
   const t = (iso: string) => new Date(iso + 'T12:00:00').getTime()
-  const kcal = list.flatMap((p) => [
-    { x: t(p.phase.start), y: p.phase.calories, note: phaseName(p.phase.type) },
-    { x: t(p.end) - 864e5, y: p.phase.calories, note: phaseName(p.phase.type) },
-  ])
+  const kcal = list.flatMap((p) => {
+    const steps = calorieSteps(p.phase)
+    return steps.flatMap((st, i) => [
+      { x: t(st.from), y: st.kcal, note: phaseName(p.phase.type) },
+      // last step of the running phase reaches "now", so a change made today is already visible
+      { x: steps[i + 1] ? t(steps[i + 1].from) - 864e5 : p.current ? Math.max(Date.now(), t(st.from) + 864e5 / 2) : t(p.end) - 864e5, y: st.kcal, note: phaseName(p.phase.type) },
+    ])
+  })
   const bands = list.map((p) => ({ from: t(p.phase.start), to: t(p.end), color: COLORS[p.phase.type] }))
   // what worked last time, per phase type (for the next bulk / cut)
   const lastOf = (['bulk', 'cut', 'maintain'] as const)
@@ -64,7 +69,7 @@ export function PhaseList() {
           <div style={{ marginTop: 8 }}>
             {lastOf.map((p) => (
               <div key={p.phase.id} className="hint">
-                <span>Letzter {phaseName(p.phase.type)}: <b>{fmtInt(p.phase.calories)} kcal</b> → {rateText(p)} ({verdict(p)})</span>
+                <span>Letzter {phaseName(p.phase.type)}: <b>{calorieSteps(p.phase).length > 1 ? 'Ø ' : ''}{fmtInt(avgCalories(p.phase, p.end))} kcal</b> → {rateText(p)} ({verdict(p)})</span>
               </div>
             ))}
           </div>
@@ -83,7 +88,7 @@ export function PhaseList() {
               <div className="faint" style={{ fontSize: 12 }}>{endLabel(p)} · {fmtWeeks(p.weeks)}</div>
             </div>
             <div className="hist-meta num">
-              <div>{fmtInt(p.phase.calories)} kcal</div>
+              <div>{calorieSteps(p.phase).map((x) => fmtInt(x.kcal)).join(' → ')} kcal</div>
               {p.startKg != null && p.endKg != null && <div>{p.endKg - p.startKg > 0 ? '+' : ''}{dec(p.endKg - p.startKg)} kg</div>}
               {p.strength != null && <div className="faint">1RM {p.strength >= 1 ? '+' : ''}{((p.strength - 1) * 100).toFixed(0)} %</div>}
             </div>
@@ -104,10 +109,17 @@ export function PhaseScoreSheet({ p, onClose }: { p: PhaseScore; onClose: () => 
         {dateLabel(p.phase.start)} · {fmtWeeks(p.weeks)}{p.current ? ' · läuft noch' : ''} · {p.workouts} Workouts
       </p>
       <div className="grid-3" style={{ marginTop: 12 }}>
-        <div className="card kpi" style={{ padding: 10 }}><div className="label">Kalorien</div><div className="value" style={{ fontSize: 17 }}>{fmtInt(p.phase.calories)}</div><div className="sub">kcal/Tag</div></div>
+        <div className="card kpi" style={{ padding: 10 }}><div className="label">{calorieSteps(p.phase).length > 1 ? 'Ø Kalorien' : 'Kalorien'}</div><div className="value" style={{ fontSize: 17 }}>{fmtInt(avgCalories(p.phase, p.end))}</div><div className="sub">kcal/Tag</div></div>
         <div className="card kpi" style={{ padding: 10 }}><div className="label">Gewicht</div><div className="value" style={{ fontSize: 17 }}>{p.startKg != null && p.endKg != null ? `${p.endKg - p.startKg > 0 ? '+' : ''}${dec(p.endKg - p.startKg)}` : '–'}</div><div className="sub">{p.startKg != null && p.endKg != null ? `${dec(p.startKg)} → ${dec(p.endKg)} kg` : 'kg'}</div></div>
         <div className="card kpi" style={{ padding: 10 }}><div className="label">Tempo</div><div className="value" style={{ fontSize: 17 }}>{p.rate != null ? `${p.rate > 0 ? '+' : ''}${dec(p.rate, 2)}` : '–'}</div><div className="sub">{p.rate != null ? `kg/Woche · ${verdict(p)}` : 'kg/Woche'}</div></div>
       </div>
+      {calorieSteps(p.phase).length > 1 && (
+        <div style={{ marginTop: 4 }}>
+          {calorieSteps(p.phase).map((x, i) => (
+            <div key={x.from} className="hint"><span>{i === 0 ? 'ab Start' : `ab ${shortDate(x.from)}`}: <b>{fmtInt(x.kcal)} kcal</b></span></div>
+          ))}
+        </div>
+      )}
       <div style={{ margin: '6px auto 0', maxWidth: 220 }}>
         <ScoreGaugeWithSub
           score={p.score}

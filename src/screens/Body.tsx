@@ -5,7 +5,7 @@ import { dateLabel, fmtInt, fmtKg, shortDate, today, uid } from '../lib'
 import { useNav } from '../nav'
 import { CurrentPhaseScore, usePhaseScores } from '../components/PhaseScores'
 import { useStore } from '../store'
-import type { Phase, PhaseType } from '../types'
+import { calorieSteps, type Phase, type PhaseType } from '../types'
 import { phaseName } from './Home'
 
 const KG = Array.from({ length: 1201 }, (_, i) => Math.round((40 + i / 10) * 10) / 10)
@@ -125,7 +125,15 @@ export function Body({ focus }: { focus?: 'phase' | null }) {
             <CurrentPhaseScore id={current.id} />
           </div>
           <div className="grid-2" style={{ marginTop: 14 }}>
-            <div><div className="faint" style={{ fontSize: 12 }}>Kalorienziel</div><div className="num" style={{ fontSize: 20, fontWeight: 650 }}>{fmtInt(current.calories)} kcal</div></div>
+            <div>
+              <div className="faint" style={{ fontSize: 12 }}>Kalorienziel</div>
+              <div className="num" style={{ fontSize: 20, fontWeight: 650 }}>{fmtInt(current.calories)} kcal</div>
+              {calorieSteps(current).length > 1 && (
+                <div className="faint num" style={{ fontSize: 11 }}>
+                  seit {shortDate(calorieSteps(current)[calorieSteps(current).length - 1].from)} · vorher {fmtInt(calorieSteps(current)[calorieSteps(current).length - 2].kcal)}
+                </div>
+              )}
+            </div>
             <div><div className="faint" style={{ fontSize: 12 }}>Veränderung in Phase</div><div className="num" style={{ fontSize: 20, fontWeight: 650 }}>{phaseStartWeight != null && last ? `${last.kg - phaseStartWeight > 0 ? '+' : ''}${fmtKg(Math.round((last.kg - phaseStartWeight) * 10) / 10)} kg` : '–'}</div></div>
           </div>
           {kcalTip && (
@@ -190,6 +198,23 @@ function WeightSheet({ initial, onClose, onSave }: { initial: number; onClose: (
 function PhaseSheet({ phase, isNew, onClose }: { phase: Phase; isNew: boolean; onClose: () => void }) {
   const store = useStore()
   const [p, setP] = useState(phase)
+  const [steps, setSteps] = useState(() => calorieSteps(phase))
+  const setStep = (i: number, patch: Partial<{ from: string; kcal: number }>) =>
+    setSteps((list) => list.map((x, j) => (j === i ? { ...x, ...patch } : x)))
+
+  const save = () => {
+    const log = steps
+      .map((x, i) => (i === 0 ? { ...x, from: p.start } : x))
+      .filter((x) => x.from >= p.start && x.kcal > 0)
+      .sort((a, b) => a.from.localeCompare(b.from))
+      .filter((x, i, a) => i === 0 || x.from !== a[i - 1].from)
+    const calories = log[log.length - 1]?.kcal ?? p.calories
+    const next: Phase = { id: p.id, type: p.type, start: p.start, calories }
+    if (log.length > 1) next.calorieLog = log
+    store.savePhase(next)
+    onClose()
+  }
+
   return (
     <Sheet onClose={onClose}>
       <h3>{isNew ? 'Neue Phase' : 'Phase bearbeiten'}</h3>
@@ -199,11 +224,26 @@ function PhaseSheet({ phase, isNew, onClose }: { phase: Phase; isNew: boolean; o
           <button key={t} className={p.type === t ? 'on' : ''} onClick={() => setP({ ...p, type: t })}>{phaseName(t)}</button>
         ))}
       </div>
-      <label className="lbl">Kalorien pro Tag</label>
-      <input className="input num" inputMode="numeric" value={p.calories || ''} onChange={(e) => setP({ ...p, calories: Number(e.target.value.replace(/\D/g, '')) })} />
       <label className="lbl">Start</label>
       <input className="input" type="date" value={p.start} onChange={(e) => setP({ ...p, start: e.target.value })} />
-      <button className="btn btn-chrome btn-block" style={{ marginTop: 18 }} onClick={() => { store.savePhase(p); onClose() }}>Speichern</button>
+      <label className="lbl">Kalorien pro Tag</label>
+      {steps.length === 1 ? (
+        <input className="input num" inputMode="numeric" value={steps[0].kcal || ''} onChange={(e) => setStep(0, { kcal: Number(e.target.value.replace(/\D/g, '')) })} />
+      ) : steps.map((x, i) => (
+        <div key={i} className="kcal-step">
+          {i === 0
+            ? <span className="faint kcal-from">ab Start</span>
+            : <input className="input kcal-from" type="date" value={x.from} min={p.start} onChange={(e) => setStep(i, { from: e.target.value })} />}
+          <input className="input num" inputMode="numeric" value={x.kcal || ''} onChange={(e) => setStep(i, { kcal: Number(e.target.value.replace(/\D/g, '')) })} />
+          {i > 0 && <button className="icon-btn" aria-label="Änderung löschen" onClick={() => setSteps((l) => l.filter((_, j) => j !== i))}>×</button>}
+        </div>
+      ))}
+      {!isNew && (
+        <button className="link" style={{ marginTop: 8 }} onClick={() => setSteps((l) => [...l, { from: today(), kcal: l[l.length - 1]?.kcal ?? 0 }])}>
+          + Kalorien ab einem Datum ändern
+        </button>
+      )}
+      <button className="btn btn-chrome btn-block" style={{ marginTop: 18 }} onClick={save}>Speichern</button>
       {!isNew && <button className="btn btn-danger btn-block" style={{ marginTop: 10 }} onClick={() => { store.deletePhase(p.id); onClose() }}>Phase löschen</button>}
     </Sheet>
   )
