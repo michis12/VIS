@@ -115,7 +115,7 @@ export function scorePhases(phases: Phase[], workouts: Workout[], weights: Weigh
 
     const parts: PhasePart[] = []
     const weightDetail = ratePct != null
-      ? `${kg1(rate!)}/Woche · ${pct(ratePct)} KG`
+      ? `${rate! > 0 ? "+" : ""}${rate!.toFixed(2).replace(".", ",")} kg/Woche · ${pct(ratePct)} KG`
       : 'zu wenig Gewichtseinträge'
     const trainPart = (max: number) => ({
       key: 'train', label: 'Training', max,
