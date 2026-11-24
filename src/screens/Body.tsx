@@ -4,6 +4,7 @@ import { Icon, Sheet, Wheel } from '../components/ui'
 import { dateLabel, fmtInt, fmtKg, shortDate, today, uid } from '../lib'
 import { useNav } from '../nav'
 import { CurrentPhaseScore, usePhaseScores } from '../components/PhaseScores'
+import { PhasePlanner } from '../components/PhasePlanner'
 import { useStore } from '../store'
 import { calorieSteps, type Phase, type PhaseType } from '../types'
 import { phaseName } from './Home'
@@ -23,6 +24,7 @@ export function Body({ focus }: { focus?: 'phase' | null }) {
   const [range, setRange] = useState(99999)
   const [addW, setAddW] = useState(false)
   const [editPhase, setEditPhase] = useState<Phase | null>(null)
+  const [planning, setPlanning] = useState(false)
 
   const since = new Date(Date.now() - range * 864e5).toISOString().slice(0, 10)
   const pts = weights.filter((w) => w.date >= since).map((w) => ({ x: new Date(w.date + 'T12:00:00').getTime(), y: w.kg }))
@@ -143,6 +145,14 @@ export function Body({ focus }: { focus?: 'phase' | null }) {
       ) : (
         <div className="card muted">Noch keine Phase gesetzt. Leg fest, ob du gerade im Bulk, Cut oder Erhalt bist.</div>
       )}
+      <button className="ai-row" style={{ marginTop: 12 }} onClick={() => setPlanning(true)}>
+        <span className="ai-spark" aria-hidden="true">✦</span>
+        <div className="grow">
+          <div className="nut-entry-name">Nächste Phase planen</div>
+          <div className="faint" style={{ fontSize: 12 }}>Kalorien, Dauer und Zielgewicht aus deinen Daten</div>
+        </div>
+        <Icon.chevron />
+      </button>
       {phases.length > 1 && (
         <div className="card" style={{ padding: '4px 14px', marginTop: 12 }}>
           {[...phases].reverse().slice(1).map((p) => (
@@ -176,6 +186,12 @@ export function Body({ focus }: { focus?: 'phase' | null }) {
       </div>
 
       {addW && <WeightSheet initial={last?.kg ?? 80} onClose={() => setAddW(false)} onSave={(kg, date) => { store.saveWeight({ date, kg, source: 'app' }); setAddW(false) }} />}
+      {planning && (
+        <PhasePlanner
+          onClose={() => setPlanning(false)}
+          onApply={(type, kcal) => { setPlanning(false); setEditPhase({ id: uid(), type, start: today(), calories: kcal }) }}
+        />
+      )}
       {editPhase && <PhaseSheet phase={editPhase} isNew={!phases.some((p) => p.id === editPhase.id)} onClose={() => setEditPhase(null)} />}
     </div>
   )

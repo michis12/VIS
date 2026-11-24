@@ -3,6 +3,7 @@ import { Icon, Sheet } from '../components/ui'
 import { dateLabel, fmtKg, haptic, shortDate, today } from '../lib'
 import { useNav } from '../nav'
 import { useStore } from '../store'
+import { BodyDataFields } from '../components/PhasePlanner'
 import { MEASURE_FIELDS, type MeasureKey, type Measurement } from '../types'
 
 /** Tiny inline trend line for one measurement. */
@@ -37,7 +38,12 @@ export function Measures() {
         <button className="btn btn-chrome btn-sm" onClick={() => setEditing({ date: today(), ...stripDate(latest) })}>Messen</button>
       </div>
 
-      <div className="card" style={{ marginTop: 18, padding: '4px 16px' }}>
+      <div className="card" style={{ marginTop: 18 }}>
+        <div className="eyebrow" style={{ marginBottom: 8 }}>Körperdaten</div>
+        <BodyDataFields />
+      </div>
+
+      <div className="card" style={{ marginTop: 12, padding: '4px 16px' }}>
         {MEASURE_FIELDS.map((f) => {
           const series = measurements.filter((m) => m[f.key] != null).map((m) => m[f.key]!)
           const now = series[series.length - 1]

@@ -2,6 +2,7 @@
 //   photo - estimate the foods on a meal photo (FOOD_MODEL, default Sonnet)
 //   label - read a nutrition label photo into per-100 g values (FAST_MODEL, Haiku)
 //   text  - turn "2 Semmeln mit Schinken" into foods with grams (FAST_MODEL, Haiku)
+//   plan  - next bulk/cut/maintain phase from body data + activity text (FAST_MODEL)
 // Only signed-in accounts on the ai_access allow-list may call it; the Anthropic
 // key is the function secret ANTHROPIC_API_KEY. Each call books its cost in ai_ledger.
 import Anthropic from 'npm:@anthropic-ai/sdk'
@@ -85,6 +86,34 @@ const TEXT_SYSTEM = `Du wandelst eine kurze Beschreibung, was jemand gegessen ha
 - Rezepte des Nutzers (id beginnt mit r-) haben ein Gewicht für das ganze Gericht; "eine Portion" ohne Angabe = ein Viertel davon.
 Antworte auf Deutsch.`
 
+const PLAN_SCHEMA = {
+  type: 'object',
+  properties: {
+    maintenance: { type: 'number', description: 'Erhaltungskalorien pro Tag bei der beschriebenen Aktivität' },
+    kcal: { type: 'number', description: 'Empfohlene Kalorien pro Tag für die neue Phase' },
+    weeks: { type: 'number', description: 'Empfohlene Dauer in Wochen' },
+    targetKg: { type: 'number', description: 'Erwartetes Gewicht am Ende' },
+    kgPerWeek: { type: 'number', description: 'Erwartete Gewichtsänderung pro Woche (negativ beim Cut)' },
+    protein: { type: 'number', description: 'Eiweiß g pro Tag' },
+    bullets: { type: 'array', items: { type: 'string' }, description: '2 bis 4 kurze Sätze: wie die Zahl zustande kommt und worauf achten' },
+    warning: { type: 'string', description: 'Ein Satz, falls etwas unrealistisch oder ungesund ist, sonst ""' },
+  },
+  required: ['maintenance', 'kcal', 'weeks', 'targetKg', 'kgPerWeek', 'protein', 'bullets', 'warning'],
+  additionalProperties: false,
+}
+
+const PLAN_SYSTEM = `Du planst die nächste Ernährungsphase (Bulk, Cut oder Erhalt) für jemanden, der Krafttraining macht. Die App liefert dir alle Daten als JSON, die Rechnungen darin sind korrekt.
+Vorgehen:
+1. Erhaltungskalorien: Wenn "measured" vorhanden ist, ist das der wichtigste Wert (echte Daten). Passe ihn nur an, wenn die beschriebene Aktivität deutlich von den letzten Wochen abweicht (z. B. neu 2× Fußball dazu: je 90 min Fußball ca. 500-800 kcal, auf den Tag verteilt). Ohne "measured": bmr × Aktivitätsfaktor (1,4 wenig aktiv bis 1,9 sehr aktiv) aus der Beschreibung.
+2. Phase:
+   - Bulk: Zunahme 0,25-0,5 % des Körpergewichts pro Woche (Fortgeschrittene eher unten), Überschuss meist 200-400 kcal. Dauer 12-24 Wochen.
+   - Cut: Abnahme 0,5-1 % pro Woche, Defizit meist 400-700 kcal, nie unter bmr. Dauer bis ein sinnvoller KFA erreicht ist (Männer ca. 10-12 %, Frauen ca. 18-22 %), meist 8-16 Wochen; ohne KFA aus Gewichtsverlauf und Zielwunsch schätzen.
+   - Erhalt: Erhaltungskalorien, Dauer 4-8 Wochen.
+   - Lerne aus "phases": Hat ein früherer Bulk mit X kcal zu schnell/langsam zugenommen, berücksichtige das.
+3. Eiweiß: 1,8-2,2 g pro kg (im Cut eher oben).
+4. Wunsch des Nutzers (Termin, Zielgewicht, Tempo) einbeziehen, wenn gesund machbar; sonst warnen.
+Runde kcal auf 50. Kurze, konkrete Sätze auf Deutsch, du-Form.`
+
 const SCHEMA = {
   type: 'object',
   properties: {
@@ -137,8 +166,9 @@ Deno.serve(async (req) => {
   if (!key) return json({ error: 'nokey' }, 503)
 
   let body: {
-    mode?: 'photo' | 'label' | 'text'; image?: string; mediaType?: string; note?: string; grams?: number
+    mode?: 'photo' | 'label' | 'text' | 'plan'; image?: string; mediaType?: string; note?: string; grams?: number
     text?: string; foods?: { id: string; name: string; g?: number }[]
+    goal?: string; activity?: string; wish?: string; data?: unknown
   }
   try {
     body = await req.json()
@@ -148,14 +178,25 @@ Deno.serve(async (req) => {
   const mode = body.mode ?? 'photo'
   const { image, note, grams } = body
   const mediaType = body.mediaType === 'image/png' ? 'image/png' : 'image/jpeg'
-  if (mode !== 'text' && (!image || image.length > 4_000_000)) return json({ error: 'image' }, 400)
+  const withImage = mode === 'photo' || mode === 'label'
+  if (withImage && (!image || image.length > 4_000_000)) return json({ error: 'image' }, 400)
   if (mode === 'text' && !body.text?.trim()) return json({ error: 'text' }, 400)
+  if (mode === 'plan' && !body.activity?.trim()) return json({ error: 'text' }, 400)
 
   // deno-lint-ignore no-explicit-any
-  const img: any = mode === 'text' ? null : { type: 'image', source: { type: 'base64', media_type: mediaType, data: image } }
+  const img: any = withImage ? { type: 'image', source: { type: 'base64', media_type: mediaType, data: image } } : null
   // deno-lint-ignore no-explicit-any
   let call: any
-  if (mode === 'label') {
+  if (mode === 'plan') {
+    const goal = body.goal === 'cut' ? 'Cut' : body.goal === 'maintain' ? 'Erhalt' : 'Bulk'
+    call = {
+      model: FAST_MODEL, system: PLAN_SYSTEM, schema: PLAN_SCHEMA, effort: 'medium',
+      content: [{
+        type: 'text',
+        text: `Geplante Phase: ${goal}\nAktivität: ${body.activity!.trim().slice(0, 500)}\nWunsch: ${body.wish?.trim().slice(0, 300) || '(keiner)'}\n\nDaten aus der App:\n${JSON.stringify(body.data ?? {}).slice(0, 6000)}`,
+      }],
+    }
+  } else if (mode === 'label') {
     call = {
       model: FAST_MODEL, system: LABEL_SYSTEM, schema: LABEL_SCHEMA,
       content: [img, { type: 'text', text: 'Lies die Nährwerte ab.' }],
@@ -187,7 +228,7 @@ Deno.serve(async (req) => {
       max_tokens: 4000,
       ...(fast ? {} : { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' }),
       system: call.system,
-      output_config: { effort: fast ? 'low' : 'medium', format: { type: 'json_schema', schema: call.schema } },
+      output_config: { effort: call.effort ?? (fast ? 'low' : 'medium'), format: { type: 'json_schema', schema: call.schema } },
       messages: [{ role: 'user', content: call.content }],
     // deno-lint-ignore no-explicit-any
     } as any)
@@ -200,7 +241,7 @@ Deno.serve(async (req) => {
     const u = res.usage ?? {}
     const usd = ((u.input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) * 1.25 + (u.cache_read_input_tokens ?? 0) * 0.1) * pin / 1e6
       + (u.output_tokens ?? 0) * pout / 1e6
-    const label = mode === 'label' ? 'Etikett' : mode === 'text' ? 'Text' : 'Foto'
+    const label = mode === 'label' ? 'Etikett' : mode === 'text' ? 'Text' : mode === 'plan' ? 'Phase' : 'Foto'
     await sb.from('ai_ledger').insert({ user_id: user.id, kind: 'use', usd, note: `${label} · ${res.model}` })
     return json({ ...out, model: res.model, usd })
   } catch (e) {

@@ -55,6 +55,7 @@ export const MEASURE_FIELDS = [
   { key: 'calf', label: 'Wade', unit: 'cm' },
   { key: 'neck', label: 'Nacken', unit: 'cm' },
   { key: 'bodyFat', label: 'Körperfett', unit: '%' },
+  { key: 'muscle', label: 'Muskelmasse', unit: 'kg' },
 ] as const
 export type MeasureKey = (typeof MEASURE_FIELDS)[number]['key']
 
@@ -98,6 +99,10 @@ export interface Settings {
   name?: string
   /** square JPEG data URL, 256 px */
   avatar?: string
+  /** body data for the phase planner */
+  heightCm?: number
+  birthYear?: number
+  sex?: 'm' | 'f'
 }
 
 // ---- Ernährung

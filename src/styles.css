@@ -625,3 +625,16 @@ label.lbl { display: block; font-size: 12px; font-weight: 600; letter-spacing: .
 .ai-spark { font-size: 18px; color: var(--good); width: 22px; text-align: center; }
 .ai-quote { font-size: 15px; color: var(--text-2); padding: 4px 2px 0; }
 .ai-wait { text-align: center; color: var(--text-3); padding: 40px 0; animation: photo-pulse 1.2s ease-in-out infinite; }
+
+/* phase planner */
+.body-data { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+.body-data .measure-field { min-width: 0; }
+.body-data .body-sex { grid-column: 1 / -1; }
+.plan-text { font: inherit; font-size: 16px; height: auto; min-height: 76px; padding-top: 10px; padding-bottom: 10px; resize: none; line-height: 1.4; }
+.plan-data { margin-top: 16px; }
+.plan-data .body-data { margin-bottom: 10px; }
+.plan-facts { display: flex; flex-wrap: wrap; gap: 6px; }
+.plan-facts span { font-size: 12px; color: var(--text-2); background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; }
+.plan-result { padding: 20px; margin-top: 4px; }
+.plan-kcal { font-size: 46px; font-weight: 750; letter-spacing: -0.03em; line-height: 1.1; margin-top: 4px; }
+.plan-kcal span { font-size: 18px; }
