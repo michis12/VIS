@@ -603,3 +603,7 @@ label.lbl { display: block; font-size: 12px; font-weight: 600; letter-spacing: .
 
 .scanner-torch { position: absolute; left: 50%; bottom: calc(var(--safe-bottom) + 84px); transform: translateX(-50%); width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.35); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: background .15s, color .15s; }
 .scanner-torch.on { background: #fff; color: #000; box-shadow: 0 0 24px rgba(255,255,255,.5); }
+
+/* check inside the kcal ring after adding */
+.ring-check { animation: scan-check-pop .4s cubic-bezier(.2,1.4,.4,1); filter: drop-shadow(0 0 14px rgba(143,209,158,.45)); }
+.ring-back { animation: fade .3s ease; }

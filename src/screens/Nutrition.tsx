@@ -69,7 +69,7 @@ export function Nutrition() {
       </div>
 
       <div className="card chrome-edge nut-ring-card">
-        <KcalRing eaten={total.kcal} target={target.kcal} />
+        <KcalRing eaten={total.kcal} target={target.kcal} flash={added} />
         <div className="nut-macros">
           <MacroBar label="Eiweiß" v={total.p} t={target.p} />
           <MacroBar label="Kohlenhydrate" v={total.c} t={target.c} />
@@ -118,13 +118,20 @@ export function Nutrition() {
           }}
         />
       )}
-      {added > 0 && <AddedCheck key={added} />}
       {editing && <EntrySheet entry={editing} onClose={() => setEditing(null)} />}
     </div>
   )
 }
 
-function KcalRing({ eaten, target }: { eaten: number; target: number | null }) {
+function KcalRing({ eaten, target, flash = 0 }: { eaten: number; target: number | null; flash?: number }) {
+  // after adding: the check plays in the middle of the ring, then the numbers come back
+  const [checking, setChecking] = useState(false)
+  useEffect(() => {
+    if (!flash) return
+    setChecking(true)
+    const t = setTimeout(() => setChecking(false), 1100)
+    return () => clearTimeout(t)
+  }, [flash])
   const r = 52
   const c = 2 * Math.PI * r
   const raw = target ? eaten / target : 0
@@ -141,11 +148,20 @@ function KcalRing({ eaten, target }: { eaten: number; target: number | null }) {
         <circle cx="60" cy="60" r={r} fill="none" stroke="url(#nutRing)" strokeWidth="9" strokeLinecap="round"
           strokeDasharray={c} strokeDashoffset={c * (1 - frac)} transform="rotate(-90 60 60)" style={{ transition: 'stroke-dashoffset .5s' }} />
       </svg>
-      <div className="nut-ring-txt">
+      {checking ? (
+        <div className="nut-ring-txt" key={flash}>
+          <svg className="ring-check" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+            <circle className="scan-check-c" cx="32" cy="32" r="26" />
+            <path className="scan-check-p" d="M20 33.5 28.5 42 45 24" />
+          </svg>
+        </div>
+      ) : (
+      <div className="nut-ring-txt ring-back">
         <b className="num">{fmtInt(eaten)}</b>
         <span className="faint">{target ? `von ${fmtInt(target)}` : 'kcal'}</span>
         {left != null && <span className="nut-left num" style={raw >= 1 ? { color: 'var(--good)' } : undefined}>{left >= 0 ? `${fmtInt(left)} übrig` : `${fmtInt(-left)} drüber`}</span>}
       </div>
+      )}
     </div>
   )
 }
@@ -457,22 +473,6 @@ function CustomFoodSheet({ initial, onClose, onSave }: { initial: { barcode?: st
         })}
       >Speichern</button>
     </Sheet>
-  )
-}
-
-/** Short check in a mint circle after adding something, upper middle of the screen. */
-function AddedCheck() {
-  const [show, setShow] = useState(true)
-  useEffect(() => { const t = setTimeout(() => setShow(false), 950); return () => clearTimeout(t) }, [])
-  if (!show) return null
-  return createPortal(
-    <div className="scan-check" aria-hidden="true">
-      <svg viewBox="0 0 64 64" width="88" height="88">
-        <circle className="scan-check-c" cx="32" cy="32" r="28" />
-        <path className="scan-check-p" d="M20 33.5 28.5 42 45 24" />
-      </svg>
-    </div>,
-    document.body,
   )
 }
 
