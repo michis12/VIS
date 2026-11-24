@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { isRealSet } from '../lib'
+import { musclesFor } from '../muscles'
 import { useStore } from '../store'
 
 /**
@@ -141,15 +142,17 @@ export function MuscleMap() {
 
   const ranked = [...sets.entries()].sort((a, b) => b[1] - a[1])
 
-  // main groups you normally train but haven't for a while (≥ 8 days)
+  // main groups you normally train but haven't for a while (≥ 8 days); secondary
+  // muscles count too – dips train the triceps even when filed under chest
   const neglected = useMemo(() => {
     const lastDay = new Map<string, number>()
     for (const w of workouts) {
       if (w.status !== 'done') continue
       const t = new Date(w.startedAt).getTime()
       for (const e of w.exercises) {
-        const g = exerciseById.get(e.exerciseId)?.muscle
-        if (g && e.sets.some(isRealSet)) lastDay.set(g, Math.max(lastDay.get(g) ?? 0, t))
+        if (!e.sets.some(isRealSet)) continue
+        const { primary, secondary } = musclesFor(exerciseById.get(e.exerciseId))
+        for (const g of [primary, ...secondary]) lastDay.set(g, Math.max(lastDay.get(g) ?? 0, t))
       }
     }
     return MAIN
