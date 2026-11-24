@@ -5,7 +5,7 @@ import { Icon, Sheet, Tap } from '../components/ui'
 import { BASICS } from '../data/foods'
 import { dateLabel, fmtInt, haptic, localIso, today, uid } from '../lib'
 import {
-  dayTotals, fmtG, forGrams, kcalTarget, macroTargets, offProduct, offSearch, recipeAsFood, recipeTotal, recipeWeight,
+  dayTotals, fmtG, forGrams, kcalTarget, macroTargets, offProduct, offSearch, recipeAsFood, recipeWeight,
   type Macros, type OffHit,
 } from '../nutrition'
 import { useStore } from '../store'
@@ -42,24 +42,16 @@ const pickName = (p: Pick) => (p.kind === 'food' ? p.food.name : p.recipe.name)
 
 export function Nutrition() {
   const store = useStore()
-  const { foodLog, phases, weights, recipes } = store
+  const { foodLog, phases, weights } = store
   const [date, setDate] = useState(today())
   const [adding, setAdding] = useState<null | 'search' | 'scan'>(null)
   const [editing, setEditing] = useState<FoodEntry | null>(null)
-  const [recipe, setRecipe] = useState<Recipe | null | 'new'>(null)
 
   // newest first
   const day = useMemo(() => foodLog.filter((e) => e.date === date).reverse(), [foodLog, date])
   const total = useMemo(() => dayTotals(foodLog, date), [foodLog, date])
   const target = macroTargets(kcalTarget(phases, date), weights)
 
-  const week = useMemo(() => Array.from({ length: 7 }, (_, i) => {
-    const d = addDays(date, i - 6)
-    return { d, kcal: dayTotals(foodLog, d).kcal, target: kcalTarget(phases, d) }
-  }), [foodLog, phases, date])
-  const logged = week.filter((x) => x.kcal > 0)
-  const avg = logged.length ? Math.round(logged.reduce((n, x) => n + x.kcal, 0) / logged.length) : 0
-  const maxK = Math.max(1, ...week.map((x) => Math.max(x.kcal, x.target ?? 0)))
 
   return (
     <div className="screen">
@@ -102,39 +94,6 @@ export function Nutrition() {
         </div>
       )}
 
-      <div className="section-title"><h2>Letzte 7 Tage</h2>{avg > 0 && <span className="faint" style={{ fontSize: 13 }}>Ø {fmtInt(avg)} kcal</span>}</div>
-      <div className="card">
-        <div className="nut-week">
-          {week.map((x) => (
-            <button key={x.d} className={'nut-week-day' + (x.d === date ? ' on' : '')} onClick={() => setDate(x.d)}>
-              <div className="nut-week-bar">
-                {x.target != null && <i className="tgt" style={{ bottom: `${(x.target / maxK) * 100}%` }} />}
-                <b style={{ height: `${(x.kcal / maxK) * 100}%` }} />
-              </div>
-              <span>{['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][new Date(x.d + 'T12:00:00').getDay()]}</span>
-            </button>
-          ))}
-        </div>
-        <div className="faint" style={{ fontSize: 11, textAlign: 'center', marginTop: 6 }}>Strich = Kalorienziel der Phase</div>
-      </div>
-
-      <div className="section-title"><h2>Rezepte</h2><button className="link" onClick={() => setRecipe('new')}>Neues Rezept</button></div>
-      <div className="card" style={{ padding: '4px 14px' }}>
-        {recipes.length === 0 && <div className="faint" style={{ padding: '14px 0' }}>Noch keine Rezepte</div>}
-        {recipes.map((r) => {
-          const t = recipeTotal(r)
-          return (
-            <button key={r.id} className="list-row" style={{ width: '100%', textAlign: 'left' }} onClick={() => setRecipe(r)}>
-              <div className="grow">
-                <div style={{ fontWeight: 600 }}>{r.name}</div>
-                <div className="faint num" style={{ fontSize: 12 }}>{r.items.length} Zutaten · {fmtInt(recipeWeight(r))} g · {fmtInt((t.kcal / recipeWeight(r)) * 100)} kcal/100 g</div>
-              </div>
-              <span className="chev"><Icon.chevron /></span>
-            </button>
-          )
-        })}
-      </div>
-
       {adding && (
         <FoodPicker
           title="Hinzufügen"
@@ -153,7 +112,6 @@ export function Nutrition() {
         />
       )}
       {editing && <EntrySheet entry={editing} onClose={() => setEditing(null)} />}
-      {recipe && <RecipeEditor recipe={recipe === 'new' ? null : recipe} onClose={() => setRecipe(null)} />}
     </div>
   )
 }
@@ -210,6 +168,8 @@ export function FoodPicker({ title, onPick, onClose, noRecipes, startScan }: {
   const [loading, setLoading] = useState(false)
   const [offline, setOffline] = useState(false)
   const [scan, setScan] = useState(!!startScan)
+  const [view, setView] = useState<'recent' | 'recipes'>('recent')
+  const [editRecipe, setEditRecipe] = useState<Recipe | null | 'new'>(null)
   const [missing, setMissing] = useState<{ code: string; name?: string } | null>(null)
   const [chosen, setChosen] = useState<Pick | null>(null)
   const [custom, setCustom] = useState<{ barcode?: string; name?: string } | null>(null)
@@ -291,15 +251,30 @@ export function FoodPicker({ title, onPick, onClose, noRecipes, startScan }: {
       </div>
 
       <div className="fullsheet-body">
-        {!term && <div className="eyebrow" style={{ margin: '4px 2px 6px' }}>{recents.length ? 'Zuletzt' : 'Tipp: suchen oder Barcode scannen'}</div>}
-        {!term && !noRecipes && recipes.length > 0 && recents.length === 0 && (
+        {!term && !noRecipes && (
+          <div className="segmented" style={{ marginBottom: 10 }}>
+            <button className={view === 'recent' ? 'on' : ''} onClick={() => setView('recent')}>Zuletzt</button>
+            <button className={view === 'recipes' ? 'on' : ''} onClick={() => setView('recipes')}>Rezepte</button>
+          </div>
+        )}
+        {!term && view === 'recipes' && !noRecipes ? (
           <>
-            {recipes.map((r) => <PickRow key={r.id} p={{ kind: 'recipe', recipe: r }} onClick={() => setChosen({ kind: 'recipe', recipe: r })} />)}
+            {recipes.map((r) => (
+              <div key={r.id} className="nut-pick-row">
+                <PickRow p={{ kind: 'recipe', recipe: r }} onClick={() => setChosen({ kind: 'recipe', recipe: r })} />
+                <button className="nut-edit" onClick={() => setEditRecipe(r)} aria-label={`${r.name} bearbeiten`}>Bearbeiten</button>
+              </div>
+            ))}
+            <button className="btn btn-ghost btn-block" style={{ marginTop: 12 }} onClick={() => setEditRecipe('new')}><Icon.plus /> Neues Rezept</button>
+          </>
+        ) : (
+          <>
+            {!term && recents.length === 0 && <div className="faint" style={{ fontSize: 13, padding: '6px 2px' }}>Noch nichts eingetragen – suchen oder Barcode scannen.</div>}
+            {list.map((p) => (
+              <PickRow key={(p.kind === 'food' ? p.food.id : p.recipe.id)} p={p} onClick={() => setChosen(p)} />
+            ))}
           </>
         )}
-        {list.map((p) => (
-          <PickRow key={(p.kind === 'food' ? p.food.id : p.recipe.id)} p={p} onClick={() => setChosen(p)} />
-        ))}
         {term && (
           <>
             <div className="eyebrow" style={{ margin: '14px 2px 6px', display: 'flex', justifyContent: 'space-between' }}>
@@ -328,6 +303,7 @@ export function FoodPicker({ title, onPick, onClose, noRecipes, startScan }: {
         />
       )}
       {busy && !scan && <div className="nut-loading">Produkt wird geladen…</div>}
+      {editRecipe && <RecipeEditor recipe={editRecipe === 'new' ? null : editRecipe} onClose={() => setEditRecipe(null)} />}
       {missing && (
         <Sheet onClose={() => setMissing(null)}>
           <h3>Produkt nicht gefunden</h3>

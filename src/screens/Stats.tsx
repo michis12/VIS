@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { BarChart, LineChart } from '../components/charts'
+import { CaloriesWeek } from '../components/CaloriesWeek'
 import { MuscleMap } from '../components/MuscleMap'
 import { PhaseList } from '../components/PhaseScores'
 import { ScoreGauge } from '../components/ScoreGauge'
@@ -232,6 +233,8 @@ export function Stats() {
         <Kpi label="Volumen" value={fmtInt(k.vol / 1000)} unit="t" sub={`${fmtInt(k.sets)} Sätze`} />
         <Kpi label="Ø Dauer" value={k.avgDur ? String(Math.round(k.avgDur / 60)) : '–'} unit="min" sub={k.skipped ? `${k.skipped}× ausgelassen` : 'pro Workout'} />
       </div>
+
+      <CaloriesWeek />
 
       <div className="section-title"><h2>Fortschritt & Rekorde</h2></div>
       <div className="grid-3">
