@@ -638,3 +638,5 @@ label.lbl { display: block; font-size: 12px; font-weight: 600; letter-spacing: .
 .plan-result { padding: 20px; margin-top: 4px; }
 .plan-kcal { font-size: 46px; font-weight: 750; letter-spacing: -0.03em; line-height: 1.1; margin-top: 4px; }
 .plan-kcal span { font-size: 18px; }
+.ai-person { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.ai-person .grow { min-width: 0; flex: 1; }

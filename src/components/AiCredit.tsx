@@ -6,11 +6,27 @@ import { getSession, supabase } from '../cloud'
  * edge function books for every photo (public.ai_ledger). Anthropic has no
  * balance API, so the exact figure is only in the Anthropic Console.
  */
-export interface Credit { balance: number; topups: number; used: number; monthUsed: number; uses: number }
+/** AI use of one account on the allow-list (only the key owner sees these). */
+export interface Person {
+  userId: string; email: string; monthUsd: number; openUsd: number; totalUsd: number
+  uses: number; settledAt: string | null; isMe: boolean
+}
+
+/**
+ * `used` / `monthUsed` / `uses` are the caller's own; for the key owner the
+ * balance subtracts everyone's use (friends spend the same key).
+ */
+export interface Credit {
+  balance: number; topups: number; used: number; monthUsed: number; uses: number
+  owner: boolean; people: Person[]
+}
 
 export async function fetchCredit(): Promise<Credit | null> {
   if (!supabase || !(await getSession())) return null
-  const { data, error } = await supabase.from('ai_ledger').select('kind, usd, created_at')
+  const [{ data, error }, overview] = await Promise.all([
+    supabase.from('ai_ledger').select('kind, usd, created_at'),
+    supabase.rpc('ai_usage_overview'),
+  ])
   if (error || !data) return null
   const month = new Date().toISOString().slice(0, 7)
   let topups = 0, used = 0, monthUsed = 0, uses = 0
@@ -19,7 +35,19 @@ export async function fetchCredit(): Promise<Credit | null> {
     if (r.kind === 'topup') topups += v
     else { used += v; uses++; if (r.created_at.slice(0, 7) === month) monthUsed += v }
   }
-  return { balance: topups - used, topups, used, monthUsed, uses }
+  const people: Person[] = ((overview.data ?? []) as Record<string, unknown>[]).map((r) => ({
+    userId: String(r.user_id), email: String(r.email ?? ''), monthUsd: Number(r.month_usd) || 0,
+    openUsd: Number(r.open_usd) || 0, totalUsd: Number(r.total_usd) || 0, uses: Number(r.uses) || 0,
+    settledAt: (r.settled_at as string | null) ?? null, isMe: !!r.is_me,
+  }))
+  const owner = people.length > 0
+  const allUsed = owner ? people.reduce((a, p) => a + p.totalUsd, 0) : used
+  return { balance: topups - allUsed, topups, used, monthUsed, uses, owner, people }
+}
+
+export async function markSettled(userId: string) {
+  const { error } = await supabase!.rpc('ai_mark_settled', { target: userId })
+  if (error) throw error
 }
 
 export async function addTopup(usd: number) {
