@@ -3,7 +3,9 @@ import { ScoreGauge } from '../components/ScoreGauge'
 import { Icon, Sheet } from '../components/ui'
 import { useWeekScore } from '../components/WeeklyReport'
 import { scoreLabel, WEEKLY_TARGET } from '../weekly'
-import { dateLabel, fmtInt, fmtKg, localIso } from '../lib'
+import { dateLabel, fmtInt, fmtKg, localIso, today } from '../lib'
+import { dayTotals, kcalTarget } from '../nutrition'
+import { progressColors } from './Nutrition'
 import { parseTemplatesFile, pickFile, shareOrDownload, templatesFile } from '../files'
 import { useNav } from '../nav'
 import { useStore } from '../store'
@@ -11,10 +13,11 @@ import type { Template } from '../types'
 import { HistoryRow } from './History'
 import { newWorkoutFromTemplate } from './Workout'
 
-export function Home({ onOpenWorkout, onOpenStats, onOpenBody, toast }: {
+export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast }: {
   onOpenWorkout: () => void
   onOpenStats: () => void
   onOpenBody: (focus?: 'phase') => void
+  onOpenFood: () => void
   toast: (t: string) => void
 }) {
   const store = useStore()
@@ -80,6 +83,8 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, toast }: {
           {phase && <div className="sub">{fmtInt(phase.calories)} kcal/Tag</div>}
         </button>
       </div>
+
+      <KcalStrip onOpen={onOpenFood} />
 
       <button className="card score-mini" style={{ width: '100%', textAlign: 'left' }} onClick={onOpenStats}>
         <ScoreGauge score={week.score} size={78} />
@@ -169,3 +174,25 @@ function badge(name: string) {
 }
 
 export const phaseName =(t: string) => (t === 'bulk' ? 'Bulk' : t === 'cut' ? 'Cut' : 'Erhalt')
+
+/** Thin calorie line for today (opens Ernährung). */
+function KcalStrip({ onOpen }: { onOpen: () => void }) {
+  const { foodLog, phases } = useStore()
+  const d = today()
+  const eaten = dayTotals(foodLog, d).kcal
+  const target = kcalTarget(phases, d)
+  const frac = target ? eaten / target : 0
+  const col = progressColors(frac)
+  return (
+    <button className="card kcal-strip" onClick={onOpen}>
+      <div className="kcal-strip-top">
+        <span className="eyebrow" style={{ margin: 0 }}>Kalorien heute</span>
+        <span className="num" style={target && frac >= 1 ? { color: 'var(--good)' } : undefined}>
+          <b>{fmtInt(eaten)}</b>{target ? <span className="faint"> / {fmtInt(target)} kcal</span> : <span className="faint"> kcal</span>}
+        </span>
+        <span className="chev"><Icon.chevron /></span>
+      </div>
+      <div className="kcal-strip-track"><div style={{ width: `${Math.min(100, frac * 100)}%`, background: `linear-gradient(90deg, ${col.from}, ${col.to})` }} /></div>
+    </button>
+  )
+}

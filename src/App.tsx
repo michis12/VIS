@@ -20,9 +20,9 @@ import { StoreProvider, useStore } from './store'
 type Tab = 'train' | 'stats' | 'body' | 'food' | 'profile'
 
 const TABS: { id: Tab; label: string; icon: () => React.JSX.Element }[] = [
-  { id: 'train', label: 'Training', icon: Icon.dumbbell },
   { id: 'stats', label: 'Statistik', icon: Icon.chart },
   { id: 'body', label: 'Körper', icon: Icon.body },
+  { id: 'train', label: 'Training', icon: Icon.dumbbell },
   { id: 'food', label: 'Ernährung', icon: Icon.food },
   { id: 'profile', label: 'Profil', icon: Icon.trophy },
 ]
@@ -77,7 +77,7 @@ function Shell() {
       <div className="app">
         {!content && <div className="top-blur" />}
         <div className="app" style={content ? { visibility: 'hidden' } : undefined} aria-hidden={!!content}>
-          {tab === 'train' && <Home onOpenWorkout={() => setShowWorkout(true)} onOpenStats={() => { haptic(); setTab('stats') }} onOpenBody={(f) => { haptic(); setBodyFocus(f ?? null); setTab('body') }} toast={setToast} />}
+          {tab === 'train' && <Home onOpenWorkout={() => setShowWorkout(true)} onOpenStats={() => { haptic(); setTab('stats') }} onOpenBody={(f) => { haptic(); setBodyFocus(f ?? null); setTab('body') }} onOpenFood={() => { haptic(); setTab('food') }} toast={setToast} />}
           {tab === 'stats' && <Stats />}
           {tab === 'body' && <Body focus={bodyFocus} />}
           {tab === 'profile' && <Profile toast={setToast} />}

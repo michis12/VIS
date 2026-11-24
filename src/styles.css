@@ -580,3 +580,14 @@ label.lbl { display: block; font-size: 12px; font-weight: 600; letter-spacing: .
 .nut-pick-row { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--line); }
 .nut-pick-row .nut-pick { border-top: 0; flex: 1; min-width: 0; }
 .nut-edit { font-size: 12px; color: var(--text-3); padding: 6px 2px 6px 6px; flex-shrink: 0; }
+
+.kcal-strip { display: block; width: 100%; text-align: left; margin-top: 12px; padding: 10px 14px 12px; }
+.kcal-strip-top { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.kcal-strip-top .num { margin-left: auto; }
+.kcal-strip-top .chev { display: flex; color: var(--text-3); }
+.kcal-strip-top .chev svg { width: 16px; height: 16px; }
+.kcal-strip-track { height: 4px; border-radius: 2px; background: var(--surface-3); overflow: hidden; margin-top: 8px; }
+.kcal-strip-track div { height: 100%; border-radius: 2px; transition: width .4s; }
+
+.nut-day-title { padding: 2px 10px; border-radius: 12px; }
+.nut-day-title:active { opacity: .6; }

@@ -44,6 +44,8 @@ export function Nutrition() {
   const store = useStore()
   const { foodLog, phases, weights } = store
   const [date, setDate] = useState(today())
+  // day arrows appear after tapping the title; tapping again (on another day) jumps back to today
+  const [dayNav, setDayNav] = useState(false)
   const [adding, setAdding] = useState<null | 'search' | 'scan'>(null)
   const [editing, setEditing] = useState<FoodEntry | null>(null)
 
@@ -57,9 +59,11 @@ export function Nutrition() {
     <div className="screen">
       <div className="eyebrow">Ernährung</div>
       <div className="nut-day">
-        <button className="icon-btn" onClick={() => setDate(addDays(date, -1))} aria-label="Vorheriger Tag"><Icon.back /></button>
-        <h1 className="title" style={{ margin: 0 }}>{date === today() ? 'Heute' : date === addDays(today(), -1) ? 'Gestern' : dateLabel(date, false)}</h1>
-        <button className="icon-btn" style={{ transform: 'scaleX(-1)', visibility: date >= today() ? 'hidden' : undefined }} onClick={() => setDate(addDays(date, 1))} aria-label="Nächster Tag"><Icon.back /></button>
+        <button className="icon-btn" style={dayNav ? undefined : { visibility: 'hidden' }} onClick={() => setDate(addDays(date, -1))} aria-label="Vorheriger Tag"><Icon.back /></button>
+        <button className="nut-day-title" onClick={() => { if (dayNav && date !== today()) setDate(today()); else setDayNav(!dayNav) }}>
+          <h1 className="title" style={{ margin: 0 }}>{date === today() ? 'Heute' : date === addDays(today(), -1) ? 'Gestern' : dateLabel(date, false)}</h1>
+        </button>
+        <button className="icon-btn" style={{ transform: 'scaleX(-1)', visibility: dayNav && date < today() ? undefined : 'hidden' }} onClick={() => setDate(addDays(date, 1))} aria-label="Nächster Tag"><Icon.back /></button>
       </div>
 
       <div className="card chrome-edge nut-ring-card">
