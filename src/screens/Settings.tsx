@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { AiCreditCard } from '../components/AiCreditCard'
 import { CloudCard } from '../components/CloudCard'
 import { enablePush, pushActive, pushSupported } from '../push'
 import { clock, localIso } from '../lib'
@@ -99,6 +100,8 @@ export function Settings({ toast }: { toast: (t: string) => void }) {
 
       <div className="section-title"><h2>Cloud</h2></div>
       <CloudCard toast={toast} />
+
+      <AiCreditCard toast={toast} />
 
       <div className="section-title"><h2>Daten</h2></div>
       <div className="card">

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { FoodPhoto } from '../components/FoodPhoto'
 import { Scanner } from '../components/Scanner'
 import { Icon, Sheet, Tap } from '../components/ui'
 import { BASICS } from '../data/foods'
@@ -50,6 +51,8 @@ export function Nutrition() {
   const [added, setAdded] = useState(0)
   const [adding, setAdding] = useState<null | 'search' | 'scan'>(null)
   const [editing, setEditing] = useState<FoodEntry | null>(null)
+  const [photo, setPhoto] = useState<File | null>(null)
+  const photoInput = useRef<HTMLInputElement>(null)
 
   // newest first
   const day = useMemo(() => foodLog.filter((e) => e.date === date).reverse(), [foodLog, date])
@@ -83,7 +86,9 @@ export function Nutrition() {
 
       <div className="nut-actions">
         <Tap className="btn btn-chrome" onClick={() => { haptic(); setAdding('search') }}><Icon.plus /> Hinzufügen</Tap>
+        <Tap className="nut-scan big" onClick={() => { haptic(); photoInput.current?.click() }} aria-label="Essen fotografieren"><CameraIcon /></Tap>
         <Tap className="nut-scan big" onClick={() => { haptic(); setAdding('scan') }} aria-label="Barcode scannen"><ScanIcon /></Tap>
+        <input ref={photoInput} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) setPhoto(f); e.target.value = '' }} />
       </div>
 
       {day.length > 0 && (
@@ -114,6 +119,23 @@ export function Nutrition() {
             if (p.kind === 'food' && p.food.source === 'off') store.saveFood(p.food) // keep for offline + recents
             haptic()
             setAdding(null)
+            setAdded((n) => n + 1)
+          }}
+        />
+      )}
+      {photo && (
+        <FoodPhoto
+          file={photo}
+          onClose={() => setPhoto(null)}
+          onAdd={(items) => {
+            const at = localIso()
+            for (const it of items) {
+              store.saveFoodEntry({
+                id: uid(), date, meal: mealAt(), name: it.food.name, grams: it.grams, ...forGrams(it.food, it.grams), at,
+                ref: { kind: 'food', food: it.food },
+              })
+            }
+            setPhoto(null)
             setAdded((n) => n + 1)
           }}
         />
@@ -480,6 +502,15 @@ function ScanIcon() {
     <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
       <path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3" />
       <path d="M8 8v8M11 8v8M14 8v8M17 8v8" strokeWidth="1.4" />
+    </svg>
+  )
+}
+
+function CameraIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5Z" />
+      <circle cx="12" cy="13" r="3.5" />
     </svg>
   )
 }
