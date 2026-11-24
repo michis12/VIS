@@ -46,6 +46,8 @@ export function Nutrition() {
   const [date, setDate] = useState(today())
   // day arrows appear after tapping the title; tapping again (on another day) jumps back to today
   const [dayNav, setDayNav] = useState(false)
+  // counts added entries; each one plays the check animation once
+  const [added, setAdded] = useState(0)
   const [adding, setAdding] = useState<null | 'search' | 'scan'>(null)
   const [editing, setEditing] = useState<FoodEntry | null>(null)
 
@@ -112,9 +114,11 @@ export function Nutrition() {
             if (p.kind === 'food' && p.food.source === 'off') store.saveFood(p.food) // keep for offline + recents
             haptic()
             setAdding(null)
+            setAdded((n) => n + 1)
           }}
         />
       )}
+      {added > 0 && <AddedCheck key={added} />}
       {editing && <EntrySheet entry={editing} onClose={() => setEditing(null)} />}
     </div>
   )
@@ -174,8 +178,6 @@ export function FoodPicker({ title, onPick, onClose, noRecipes, startScan }: {
   const [scan, setScan] = useState(!!startScan)
   const [view, setView] = useState<'recent' | 'recipes'>('recent')
   const [editRecipe, setEditRecipe] = useState<Recipe | null | 'new'>(null)
-  // counts successful scans; each one plays the check animation once
-  const [ok, setOk] = useState(0)
   const [missing, setMissing] = useState<{ code: string; name?: string } | null>(null)
   const [chosen, setChosen] = useState<Pick | null>(null)
   const [custom, setCustom] = useState<{ barcode?: string; name?: string } | null>(null)
@@ -228,13 +230,13 @@ export function FoodPicker({ title, onPick, onClose, noRecipes, startScan }: {
     return () => { clearTimeout(t); c.abort() }
   }, [term])
 
-  const openProduct = async (code: string, fallbackName?: string, scanned = false) => {
+  const openProduct = async (code: string, fallbackName?: string) => {
     const known = foods.find((f) => f.barcode === code)
-    if (known) { if (scanned) setOk((n) => n + 1); setChosen({ kind: 'food', food: known }); return }
+    if (known) { setChosen({ kind: 'food', food: known }); return }
     setBusy(code)
     try {
       const f = await offProduct(code)
-      if (f) { if (scanned) setOk((n) => n + 1); setChosen({ kind: 'food', food: f }) }
+      if (f) setChosen({ kind: 'food', food: f })
       else setMissing({ code, name: fallbackName })
     } catch {
       setOffline(true)
@@ -305,11 +307,10 @@ export function FoodPicker({ title, onPick, onClose, noRecipes, startScan }: {
         <Scanner
           // opened via the scan button: cancelling goes straight back
           onClose={() => { setScan(false); if (startScan && !missing) onClose() }}
-          onCode={(code) => { setScan(false); openProduct(code, undefined, true) }}
+          onCode={(code) => { setScan(false); openProduct(code) }}
         />
       )}
       {busy && !scan && <div className="nut-loading">Produkt wird geladen…</div>}
-      {ok > 0 && <ScanCheck key={ok} />}
       {editRecipe && <RecipeEditor recipe={editRecipe === 'new' ? null : editRecipe} onClose={() => setEditRecipe(null)} />}
       {missing && (
         <Sheet onClose={() => setMissing(null)}>
@@ -459,8 +460,8 @@ function CustomFoodSheet({ initial, onClose, onSave }: { initial: { barcode?: st
   )
 }
 
-/** Short "found it" check in a mint circle, centered above everything. */
-function ScanCheck() {
+/** Short check in a mint circle after adding something, upper middle of the screen. */
+function AddedCheck() {
   const [show, setShow] = useState(true)
   useEffect(() => { const t = setTimeout(() => setShow(false), 950); return () => clearTimeout(t) }, [])
   if (!show) return null

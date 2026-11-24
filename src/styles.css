@@ -592,8 +592,8 @@ label.lbl { display: block; font-size: 12px; font-weight: 600; letter-spacing: .
 .nut-day-title { padding: 2px 10px; border-radius: 12px; }
 .nut-day-title:active { opacity: .6; }
 
-/* successful scan: mint check, center of the screen, above the amount sheet */
-.scan-check { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; pointer-events: none; animation: scan-check-out .95s ease forwards; }
+/* after adding food: mint check in the upper middle of the screen */
+.scan-check { position: fixed; inset: 0; z-index: 90; display: flex; justify-content: center; align-items: flex-start; padding-top: 30vh; pointer-events: none; animation: scan-check-out .95s ease forwards; }
 .scan-check svg { filter: drop-shadow(0 0 24px rgba(143,209,158,.45)); animation: scan-check-pop .45s cubic-bezier(.2,1.4,.4,1); }
 .scan-check-c { fill: rgba(143,209,158,.16); stroke: var(--good); stroke-width: 3; }
 .scan-check-p { fill: none; stroke: var(--good); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 40; stroke-dashoffset: 40; animation: scan-check-draw .35s .12s ease-out forwards; }
