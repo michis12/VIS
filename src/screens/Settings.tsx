@@ -2,11 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { CloudCard } from '../components/CloudCard'
 import { enablePush, pushActive, pushSupported } from '../push'
 import { clock, localIso } from '../lib'
+import { Icon } from '../components/ui'
+import { useNav } from '../nav'
 import { useStore } from '../store'
-import type { Snapshot } from '../db'
+import { normalizeSnapshot, snapshotOf, type Snapshot } from '../db'
 
 export function Settings({ toast }: { toast: (t: string) => void }) {
   const store = useStore()
+  const nav = useNav()
   const file = useRef<HTMLInputElement>(null)
   const [persisted, setPersisted] = useState<boolean | null>(null)
   const [perm, setPerm] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported')
@@ -18,10 +21,7 @@ export function Settings({ toast }: { toast: (t: string) => void }) {
   useEffect(() => { pushActive().then(setPushOn) }, [])
 
   const exportBackup = () => {
-    const snap: Snapshot = {
-      exercises: store.exercises, workouts: store.workouts, templates: store.templates,
-      weights: store.weights, phases: store.phases, measurements: store.measurements, settings: store.settings,
-    }
+    const snap: Snapshot = snapshotOf(store)
     const blob = new Blob([JSON.stringify({ app: 'vis', version: 1, exportedAt: localIso(), ...snap })], { type: 'application/json' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
@@ -37,11 +37,7 @@ export function Settings({ toast }: { toast: (t: string) => void }) {
     try {
       const data = JSON.parse(await f.text())
       if (data.app !== 'vis' || !Array.isArray(data.workouts)) throw new Error('Keine VIS-Sicherung')
-      await store.importSnapshot({
-        exercises: data.exercises ?? [], workouts: data.workouts, templates: data.templates ?? [],
-        weights: data.weights ?? [], phases: data.phases ?? [], measurements: data.measurements ?? [],
-        settings: data.settings ?? store.settings,
-      })
+      await store.importSnapshot(normalizeSnapshot(data, store.settings))
       toast('Sicherung wiederhergestellt')
     } catch (e) {
       toast('Import fehlgeschlagen: ' + (e as Error).message)
@@ -68,9 +64,12 @@ export function Settings({ toast }: { toast: (t: string) => void }) {
   const setRest = (d: number) => store.saveSettings({ ...store.settings, restSec: Math.max(30, Math.min(600, rest + d)) })
 
   return (
-    <div className="screen">
-      <div className="eyebrow">VIS</div>
-      <h1 className="title">Einstellungen</h1>
+    <div className="screen no-tabs">
+      <div className="wo-head">
+        <button className="icon-btn" onClick={nav.pop} aria-label="Zurück"><Icon.back /></button>
+        <div className="grow"><div className="name">Einstellungen</div></div>
+      </div>
+      <div style={{ height: 18 }} />
 
       <div className="section-title" style={{ marginTop: 0 }}><h2>Training</h2></div>
       <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

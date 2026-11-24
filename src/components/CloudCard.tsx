@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import * as cloud from '../cloud'
-import type { Snapshot } from '../db'
+import { normalizeSnapshot, snapshotOf, type Snapshot } from '../db'
 import { dateLabel } from '../lib'
 import { useStore } from '../store'
 import { Sheet } from './ui'
@@ -21,10 +21,7 @@ export function CloudCard({ toast }: { toast: (t: string) => void }) {
   const [ready, setReady] = useState(cloud.cloudReady())
   const [last, setLast] = useState(cloud.lastSync())
 
-  const snapshot = useCallback((): Snapshot => ({
-    exercises: store.exercises, workouts: store.workouts, templates: store.templates,
-    weights: store.weights, phases: store.phases, measurements: store.measurements, settings: store.settings,
-  }), [store])
+  const snapshot = useCallback((): Snapshot => snapshotOf(store), [store])
 
   useEffect(() => {
     if (!cloud.supabase) { setLoading(false); return }
@@ -55,11 +52,7 @@ export function CloudCard({ toast }: { toast: (t: string) => void }) {
 
   const restore = (id: number) => run(async () => {
     const data = await cloud.fetchBackup(id)
-    await store.importSnapshot({
-      exercises: data.exercises ?? [], workouts: data.workouts ?? [], templates: data.templates ?? [],
-      weights: data.weights ?? [], phases: data.phases ?? [], measurements: data.measurements ?? [],
-      settings: data.settings ?? store.settings,
-    })
+    await store.importSnapshot(normalizeSnapshot(data, store.settings))
     cloud.setCloudReady(true)
     setReady(true); setFound(null); setVersions(null)
     toast('Aus der Cloud wiederhergestellt')

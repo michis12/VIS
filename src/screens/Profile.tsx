@@ -1,9 +1,11 @@
 import { useId, useMemo, useRef, useState } from 'react'
 import { pastWeekScores } from '../weekly'
 import { scorePhases } from '../phaseScore'
+import { kcalTarget } from '../nutrition'
 import { computeMetrics, evaluate, fmtMetric, MAX_STARS, nextRank, rankFor, ULTIMATE, type AchievementState, type Glyph } from '../achievements'
 import { Avatar, ProfileEditor } from '../components/Avatar'
 import { Icon, Sheet } from '../components/ui'
+import { useNav } from '../nav'
 import { shareOrDownload } from '../files'
 import { renderShareCard } from '../shareCard'
 import { dateLabel, fmtInt } from '../lib'
@@ -78,6 +80,9 @@ const GLYPHS: Record<Glyph, React.JSX.Element> = {
   phase: <g {...P}><path d="M4 24c4 0 5-12 9-12s4 8 7 8 4-12 8-12" /><circle cx="13" cy="12" r="1.6" /><circle cx="20" cy="20" r="1.6" /></g>,
   bulk: <g {...P}><path d="M6 26h20" /><path d="M9 26V18M14 26V14M19 26V10M24 26V6" /><path d="M21 6h3v3" /></g>,
   shred: <g {...P}><path d="M16 28c-5 0-8-3.5-8-8 0-5 4-7 5-12 3 2 4 5 4 7 1-1 2-3 2-4 3 2 5 5 5 9 0 4.5-3 8-8 8Z" /><path d="M16 28c-2 0-3.5-1.5-3.5-3.5 0-2 2-3 3.5-5.5 1.5 2.5 3.5 3.5 3.5 5.5S18 28 16 28Z" /></g>,
+  diary: <g {...P}><rect x="7" y="4" width="18" height="24" rx="2.5" /><path d="M11 4v24" /><path d="M15 11h6M15 15h6M15 19h4" /></g>,
+  egg: <g {...P}><path d="M16 4c-5 0-9 8-9 14a9 9 0 0 0 18 0c0-6-4-14-9-14Z" /><path d="M12 19a4 4 0 0 0 4 4" /></g>,
+  bullseye: <g {...P}><circle cx="16" cy="16" r="11" /><circle cx="16" cy="16" r="6.5" /><circle cx="16" cy="16" r="2" /></g>,
   couch: <g {...P}><path d="M7 16v-4a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v4" /><path d="M4 18a2 2 0 0 1 4 0v2h16v-2a2 2 0 0 1 4 0v6H4Z" /><path d="M7 24v3M25 24v3" /></g>,
 }
 
@@ -119,14 +124,29 @@ export function Stars({ n, size = 11 }: { n: number; size?: number }) {
 }
 
 function useMetrics() {
-  const { workouts, weights, exercises, progress, phases, workoutScores, measurements } = useStore()
+  const { workouts, weights, exercises, progress, phases, workoutScores, measurements, foodLog } = useStore()
   return useMemo(() => {
     const first = workouts.find((w) => w.status === 'done')?.startedAt
     const weeks = first ? Math.min(600, Math.ceil((Date.now() - Date.parse(first)) / (7 * 864e5)) + 1) : 0
     const weekScores = pastWeekScores(workouts, progress.byId, weights, phases, weeks).reverse()
     const phaseScores = scorePhases(phases, workouts, weights, progress.byId).map((p) => ({ type: p.phase.type, score: p.score, weeks: p.weeks }))
-    return computeMetrics(workouts, weights, exercises, progress.byId, { workoutScores, weekScores, measurements: measurements.length, phaseScores })
-  }, [workouts, weights, exercises, progress, phases, workoutScores, measurements])
+    // food log: per day totals vs. targets
+    const byDay = new Map<string, { kcal: number; p: number }>()
+    for (const e of foodLog) {
+      const d = byDay.get(e.date) ?? { kcal: 0, p: 0 }
+      d.kcal += e.kcal; d.p += e.p
+      byDay.set(e.date, d)
+    }
+    let proteinDays = 0, onTargetDays = 0
+    for (const [date, d] of byDay) {
+      const kg = [...weights].reverse().find((w) => w.date <= date)?.kg ?? weights[0]?.kg
+      if (kg && d.p >= kg * 2) proteinDays++
+      const t = kcalTarget(phases, date)
+      if (t && Math.abs(d.kcal - t) <= t * 0.05) onTargetDays++
+    }
+    const nutrition = { days: byDay.size, proteinDays, onTargetDays }
+    return computeMetrics(workouts, weights, exercises, progress.byId, { workoutScores, weekScores, measurements: measurements.length, phaseScores, nutrition })
+  }, [workouts, weights, exercises, progress, phases, workoutScores, measurements, foodLog])
 }
 
 export function useAchievements() {
@@ -139,6 +159,7 @@ const MONTH_SHORT = ['Jän', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', '
 
 export function Profile({ toast }: { toast: (t: string) => void }) {
   const { workouts, settings } = useStore()
+  const nav = useNav()
   const list = useAchievements()
   const [open, setOpen] = useState<AchievementState | null>(null)
   const [ultOpen, setUltOpen] = useState(false)
@@ -218,9 +239,14 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
           <div className="nm">{settings.name || 'Dein Name'}</div>
           <button className="link muted" style={{ fontSize: 14 }} onClick={() => setEditing(true)}>Profil bearbeiten</button>
         </div>
-        <button className="icon-btn" onClick={buildShare} disabled={busy} aria-label="Profil teilen" style={{ width: 44, height: 44 }}>
-          <Icon.share />
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="icon-btn" onClick={buildShare} disabled={busy} aria-label="Profil teilen" style={{ width: 44, height: 44 }}>
+            <Icon.share />
+          </button>
+          <button className="icon-btn" onClick={() => nav.push({ kind: 'settings' })} aria-label="Einstellungen" style={{ width: 44, height: 44 }}>
+            <Icon.gear />
+          </button>
+        </div>
       </div>
 
       <div className="card chrome-edge rank-card">

@@ -1,8 +1,9 @@
 import { openDB, type IDBPDatabase } from 'idb'
-import type { Exercise, Measurement, Phase, Settings, Template, WeightEntry, Workout } from './types'
+import { SEED_RECIPES } from './data/foods'
+import type { Exercise, Food, FoodEntry, Measurement, Phase, Recipe, Settings, Template, WeightEntry, Workout } from './types'
 
 const DB_NAME = 'vis'
-const VERSION = 2
+const VERSION = 3
 
 export interface Snapshot {
   exercises: Exercise[]
@@ -12,7 +13,29 @@ export interface Snapshot {
   phases: Phase[]
   /** body measurements (added later – may be missing in old backups) */
   measurements: Measurement[]
+  /** nutrition (added later – may be missing in old backups) */
+  foods: Food[]
+  recipes: Recipe[]
+  foodLog: FoodEntry[]
   settings: Settings
+}
+
+/** Fills fields missing in older backups. */
+export function normalizeSnapshot(data: Partial<Snapshot>, fallback: Settings): Snapshot {
+  return {
+    exercises: data.exercises ?? [], workouts: data.workouts ?? [], templates: data.templates ?? [],
+    weights: data.weights ?? [], phases: data.phases ?? [], measurements: data.measurements ?? [],
+    foods: data.foods ?? [], recipes: data.recipes ?? [], foodLog: data.foodLog ?? [],
+    settings: data.settings ?? fallback,
+  }
+}
+
+/** The persisted part of the store. */
+export function snapshotOf(s: Snapshot): Snapshot {
+  return {
+    exercises: s.exercises, workouts: s.workouts, templates: s.templates, weights: s.weights, phases: s.phases,
+    measurements: s.measurements, foods: s.foods, recipes: s.recipes, foodLog: s.foodLog, settings: s.settings,
+  }
 }
 
 let dbp: Promise<IDBPDatabase> | null = null
@@ -29,6 +52,16 @@ function db() {
         d.createObjectStore('meta')
       }
       if (oldVersion < 2) d.createObjectStore('measurements', { keyPath: 'date' })
+      if (oldVersion < 3) {
+        d.createObjectStore('foods', { keyPath: 'id' })
+        d.createObjectStore('recipes', { keyPath: 'id' })
+        d.createObjectStore('foodlog', { keyPath: 'id' })
+      }
+    },
+    // a newer version (other tab / after an update) needs the database: let go and reload
+    blocking() {
+      void dbp?.then((x) => x.close())
+      location.reload()
     },
   })
   return dbp
@@ -98,7 +131,14 @@ export async function loadAll(): Promise<Snapshot> {
     tx.objectStore('meta').put(seed.version, 'seedVersion')
     await tx.done
   }
-  const [exercises, workouts, templates, weights, phases, settings, measurements] = await Promise.all([
+  // starter recipes, once per device (again after restoring a backup that has none)
+  if (!(await d.get('meta', 'recipesSeeded'))) {
+    const tx = d.transaction(['recipes', 'meta'], 'readwrite')
+    for (const r of SEED_RECIPES) if (!(await tx.objectStore('recipes').get(r.id))) tx.objectStore('recipes').put(r)
+    tx.objectStore('meta').put(true, 'recipesSeeded')
+    await tx.done
+  }
+  const [exercises, workouts, templates, weights, phases, settings, measurements, foods, recipes, foodLog] = await Promise.all([
     d.getAll('exercises'),
     d.getAll('workouts'),
     d.getAll('templates'),
@@ -106,16 +146,21 @@ export async function loadAll(): Promise<Snapshot> {
     d.getAll('phases'),
     d.get('meta', 'settings'),
     d.getAll('measurements'),
+    d.getAll('foods'),
+    d.getAll('recipes'),
+    d.getAll('foodlog'),
   ])
+  recipes.sort((a, b) => a.name.localeCompare(b.name, 'de'))
+  foodLog.sort((a, b) => a.at.localeCompare(b.at))
   measurements.sort((a, b) => a.date.localeCompare(b.date))
   workouts.sort((a, b) => a.startedAt.localeCompare(b.startedAt))
   templates.sort((a, b) => a.name.localeCompare(b.name, 'de', { numeric: true }))
   weights.sort((a, b) => a.date.localeCompare(b.date))
   phases.sort((a, b) => a.start.localeCompare(b.start))
-  return { exercises, workouts, templates, weights, phases, measurements, settings: { ...DEFAULT_SETTINGS, ...settings } }
+  return { exercises, workouts, templates, weights, phases, measurements, foods, recipes, foodLog, settings: { ...DEFAULT_SETTINGS, ...settings } }
 }
 
-type Store = 'exercises' | 'workouts' | 'templates' | 'weights' | 'phases' | 'measurements'
+type Store = 'exercises' | 'workouts' | 'templates' | 'weights' | 'phases' | 'measurements' | 'foods' | 'recipes' | 'foodlog'
 
 export async function put<T>(store: Store, value: T) {
   await (await db()).put(store, value)
@@ -132,12 +177,17 @@ export async function saveSettings(s: Settings) {
 /** Full replace, used by backup import. */
 export async function replaceAll(s: Snapshot) {
   const d = await db()
-  const stores: Store[] = ['exercises', 'workouts', 'templates', 'weights', 'phases', 'measurements']
-  const tx = d.transaction([...stores, 'meta'], 'readwrite')
-  for (const st of stores) {
+  const map: [Store, keyof Snapshot][] = [
+    ['exercises', 'exercises'], ['workouts', 'workouts'], ['templates', 'templates'], ['weights', 'weights'],
+    ['phases', 'phases'], ['measurements', 'measurements'], ['foods', 'foods'], ['recipes', 'recipes'], ['foodlog', 'foodLog'],
+  ]
+  const tx = d.transaction([...map.map(([st]) => st), 'meta'], 'readwrite')
+  for (const [st, key] of map) {
     await tx.objectStore(st).clear()
-    for (const v of s[st] ?? []) tx.objectStore(st).put(v) // old backups have no measurements
+    for (const v of (s[key] as unknown[] | undefined) ?? []) tx.objectStore(st).put(v) // old backups lack newer stores
   }
+  // a backup without recipes gets the starter recipes again
+  if (!s.recipes?.length) tx.objectStore('meta').delete('recipesSeeded')
   tx.objectStore('meta').put(s.settings, 'settings')
   tx.objectStore('meta').put(true, 'seeded')
   tx.objectStore('meta').put(4, 'seedVersion')

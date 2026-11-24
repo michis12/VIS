@@ -7,6 +7,7 @@ import { Body } from './screens/Body'
 import { ExerciseDetail } from './screens/ExerciseDetail'
 import { History } from './screens/History'
 import { Measures } from './screens/Measures'
+import { Nutrition } from './screens/Nutrition'
 import { Home } from './screens/Home'
 import { Profile, useAchievements } from './screens/Profile'
 import { Settings } from './screens/Settings'
@@ -16,14 +17,14 @@ import { WorkoutScreen } from './screens/Workout'
 import { WorkoutView } from './screens/WorkoutView'
 import { StoreProvider, useStore } from './store'
 
-type Tab = 'train' | 'stats' | 'body' | 'profile' | 'settings'
+type Tab = 'train' | 'stats' | 'body' | 'food' | 'profile'
 
 const TABS: { id: Tab; label: string; icon: () => React.JSX.Element }[] = [
   { id: 'train', label: 'Training', icon: Icon.dumbbell },
   { id: 'stats', label: 'Statistik', icon: Icon.chart },
   { id: 'body', label: 'Körper', icon: Icon.body },
+  { id: 'food', label: 'Ernährung', icon: Icon.food },
   { id: 'profile', label: 'Profil', icon: Icon.trophy },
-  { id: 'settings', label: 'Mehr', icon: Icon.gear },
 ]
 
 function Shell() {
@@ -58,6 +59,7 @@ function Shell() {
   else if (top?.kind === 'history') content = <History />
   else if (top?.kind === 'template') content = <TemplateEditor template={top.template} onClose={nav.pop} />
   else if (top?.kind === 'measures') content = <Measures />
+  else if (top?.kind === 'settings') content = <Settings toast={setToast} />
   else if (top?.kind === 'exercise') content = <ExerciseDetail key={top.id} id={top.id} />
 
   else if (showWorkout && active) {
@@ -79,7 +81,7 @@ function Shell() {
           {tab === 'stats' && <Stats />}
           {tab === 'body' && <Body focus={bodyFocus} />}
           {tab === 'profile' && <Profile toast={setToast} />}
-          {tab === 'settings' && <Settings toast={setToast} />}
+          {tab === 'food' && <Nutrition />}
           <nav className="tabbar">
             {TABS.map((t) => (
               <Tap key={t.id} className={'tab' + (tab === t.id ? ' on' : '')} onClick={() => { if (t.id !== tab) haptic(); setBodyFocus(null); setTab(t.id) }}>

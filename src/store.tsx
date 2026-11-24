@@ -4,7 +4,7 @@ import * as db from './db'
 import type { Snapshot } from './db'
 import { buildProgress } from './progress'
 import { buildWorkoutScoreDetails, type WorkoutScoreDetail } from './workoutScore'
-import type { Exercise, Measurement, Phase, Settings, Template, WeightEntry, Workout } from './types'
+import type { Exercise, Food, FoodEntry, Measurement, Phase, Recipe, Settings, Template, WeightEntry, Workout } from './types'
 
 interface Store extends Snapshot {
   exerciseById: Map<string, Exercise>
@@ -27,6 +27,12 @@ interface Store extends Snapshot {
   saveMeasurement: (m: Measurement) => void
   deleteMeasurement: (date: string) => void
   saveSettings: (s: Settings) => void
+  saveFood: (f: Food) => void
+  deleteFood: (id: string) => void
+  saveRecipe: (r: Recipe) => void
+  deleteRecipe: (id: string) => void
+  saveFoodEntry: (e: FoodEntry) => void
+  deleteFoodEntry: (id: string) => void
   importSnapshot: (s: Snapshot) => Promise<void>
 }
 
@@ -138,6 +144,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       saveSettings: (settings) => {
         db.saveSettings(settings)
         mutate((s) => ({ ...s, settings }))
+      },
+      saveFood: (f) => {
+        db.put('foods', f)
+        mutate((s) => ({ ...s, foods: upsert(s.foods, f, (x) => x.id) }))
+      },
+      deleteFood: (id) => {
+        db.del('foods', id)
+        mutate((s) => ({ ...s, foods: s.foods.filter((x) => x.id !== id) }))
+      },
+      saveRecipe: (r) => {
+        db.put('recipes', r)
+        mutate((s) => ({ ...s, recipes: upsert(s.recipes, r, (x) => x.id, (x) => x.name) }))
+      },
+      deleteRecipe: (id) => {
+        db.del('recipes', id)
+        mutate((s) => ({ ...s, recipes: s.recipes.filter((x) => x.id !== id) }))
+      },
+      saveFoodEntry: (e) => {
+        db.put('foodlog', e)
+        mutate((s) => ({ ...s, foodLog: upsert(s.foodLog, e, (x) => x.id, (x) => x.at) }))
+      },
+      deleteFoodEntry: (id) => {
+        db.del('foodlog', id)
+        mutate((s) => ({ ...s, foodLog: s.foodLog.filter((x) => x.id !== id) }))
       },
       importSnapshot: async (s) => {
         await db.replaceAll(s)

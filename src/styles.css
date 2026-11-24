@@ -520,3 +520,54 @@ label.lbl { display: block; font-size: 12px; font-weight: 600; letter-spacing: .
 .kcal-step { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 36px; gap: 8px; align-items: center; margin-top: 8px; }
 .kcal-step .kcal-from { font-size: 13px; }
 .kcal-step .icon-btn { width: 36px; height: 36px; font-size: 20px; }
+
+.icon-btn svg:not([width]) { width: 22px; height: 22px; }
+
+/* ---- Ernährung */
+.nut-day { display: flex; align-items: center; justify-content: space-between; margin: 2px 0 14px; }
+.nut-ring-card { display: flex; align-items: center; gap: 16px; padding: 16px; }
+.nut-ring { position: relative; width: 132px; height: 132px; flex-shrink: 0; }
+.nut-ring svg { display: block; }
+.nut-ring-txt { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; }
+.nut-ring-txt b { font-size: 26px; font-weight: 750; letter-spacing: -0.02em; }
+.nut-ring-txt span { font-size: 12px; }
+.nut-left { margin-top: 3px; color: var(--text-2); font-weight: 600; }
+.nut-macros { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.nut-macro-top { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
+.nut-macro .track { height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+.nut-macro .fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #8e8e93, #f2f2f7); transition: width .4s; }
+.nut-meal { margin-top: 12px; padding: 12px 14px 6px; }
+.nut-meal-head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 6px; }
+.nut-add { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); border: 1px solid var(--line); }
+.nut-entry, .nut-pick { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 10px 0; border-top: 1px solid var(--line); }
+.nut-entry-name { font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nut-entry .grow, .nut-pick .grow { min-width: 0; flex: 1; }
+.nut-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.nut-week-day { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; color: var(--text-3); }
+.nut-week-day.on { color: var(--text); }
+.nut-week-bar { position: relative; width: 100%; max-width: 26px; height: 80px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.nut-week-bar b { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(180deg, #f2f2f7, #8e8e93); border-radius: 6px 6px 0 0; }
+.nut-week-day:not(.on) .nut-week-bar b { opacity: .55; }
+.nut-week-bar .tgt { position: absolute; left: 0; right: 0; height: 2px; background: var(--good); z-index: 1; }
+.nut-amount { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.nut-amount .field { flex: 1; text-align: center; font-size: 28px; font-weight: 700; }
+.nut-sum { margin-top: 14px; text-align: center; }
+.nut-sum b { display: block; font-size: 18px; font-weight: 700; }
+.nut-sum span { font-size: 11px; color: var(--text-3); }
+.nut-cooked { width: 90px; height: 34px; padding: 0 10px; text-align: right; }
+
+/* full-screen picker / editor above the tab bar */
+.fullsheet { position: fixed; inset: 0; z-index: 45; background: var(--bg); display: flex; flex-direction: column; animation: slide-in .26s cubic-bezier(.2,.9,.3,1); padding-top: var(--safe-top); }
+.fullsheet-head .grow { flex: 1; min-width: 0; }
+.fullsheet-head { display: flex; align-items: center; gap: 12px; padding: 12px 16px 8px; max-width: 640px; width: 100%; margin: 0 auto; }
+.fullsheet-body { flex: 1; overflow-y: auto; padding: 6px 16px calc(var(--safe-bottom) + 40px + var(--kb, 0px)); max-width: 640px; width: 100%; margin: 0 auto; }
+.nut-search { display: flex; gap: 8px; padding: 0 16px 8px; max-width: 640px; width: 100%; margin: 0 auto; }
+.nut-search .input { flex: 1; }
+.nut-scan { width: 48px; flex-shrink: 0; border-radius: 14px; display: grid; place-items: center; background: var(--surface-2); border: 1px solid var(--line-strong); }
+
+/* barcode scanner */
+.scanner { position: fixed; inset: 0; z-index: 70; background: #000; }
+.scanner video { width: 100%; height: 100%; object-fit: cover; }
+.scanner-frame { position: absolute; left: 12%; right: 12%; top: 38%; height: 22%; border: 2px solid rgba(255,255,255,.85); border-radius: 18px; box-shadow: 0 0 0 100vmax rgba(0,0,0,.45); }
+.scanner-top { position: absolute; top: calc(var(--safe-top) + 12px); right: 16px; }
+.scanner-hint { position: absolute; left: 0; right: 0; bottom: calc(var(--safe-bottom) + 40px); text-align: center; color: #fff; font-size: 14px; padding: 0 24px; }

@@ -11,6 +11,7 @@ export type Glyph =
   | 'target' | 'stairs' | 'storm' | 'chevrons' | 'infinity' | 'diamond' | 'swords'
   | 'laurel' | 'torch' | 'gauge' | 'check' | 'figure' | 'link' | 'tape' | 'trend'
   | 'phase' | 'bulk' | 'shred'
+  | 'diary' | 'egg' | 'bullseye'
 
 export interface AchievementDef {
   id: string
@@ -93,6 +94,9 @@ export interface Metrics {
   bestPhase: number
   cleanBulks: number
   cleanCuts: number
+  foodDays: number
+  proteinDays: number
+  onTargetDays: number
 }
 
 /** Extra inputs for the score/feature achievements. */
@@ -103,6 +107,8 @@ export interface MetricExtras {
   measurements?: number
   /** scored bulk/cut/maintenance phases */
   phaseScores?: { type: string; score: number; weeks: number }[]
+  /** food log summary */
+  nutrition?: { days: number; proteinDays: number; onTargetDays: number }
 }
 
 const BENCH = new Set(['bench-press-barbell', 'bench-press-smith-machine', 'decline-barbell-bench-press', 'incline-bench-press-smith-machine'])
@@ -169,6 +175,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'phasenmeister', score: true, name: 'Phasen-Meister', glyph: 'phase', metric: 'bestPhase', unit: 'bester Phasen-Score', desc: 'Bulk, Cut oder Erhalt – richtig durchgezogen. Dein höchster Phasen-Score (ab 2 Wochen).', tiers: [50, 60, 70, 80, 90] },
   { id: 'saubererbulk', score: true, name: 'Sauberer Bulk', glyph: 'bulk', metric: 'cleanBulks', unit: 'Bulks mit Score 70+', desc: 'Optimal zugenommen und dabei stärker geworden. Bulk-Phasen (ab 4 Wochen) mit Score 70+.', tiers: [1, 2, 3, 5, 8] },
   { id: 'shredded', score: true, name: 'Shredded', glyph: 'shred', metric: 'cleanCuts', unit: 'Cuts mit Score 70+', desc: 'Fett runter, Kraft bleibt. Cut-Phasen (ab 4 Wochen) mit Score 70+.', tiers: [1, 2, 3, 5, 8] },
+  { id: 'tagebuch', score: true, name: 'Ess-Tagebuch', glyph: 'diary', metric: 'foodDays', unit: 'Tage geloggt', desc: 'Was du isst, zählt. Tage mit mindestens einem Eintrag in Ernährung.', tiers: [1, 7, 30, 100, 365] },
+  { id: 'eiweissprofi', score: true, name: 'Eiweiß-Profi', glyph: 'egg', metric: 'proteinDays', unit: 'Tage Eiweißziel erreicht', desc: 'Muskeln brauchen Baustoff. Tage mit mindestens 2 g Eiweiß pro kg Körpergewicht.', tiers: [1, 7, 30, 100, 250] },
+  { id: 'punktlandung', score: true, name: 'Punktlandung', glyph: 'bullseye', metric: 'onTargetDays', unit: 'Tage im Kalorienziel', desc: 'Genau dort, wo du hinwillst. Tage mit maximal 5 % Abweichung vom Kalorienziel der Phase.', tiers: [1, 7, 30, 90, 200] },
   { id: 'massband', score: true, name: 'Maßband', glyph: 'tape', metric: 'measureCount', unit: 'Messungen', desc: 'Zahlen lügen nicht. Einträge bei den Körpermaßen.', tiers: [1, 5, 12, 25, 52] },
 
   { id: 'ausreden', fun: true, name: 'Ausreden-Meister', glyph: 'couch', metric: 'excuses', unit: 'ausgelassene Übungen', desc: '„Heute nicht.“ – Übungen, die du per „Heute nicht trainieren“ geschwänzt hast.', tiers: [1, 5, 15, 30, 60] },
@@ -219,6 +228,7 @@ export function computeMetrics(
     bestWeekScore: 0, goodWeekStreak: 0, eliteWeeks: 0, upWeeks: 0, flawless: 0, fullBodyWeeks: 0,
     supersets: 0, measureCount: extras.measurements ?? 0,
     bestPhase: 0, cleanBulks: 0, cleanCuts: 0,
+    foodDays: extras.nutrition?.days ?? 0, proteinDays: extras.nutrition?.proteinDays ?? 0, onTargetDays: extras.nutrition?.onTargetDays ?? 0,
     // whole workouts marked as skipped (older feature) count as one excuse each
     excuses: workouts.filter((w) => w.status === 'skipped').length,
   }

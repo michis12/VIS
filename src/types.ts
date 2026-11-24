@@ -99,3 +99,53 @@ export interface Settings {
   /** square JPEG data URL, 256 px */
   avatar?: string
 }
+
+// ---- Ernährung
+
+/** Nutrition per 100 g (or 100 ml). */
+export interface Food {
+  id: string
+  name: string
+  brand?: string
+  kcal: number
+  p: number
+  c: number
+  f: number
+  /** optional portion, e.g. { label: '1 Ei', g: 55 } */
+  serving?: { label: string; g: number }
+  source: 'basic' | 'off' | 'custom'
+  barcode?: string
+}
+
+export interface RecipeItem { food: Food; grams: number }
+
+export interface Recipe {
+  id: string
+  name: string
+  items: RecipeItem[]
+  /** weight after cooking; nutrition per 100 g is based on this when set */
+  cookedWeight?: number
+}
+
+export type Meal = 'breakfast' | 'lunch' | 'dinner' | 'snack'
+export const MEALS: { id: Meal; label: string }[] = [
+  { id: 'breakfast', label: 'Frühstück' },
+  { id: 'lunch', label: 'Mittagessen' },
+  { id: 'dinner', label: 'Abendessen' },
+  { id: 'snack', label: 'Snacks' },
+]
+
+export interface FoodEntry {
+  id: string
+  date: string // YYYY-MM-DD
+  meal: Meal
+  name: string
+  grams: number
+  /** totals for `grams` */
+  kcal: number
+  p: number
+  c: number
+  f: number
+  ref: { kind: 'food'; food: Food } | { kind: 'recipe'; id: string }
+  at: string // ISO local, when it was logged
+}
