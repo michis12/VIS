@@ -174,6 +174,8 @@ export function FoodPicker({ title, onPick, onClose, noRecipes, startScan }: {
   const [scan, setScan] = useState(!!startScan)
   const [view, setView] = useState<'recent' | 'recipes'>('recent')
   const [editRecipe, setEditRecipe] = useState<Recipe | null | 'new'>(null)
+  // counts successful scans; each one plays the check animation once
+  const [ok, setOk] = useState(0)
   const [missing, setMissing] = useState<{ code: string; name?: string } | null>(null)
   const [chosen, setChosen] = useState<Pick | null>(null)
   const [custom, setCustom] = useState<{ barcode?: string; name?: string } | null>(null)
@@ -226,13 +228,13 @@ export function FoodPicker({ title, onPick, onClose, noRecipes, startScan }: {
     return () => { clearTimeout(t); c.abort() }
   }, [term])
 
-  const openProduct = async (code: string, fallbackName?: string) => {
+  const openProduct = async (code: string, fallbackName?: string, scanned = false) => {
     const known = foods.find((f) => f.barcode === code)
-    if (known) { setChosen({ kind: 'food', food: known }); return }
+    if (known) { if (scanned) setOk((n) => n + 1); setChosen({ kind: 'food', food: known }); return }
     setBusy(code)
     try {
       const f = await offProduct(code)
-      if (f) setChosen({ kind: 'food', food: f })
+      if (f) { if (scanned) setOk((n) => n + 1); setChosen({ kind: 'food', food: f }) }
       else setMissing({ code, name: fallbackName })
     } catch {
       setOffline(true)
@@ -303,10 +305,11 @@ export function FoodPicker({ title, onPick, onClose, noRecipes, startScan }: {
         <Scanner
           // opened via the scan button: cancelling goes straight back
           onClose={() => { setScan(false); if (startScan && !missing) onClose() }}
-          onCode={(code) => { setScan(false); openProduct(code) }}
+          onCode={(code) => { setScan(false); openProduct(code, undefined, true) }}
         />
       )}
       {busy && !scan && <div className="nut-loading">Produkt wird geladen…</div>}
+      {ok > 0 && <ScanCheck key={ok} />}
       {editRecipe && <RecipeEditor recipe={editRecipe === 'new' ? null : editRecipe} onClose={() => setEditRecipe(null)} />}
       {missing && (
         <Sheet onClose={() => setMissing(null)}>
@@ -453,6 +456,22 @@ function CustomFoodSheet({ initial, onClose, onSave }: { initial: { barcode?: st
         })}
       >Speichern</button>
     </Sheet>
+  )
+}
+
+/** Short "found it" check in a mint circle, centered above everything. */
+function ScanCheck() {
+  const [show, setShow] = useState(true)
+  useEffect(() => { const t = setTimeout(() => setShow(false), 950); return () => clearTimeout(t) }, [])
+  if (!show) return null
+  return createPortal(
+    <div className="scan-check" aria-hidden="true">
+      <svg viewBox="0 0 64 64" width="88" height="88">
+        <circle className="scan-check-c" cx="32" cy="32" r="28" />
+        <path className="scan-check-p" d="M20 33.5 28.5 42 45 24" />
+      </svg>
+    </div>,
+    document.body,
   )
 }
 
