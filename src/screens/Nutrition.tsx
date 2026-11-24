@@ -151,7 +151,6 @@ function KcalRing({ eaten, target, flash = 0 }: { eaten: number; target: number 
       {checking ? (
         <div className="nut-ring-txt" key={flash}>
           <svg className="ring-check" viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
-            <circle className="scan-check-c" cx="32" cy="32" r="26" />
             <path className="scan-check-p" d="M20 33.5 28.5 42 45 24" />
           </svg>
         </div>
