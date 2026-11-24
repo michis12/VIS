@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { FoodPhoto } from '../components/FoodPhoto'
+import { FoodPhoto, type KnownFood, type PhotoItem } from '../components/FoodPhoto'
 import { Scanner } from '../components/Scanner'
 import { Icon, Sheet, Tap } from '../components/ui'
 import { BASICS } from '../data/foods'
+import { foodAi, shrink } from '../foodAi'
 import { dateLabel, fmtInt, haptic, localIso, today, uid } from '../lib'
 import {
   dayTotals, fmtG, forGrams, kcalTarget, macroTargets, offProduct, offSearch, recipeAsFood, recipeWeight,
@@ -59,6 +60,17 @@ export function Nutrition() {
   const total = useMemo(() => dayTotals(foodLog, date), [foodLog, date])
   const target = macroTargets(kcalTarget(phases, date), weights)
 
+  const saveItems = (items: PhotoItem[]) => {
+    const at = localIso()
+    for (const it of items) {
+      store.saveFoodEntry({
+        id: uid(), date, meal: mealAt(), name: it.food.name, grams: it.grams, ...forGrams(it.food, it.grams), at,
+        ref: it.recipeId ? { kind: 'recipe', id: it.recipeId } : { kind: 'food', food: it.food },
+      })
+    }
+    setAdded((n) => n + 1)
+  }
+
 
   return (
     <div className="screen">
@@ -110,6 +122,7 @@ export function Nutrition() {
           title="Hinzufügen"
           startScan={adding === 'scan'}
           onClose={() => setAdding(null)}
+          onPickMany={(items) => { saveItems(items); setAdding(null) }}
           onPick={(p, grams) => {
             const m = forGrams(pickFood(p), grams)
             store.saveFoodEntry({
@@ -125,19 +138,9 @@ export function Nutrition() {
       )}
       {photo && (
         <FoodPhoto
-          file={photo}
+          source={{ kind: 'photo', file: photo }}
           onClose={() => setPhoto(null)}
-          onAdd={(items) => {
-            const at = localIso()
-            for (const it of items) {
-              store.saveFoodEntry({
-                id: uid(), date, meal: mealAt(), name: it.food.name, grams: it.grams, ...forGrams(it.food, it.grams), at,
-                ref: { kind: 'food', food: it.food },
-              })
-            }
-            setPhoto(null)
-            setAdded((n) => n + 1)
-          }}
+          onAdd={(items) => { saveItems(items); setPhoto(null) }}
         />
       )}
       {editing && <EntrySheet entry={editing} onClose={() => setEditing(null)} />}
@@ -199,9 +202,11 @@ function MacroBar({ label, v, t }: { label: string; v: number; t: number | null 
 // ---------------------------------------------------------------- picking food
 
 /** Full-screen search: recents, recipes, own foods, basics and Open Food Facts; plus barcode scan. */
-export function FoodPicker({ title, onPick, onClose, noRecipes, startScan }: {
+export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, startScan }: {
   title: string
   onPick: (p: Pick, grams: number) => void
+  /** several foods at once (AI text entry); the AI row only shows when set */
+  onPickMany?: (items: PhotoItem[]) => void
   onClose: () => void
   noRecipes?: boolean
   /** open straight into the camera (scan button) */
@@ -219,7 +224,9 @@ export function FoodPicker({ title, onPick, onClose, noRecipes, startScan }: {
   const [chosen, setChosen] = useState<Pick | null>(null)
   const [custom, setCustom] = useState<{ barcode?: string; name?: string } | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
+  const [aiText, setAiText] = useState<string | null>(null)
   const ctrl = useRef<AbortController | null>(null)
+
 
   // recently logged, newest first, unique
   const recents = useMemo(() => {
@@ -238,6 +245,19 @@ export function FoodPicker({ title, onPick, onClose, noRecipes, startScan }: {
     }
     return out
   }, [foodLog, recipes, noRecipes])
+
+  // what the AI text entry may map to: recipes, own and recently eaten foods, basics
+  const known = useMemo(() => {
+    if (!aiText) return []
+    const out: KnownFood[] = []
+    const seen = new Set<string>()
+    const push = (k: KnownFood) => { if (!seen.has(k.id)) { seen.add(k.id); out.push(k) } }
+    if (!noRecipes) for (const r of recipes) push({ id: r.id, food: recipeAsFood(r), recipeId: r.id, g: recipeWeight(r) })
+    for (const f of foods) push({ id: f.id, food: f })
+    for (const p of recents) if (p.kind === 'food') push({ id: p.food.id, food: p.food })
+    for (const f of BASICS) push({ id: f.id, food: f })
+    return out
+  }, [aiText, recipes, foods, recents, noRecipes])
 
   const term = q.trim().toLowerCase()
   const local = useMemo(() => {
@@ -320,6 +340,15 @@ export function FoodPicker({ title, onPick, onClose, noRecipes, startScan }: {
             ))}
           </>
         )}
+        {term && onPickMany && term.length >= 3 && (
+          <button className="ai-row" onClick={() => setAiText(q.trim())}>
+            <span className="ai-spark" aria-hidden="true">✦</span>
+            <div className="grow">
+              <div className="nut-entry-name">Mit KI eintragen</div>
+              <div className="faint" style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>„{q.trim()}“ – auch mehrere Sachen mit Mengen</div>
+            </div>
+          </button>
+        )}
         {term && (
           <>
             <div className="eyebrow" style={{ margin: '14px 2px 6px', display: 'flex', justifyContent: 'space-between' }}>
@@ -348,6 +377,13 @@ export function FoodPicker({ title, onPick, onClose, noRecipes, startScan }: {
         />
       )}
       {busy && !scan && <div className="nut-loading">Produkt wird geladen…</div>}
+      {aiText && onPickMany && (
+        <FoodPhoto
+          source={{ kind: 'text', text: aiText, known }}
+          onClose={() => setAiText(null)}
+          onAdd={(items) => { setAiText(null); onPickMany(items) }}
+        />
+      )}
       {editRecipe && <RecipeEditor recipe={editRecipe === 'new' ? null : editRecipe} onClose={() => setEditRecipe(null)} />}
       {missing && (
         <Sheet onClose={() => setMissing(null)}>
@@ -467,10 +503,39 @@ function CustomFoodSheet({ initial, onClose, onSave }: { initial: { barcode?: st
   const num = (s: string) => Math.max(0, Number(s.replace(',', '.')) || 0)
   const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => setV({ ...v, [k]: e.target.value })
   const ok = v.name.trim() && num(v.kcal) > 0
+  const label = useRef<HTMLInputElement>(null)
+  const [reading, setReading] = useState(false)
+  const [labelMsg, setLabelMsg] = useState<string | null>(null)
+  const readLabel = async (file: File) => {
+    setReading(true)
+    setLabelMsg(null)
+    try {
+      // labels have small print: a bit more resolution than meal photos
+      const d = await foodAi({ mode: 'label', image: await shrink(file, 1400), mediaType: 'image/jpeg' })
+      if (!d?.found) throw new Error('Keine Nährwerttabelle erkannt – näher ran und gerade fotografieren.')
+      const n = (x: unknown) => (Number(x) > 0 ? String(Math.round(Number(x) * 10) / 10).replace('.', ',') : '0')
+      setV((cur) => ({
+        name: cur.name || d.name || '', brand: cur.brand || d.brand || '',
+        kcal: String(Math.round(Number(d.kcal) || 0)), p: n(d.protein), c: n(d.carbs), f: n(d.fat),
+        serving: Number(d.serving) > 0 ? String(Math.round(Number(d.serving))) : cur.serving,
+      }))
+      setLabelMsg('Abgelesen – kurz mit der Packung vergleichen.')
+      haptic(true)
+    } catch (e) {
+      setLabelMsg((e as Error).message)
+    } finally {
+      setReading(false)
+    }
+  }
   return (
     <Sheet onClose={onClose}>
       <h3>Eigenes Lebensmittel</h3>
       {initial.barcode && <p className="faint" style={{ fontSize: 13 }}>Barcode {initial.barcode} ist noch unbekannt – einmal anlegen, dann erkennt VIS ihn.</p>}
+      <Tap className="btn btn-ghost btn-block" style={{ marginTop: 10 }} onClick={() => !reading && label.current?.click()}>
+        <CameraIcon /> {reading ? 'Wird abgelesen…' : 'Nährwerttabelle fotografieren'}
+      </Tap>
+      <input ref={label} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) readLabel(f); e.target.value = '' }} />
+      {labelMsg && <div className="hint"><span>{labelMsg}</span></div>}
       <label className="lbl">Name</label>
       <input className="input" value={v.name} onChange={set('name')} placeholder="z. B. Proteinriegel" />
       <label className="lbl">Marke (optional)</label>

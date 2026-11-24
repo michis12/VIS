@@ -35,6 +35,15 @@ export function useCredit() {
   const [credit, setCredit] = useState<Credit | null>(null)
   const reload = () => { fetchCredit().then(setCredit).catch(() => {}) }
   useEffect(reload, [])
+  // every AI call reports its cost: keep the pill current without refetching
+  useEffect(() => {
+    const on = (e: Event) => {
+      const usd = (e as CustomEvent<number>).detail
+      setCredit((c) => (c ? { ...c, balance: c.balance - usd, used: c.used + usd, monthUsed: c.monthUsed + usd, uses: c.uses + 1 } : c))
+    }
+    window.addEventListener('vis-ai-cost', on)
+    return () => window.removeEventListener('vis-ai-cost', on)
+  }, [])
   return { credit, reload, setCredit }
 }
 

@@ -84,6 +84,7 @@ export function RecipeEditor({ recipe, onClose }: { recipe: Recipe | null; onClo
           title="Zutat hinzufügen"
           noRecipes
           onClose={() => setPicking(false)}
+          onPickMany={(items) => { setR((x) => ({ ...x, items: [...x.items, ...items.map((i) => ({ food: i.food, grams: i.grams }))] })); setPicking(false) }}
           onPick={(p, grams) => {
             if (p.kind === 'food') setR((x) => ({ ...x, items: [...x.items, { food: p.food, grams }] }))
             if (p.kind === 'food' && p.food.source === 'off') store.saveFood(p.food)
