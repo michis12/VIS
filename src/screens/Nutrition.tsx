@@ -9,13 +9,30 @@ import {
   type Macros, type OffHit,
 } from '../nutrition'
 import { useStore } from '../store'
-import { MEALS, type Food, type FoodEntry, type Meal, type Recipe } from '../types'
+import type { Food, FoodEntry, Meal, Recipe } from '../types'
 import { RecipeEditor } from './RecipeEditor'
 
 const addDays = (iso: string, d: number) => {
   const t = new Date(iso + 'T12:00:00')
   t.setDate(t.getDate() + d)
   return t.toISOString().slice(0, 10)
+}
+
+const mealAt = (): Meal => {
+  const h = new Date().getHours()
+  return h < 10 ? 'breakfast' : h < 15 ? 'lunch' : h < 21 ? 'dinner' : 'snack'
+}
+
+/** Neutral chrome up to 60 % of a goal, then fading into mint until it is reached. */
+const mix = (a: string, b: string, t: number) => {
+  const pa = a.match(/\w\w/g)!.map((x) => parseInt(x, 16))
+  const pb = b.match(/\w\w/g)!.map((x) => parseInt(x, 16))
+  return '#' + pa.map((v, i) => Math.round(v + (pb[i] - v) * t).toString(16).padStart(2, '0')).join('')
+}
+const greenness = (frac: number) => Math.max(0, Math.min(1, (frac - 0.6) / 0.4))
+export const progressColors = (frac: number) => {
+  const t = greenness(frac)
+  return { from: mix('#8e8e93', '#5fae73', t), to: mix('#f2f2f7', '#a6e0b2', t) }
 }
 
 /** What can be picked: a food (per 100 g) or a recipe. */
@@ -27,11 +44,12 @@ export function Nutrition() {
   const store = useStore()
   const { foodLog, phases, weights, recipes } = store
   const [date, setDate] = useState(today())
-  const [adding, setAdding] = useState<Meal | null>(null)
+  const [adding, setAdding] = useState<null | 'search' | 'scan'>(null)
   const [editing, setEditing] = useState<FoodEntry | null>(null)
   const [recipe, setRecipe] = useState<Recipe | null | 'new'>(null)
 
-  const day = useMemo(() => foodLog.filter((e) => e.date === date), [foodLog, date])
+  // newest first
+  const day = useMemo(() => foodLog.filter((e) => e.date === date).reverse(), [foodLog, date])
   const total = useMemo(() => dayTotals(foodLog, date), [foodLog, date])
   const target = macroTargets(kcalTarget(phases, date), weights)
 
@@ -65,30 +83,24 @@ export function Nutrition() {
         <div className="hint"><span>Noch <b>{Math.round(target.p - total.p)} g Eiweiß</b> bis zu deinem Ziel – z. B. Skyr, Topfen oder ein Shake.</span></div>
       )}
 
-      {MEALS.map((m) => {
-        const items = day.filter((e) => e.meal === m.id)
-        const k = items.reduce((n, e) => n + e.kcal, 0)
-        return (
-          <div key={m.id} className="card nut-meal">
-            <div className="nut-meal-head">
-              <div>
-                <div style={{ fontWeight: 650 }}>{m.label}</div>
-                {k > 0 && <div className="faint num" style={{ fontSize: 12 }}>{fmtInt(k)} kcal</div>}
+      <div className="nut-actions">
+        <Tap className="btn btn-chrome" onClick={() => { haptic(); setAdding('search') }}><Icon.plus /> Hinzufügen</Tap>
+        <Tap className="nut-scan big" onClick={() => { haptic(); setAdding('scan') }} aria-label="Barcode scannen"><ScanIcon /></Tap>
+      </div>
+
+      {day.length > 0 && (
+        <div className="card" style={{ padding: '2px 14px', marginTop: 12 }}>
+          {day.map((e) => (
+            <button key={e.id} className="nut-entry" onClick={() => setEditing(e)}>
+              <div className="grow">
+                <div className="nut-entry-name">{e.name}</div>
+                <div className="faint num" style={{ fontSize: 12 }}>{e.at.slice(11, 16)} · {fmtG(e.grams)} g · {fmtG(e.p)} E · {fmtG(e.c)} K · {fmtG(e.f)} F</div>
               </div>
-              <Tap className="nut-add" onClick={() => { haptic(); setAdding(m.id) }} aria-label={`${m.label} hinzufügen`}><Icon.plus /></Tap>
-            </div>
-            {items.map((e) => (
-              <button key={e.id} className="nut-entry" onClick={() => setEditing(e)}>
-                <div className="grow">
-                  <div className="nut-entry-name">{e.name}</div>
-                  <div className="faint num" style={{ fontSize: 12 }}>{fmtG(e.grams)} g · {fmtG(e.p)} E · {fmtG(e.c)} K · {fmtG(e.f)} F</div>
-                </div>
-                <span className="num">{fmtInt(e.kcal)}</span>
-              </button>
-            ))}
-          </div>
-        )
-      })}
+              <span className="num">{fmtInt(e.kcal)}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="section-title"><h2>Letzte 7 Tage</h2>{avg > 0 && <span className="faint" style={{ fontSize: 13 }}>Ø {fmtInt(avg)} kcal</span>}</div>
       <div className="card">
@@ -125,12 +137,13 @@ export function Nutrition() {
 
       {adding && (
         <FoodPicker
-          title={MEALS.find((m) => m.id === adding)!.label}
+          title="Hinzufügen"
+          startScan={adding === 'scan'}
           onClose={() => setAdding(null)}
           onPick={(p, grams) => {
             const m = forGrams(pickFood(p), grams)
             store.saveFoodEntry({
-              id: uid(), date, meal: adding, name: pickName(p), grams, ...m, at: localIso(),
+              id: uid(), date, meal: mealAt(), name: pickName(p), grams, ...m, at: localIso(),
               ref: p.kind === 'food' ? { kind: 'food', food: p.food } : { kind: 'recipe', id: p.recipe.id },
             })
             if (p.kind === 'food' && p.food.source === 'off') store.saveFood(p.food) // keep for offline + recents
@@ -148,23 +161,24 @@ export function Nutrition() {
 function KcalRing({ eaten, target }: { eaten: number; target: number | null }) {
   const r = 52
   const c = 2 * Math.PI * r
-  const frac = target ? Math.min(1, eaten / target) : 0
-  const over = target != null && eaten > target * 1.05
+  const raw = target ? eaten / target : 0
+  const frac = Math.min(1, raw)
+  const col = progressColors(raw)
   const left = target != null ? Math.round(target - eaten) : null
   return (
     <div className="nut-ring">
       <svg viewBox="0 0 120 120" width="132" height="132">
-        <circle cx="60" cy="60" r={r} fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="9" />
-        <circle cx="60" cy="60" r={r} fill="none" stroke={over ? '#e3b26b' : 'url(#nutChrome)'} strokeWidth="9" strokeLinecap="round"
-          strokeDasharray={c} strokeDashoffset={c * (1 - frac)} transform="rotate(-90 60 60)" style={{ transition: 'stroke-dashoffset .5s' }} />
         <defs>
-          <linearGradient id="nutChrome" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stopColor="#fff" /><stop offset=".5" stopColor="#a1a1a6" /><stop offset="1" stopColor="#f2f2f7" /></linearGradient>
+          <linearGradient id="nutRing" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stopColor={col.to} /><stop offset=".55" stopColor={col.from} /><stop offset="1" stopColor={col.to} /></linearGradient>
         </defs>
+        <circle cx="60" cy="60" r={r} fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="9" />
+        <circle cx="60" cy="60" r={r} fill="none" stroke="url(#nutRing)" strokeWidth="9" strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={c * (1 - frac)} transform="rotate(-90 60 60)" style={{ transition: 'stroke-dashoffset .5s' }} />
       </svg>
       <div className="nut-ring-txt">
         <b className="num">{fmtInt(eaten)}</b>
         <span className="faint">{target ? `von ${fmtInt(target)}` : 'kcal'}</span>
-        {left != null && <span className="nut-left num">{left >= 0 ? `${fmtInt(left)} übrig` : `${fmtInt(-left)} drüber`}</span>}
+        {left != null && <span className="nut-left num" style={raw >= 1 ? { color: 'var(--good)' } : undefined}>{left >= 0 ? `${fmtInt(left)} übrig` : `${fmtInt(-left)} drüber`}</span>}
       </div>
     </div>
   )
@@ -173,8 +187,8 @@ function KcalRing({ eaten, target }: { eaten: number; target: number | null }) {
 function MacroBar({ label, v, t }: { label: string; v: number; t: number | null }) {
   return (
     <div className="nut-macro">
-      <div className="nut-macro-top"><span>{label}</span><span className="num faint">{Math.round(v)}{t ? ` / ${t}` : ''} g</span></div>
-      <div className="track"><div className="fill" style={{ width: `${t ? Math.min(100, (v / t) * 100) : 0}%` }} /></div>
+      <div className="nut-macro-top"><span>{label}</span><span className="num faint" style={t && v >= t ? { color: 'var(--good)' } : undefined}>{Math.round(v)}{t ? ` / ${t}` : ''} g</span></div>
+      <div className="track"><div className="fill" style={{ width: `${t ? Math.min(100, (v / t) * 100) : 0}%`, background: t ? `linear-gradient(90deg, ${progressColors(v / t).from}, ${progressColors(v / t).to})` : undefined }} /></div>
     </div>
   )
 }
@@ -182,18 +196,21 @@ function MacroBar({ label, v, t }: { label: string; v: number; t: number | null 
 // ---------------------------------------------------------------- picking food
 
 /** Full-screen search: recents, recipes, own foods, basics and Open Food Facts; plus barcode scan. */
-export function FoodPicker({ title, onPick, onClose, noRecipes }: {
+export function FoodPicker({ title, onPick, onClose, noRecipes, startScan }: {
   title: string
   onPick: (p: Pick, grams: number) => void
   onClose: () => void
   noRecipes?: boolean
+  /** open straight into the camera (scan button) */
+  startScan?: boolean
 }) {
   const { foodLog, foods, recipes, saveFood } = useStore()
   const [q, setQ] = useState('')
   const [remote, setRemote] = useState<OffHit[]>([])
   const [loading, setLoading] = useState(false)
   const [offline, setOffline] = useState(false)
-  const [scan, setScan] = useState(false)
+  const [scan, setScan] = useState(!!startScan)
+  const [missing, setMissing] = useState<{ code: string; name?: string } | null>(null)
   const [chosen, setChosen] = useState<Pick | null>(null)
   const [custom, setCustom] = useState<{ barcode?: string; name?: string } | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
@@ -252,7 +269,7 @@ export function FoodPicker({ title, onPick, onClose, noRecipes }: {
     try {
       const f = await offProduct(code)
       if (f) setChosen({ kind: 'food', food: f })
-      else setCustom({ barcode: code, name: fallbackName })
+      else setMissing({ code, name: fallbackName })
     } catch {
       setOffline(true)
     } finally {
@@ -303,7 +320,25 @@ export function FoodPicker({ title, onPick, onClose, noRecipes }: {
         )}
       </div>
 
-      {scan && <Scanner onClose={() => setScan(false)} onCode={(code) => { setScan(false); openProduct(code) }} />}
+      {scan && (
+        <Scanner
+          // opened via the scan button: cancelling goes straight back
+          onClose={() => { setScan(false); if (startScan && !missing) onClose() }}
+          onCode={(code) => { setScan(false); openProduct(code) }}
+        />
+      )}
+      {busy && !scan && <div className="nut-loading">Produkt wird geladen…</div>}
+      {missing && (
+        <Sheet onClose={() => setMissing(null)}>
+          <h3>Produkt nicht gefunden</h3>
+          <p className="faint" style={{ fontSize: 13 }}>
+            {missing.name ? `„${missing.name}“ hat noch keine Nährwerte.` : 'Diesen Barcode kennt die Datenbank noch nicht.'} Leg es einmal an – danach erkennt VIS es beim Scannen automatisch.
+          </p>
+          <p className="faint num" style={{ fontSize: 12, marginTop: 4 }}>Barcode {missing.code}</p>
+          <Tap className="btn btn-chrome btn-block" style={{ marginTop: 16 }} onClick={() => { setCustom({ barcode: missing.code, name: missing.name }); setMissing(null) }}>Produkt anlegen</Tap>
+          <button className="btn btn-ghost btn-block" style={{ marginTop: 10 }} onClick={() => { setMissing(null); setScan(true) }}>Erneut scannen</button>
+        </Sheet>
+      )}
       {chosen && <AmountSheet pick={chosen} onClose={() => setChosen(null)} onDone={(g) => { onPick(chosen, g); setChosen(null) }} />}
       {custom && (
         <CustomFoodSheet
@@ -381,7 +416,6 @@ function AmountSheet({ pick, onClose, onDone, initial, action = 'Hinzufügen', e
 
 function EntrySheet({ entry, onClose }: { entry: FoodEntry; onClose: () => void }) {
   const store = useStore()
-  const [meal, setMeal] = useState<Meal>(entry.meal)
   const rec = entry.ref.kind === 'recipe' ? store.recipes.find((r) => r.id === (entry.ref as { id: string }).id) : null
   const pick: Pick = entry.ref.kind === 'food'
     ? { kind: 'food', food: entry.ref.food }
@@ -395,14 +429,11 @@ function EntrySheet({ entry, onClose }: { entry: FoodEntry; onClose: () => void 
       action="Speichern"
       onClose={onClose}
       onDone={(g) => {
-        store.saveFoodEntry({ ...entry, meal, grams: g, ...forGrams(pickFood(pick), g) })
+        store.saveFoodEntry({ ...entry, grams: g, ...forGrams(pickFood(pick), g) })
         onClose()
       }}
       extra={
         <>
-          <div className="segmented" style={{ marginTop: 12 }}>
-            {MEALS.map((m) => <button key={m.id} className={meal === m.id ? 'on' : ''} onClick={() => setMeal(m.id)}>{m.label.replace('essen', '')}</button>)}
-          </div>
           <button className="btn btn-danger btn-block" style={{ marginTop: 10 }} onClick={() => { store.deleteFoodEntry(entry.id); onClose() }}>Eintrag löschen</button>
         </>
       }

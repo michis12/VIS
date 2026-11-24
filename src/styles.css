@@ -571,3 +571,8 @@ label.lbl { display: block; font-size: 12px; font-weight: 600; letter-spacing: .
 .scanner-frame { position: absolute; left: 12%; right: 12%; top: 38%; height: 22%; border: 2px solid rgba(255,255,255,.85); border-radius: 18px; box-shadow: 0 0 0 100vmax rgba(0,0,0,.45); }
 .scanner-top { position: absolute; top: calc(var(--safe-top) + 12px); right: 16px; }
 .scanner-hint { position: absolute; left: 0; right: 0; bottom: calc(var(--safe-bottom) + 40px); text-align: center; color: #fff; font-size: 14px; padding: 0 24px; }
+
+.nut-actions { display: flex; gap: 10px; margin-top: 14px; }
+.nut-actions .btn { flex: 1; }
+.nut-scan.big { width: 54px; height: auto; }
+.nut-loading { position: fixed; left: 50%; bottom: calc(var(--safe-bottom) + 30px); transform: translateX(-50%); z-index: 60; background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: 999px; padding: 8px 16px; font-size: 13px; }
