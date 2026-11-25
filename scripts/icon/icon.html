@@ -65,21 +65,98 @@ for (let i = 0; i < img.data.length; i += 4) {
 }
 ctx.putImageData(img, 0, 0)
 // 5. VIS wordmark
+// 5. mark: a chrome V with a barbell through it (in front of the left arm, behind the right one), inner plates cut from emerald (v4)
+const chromeV = (y0, y1) => {
+  const g = ctx.createLinearGradient(0, y0, 0, y1)
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.5, '#e5e5ea'); g.addColorStop(1, '#9a9aa0')
+  return g
+}
+const shadow = (blur, dy, a = 0.5) => { ctx.shadowColor = `rgba(0,0,0,${a})`; ctx.shadowBlur = blur; ctx.shadowOffsetY = dy }
+const rr = (x, y, w, h, r) => { ctx.beginPath(); ctx.roundRect(x, y, w, h, r) }
+
+// the barbell runs through the V: in front of the left arm, behind the right one
+const barY = 520
+const drawBar = (x0, x1) => {
+  ctx.save()
+  shadow(30, 10, 0.55)
+  const bar = ctx.createLinearGradient(0, barY - 20, 0, barY + 20)
+  bar.addColorStop(0, '#f2f2f7'); bar.addColorStop(0.5, '#aeaeb2'); bar.addColorStop(1, '#636366')
+  ctx.fillStyle = bar
+  rr(x0, barY - 19, x1 - x0, 38, 10); ctx.fill()
+  ctx.restore()
+}
+
+// the V: two slanted arms meeting in a sharp point
+const vTop = 250, vBot = 800, vHalf = 290, arm = 150
 ctx.save()
-ctx.textAlign = 'center'
-ctx.textBaseline = 'middle'
-ctx.font = '900 430px "Segoe UI Black", "Segoe UI Variable Display", "Segoe UI", "SF Pro Display", Inter, system-ui, sans-serif'
-ctx.letterSpacing = '6px'
-const tg = ctx.createLinearGradient(0, 330, 0, 700)
-tg.addColorStop(0, '#ffffff')
-tg.addColorStop(0.55, '#e5e5ea')
-tg.addColorStop(1, '#a1a1a6')
-ctx.shadowColor = 'rgba(0,0,0,0.45)'
-ctx.shadowBlur = 40
-ctx.shadowOffsetY = 10
-ctx.fillStyle = tg
-ctx.fillText('VIS', S / 2 + 3, S / 2 + 18) // +3 re-centres trailing letter-spacing
+shadow(50, 14)
+ctx.fillStyle = chromeV(vTop, vBot)
+ctx.beginPath()
+ctx.moveTo(S / 2 - vHalf, vTop)
+ctx.lineTo(S / 2 - vHalf + arm, vTop)
+ctx.lineTo(S / 2, vBot - 190)
+ctx.lineTo(S / 2 + vHalf - arm, vTop)
+ctx.lineTo(S / 2 + vHalf, vTop)
+ctx.lineTo(S / 2 + 62, vBot)
+ctx.lineTo(S / 2 - 62, vBot)
+ctx.closePath()
+ctx.fill()
 ctx.restore()
+// light edge on the left arm, shade on the right one: reads as polished metal
+ctx.save()
+ctx.globalAlpha = 0.35
+ctx.fillStyle = '#ffffff'
+ctx.beginPath()
+ctx.moveTo(S / 2 - vHalf, vTop); ctx.lineTo(S / 2 - vHalf + 26, vTop); ctx.lineTo(S / 2 - 40, vBot); ctx.lineTo(S / 2 - 62, vBot); ctx.closePath(); ctx.fill()
+ctx.globalAlpha = 0.18
+ctx.fillStyle = '#000'
+ctx.beginPath()
+ctx.moveTo(S / 2 + vHalf, vTop); ctx.lineTo(S / 2 + vHalf - 30, vTop); ctx.lineTo(S / 2 + 36, vBot); ctx.lineTo(S / 2 + 62, vBot); ctx.closePath(); ctx.fill()
+ctx.restore()
+
+// the bar in one piece after the V, with only the right arm cut out: so it lies
+// in front of the left arm and behind the right one, and the V's shadow never
+// darkens part of it (that left a visible colour step before)
+ctx.save()
+ctx.beginPath()
+ctx.rect(0, 0, S, S)
+ctx.moveTo(S / 2 + vHalf, vTop)
+ctx.lineTo(S / 2 + vHalf - arm, vTop)
+ctx.lineTo(S / 2, vBot - 190)
+ctx.lineTo(S / 2, vBot)
+ctx.lineTo(S / 2 + 62, vBot)
+ctx.closePath()
+ctx.clip('evenodd')
+drawBar(118, S - 118)
+ctx.restore()
+
+const plate = (cx, w, h, fill, edge) => {
+  ctx.save()
+  shadow(26, 8, 0.55)
+  ctx.fillStyle = fill
+  rr(cx - w / 2, barY - h / 2, w, h, Math.min(18, w / 3)); ctx.fill()
+  ctx.restore()
+  // thin highlight down the plate's left edge
+  ctx.save()
+  ctx.fillStyle = edge
+  rr(cx - w / 2 + 6, barY - h / 2 + 14, 6, h - 28, 3); ctx.fill()
+  ctx.restore()
+}
+const chromePlate = () => {
+  const g = ctx.createLinearGradient(0, barY - 190, 0, barY + 190)
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, '#d1d1d6'); g.addColorStop(1, '#7c7c82')
+  return g
+}
+const emeraldPlate = () => {
+  const g = ctx.createLinearGradient(0, barY - 140, 0, barY + 140)
+  g.addColorStop(0, '#c4ffe6'); g.addColorStop(0.35, '#4fe3a6'); g.addColorStop(0.7, '#12a06a'); g.addColorStop(1, '#0b6e48')
+  return g
+}
+for (const side of [-1, 1]) {
+  plate(S / 2 + side * 330, 56, 300, chromePlate(), 'rgba(255,255,255,0.55)') // big outer plate
+  plate(S / 2 + side * 272, 44, 220, emeraldPlate(), 'rgba(220,255,240,0.6)') // emerald inner plate
+  plate(S / 2 + side * 380, 26, 120, chromePlate(), 'rgba(255,255,255,0.5)') // collar
+}
 
 async function save(name, size) {
   const out = document.createElement('canvas')
@@ -96,7 +173,7 @@ window.exportIcons = async () => {
   const r = []
   // bump V (and the names in index.html / vite.config.ts) whenever the icon changes,
   // otherwise iPhones keep showing the cached old icon
-  const V = 'v3'
+  const V = 'v4'
   for (const [n, s] of [['icon-1024.png', 1024], [`icon-512-${V}.png`, 512], [`icon-192-${V}.png`, 192], [`apple-touch-icon-${V}.png`, 180], [`favicon-64-${V}.png`, 64]]) r.push(await save(n, s))
   document.getElementById('log').textContent = r.join('\n')
   return r

@@ -11,7 +11,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon-64-v3.png', 'apple-touch-icon-v3.png'],
+      includeAssets: ['favicon-64-v4.png', 'apple-touch-icon-v4.png'],
       manifest: {
         name: 'VIS',
         short_name: 'VIS',
@@ -22,9 +22,9 @@ export default defineConfig({
         orientation: 'portrait',
         start_url: '.',
         icons: [
-          { src: 'icon-192-v3.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icon-512-v3.png', sizes: '512x512', type: 'image/png' },
-          { src: 'icon-512-v3.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'icon-192-v4.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icon-512-v4.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icon-512-v4.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
