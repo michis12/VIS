@@ -680,3 +680,20 @@ button.nut-ring:active { transform: scale(.97); transition: transform .1s; }
 .pw-price span { font-size: 13px; font-weight: 500; color: var(--text-3); margin-left: 2px; }
 .pw-desc { font-size: 13px; color: var(--text-2); line-height: 1.4; margin-top: 4px; }
 .pw-fine { text-align: center; font-size: 12px; color: var(--text-3); margin-top: 10px; line-height: 1.4; }
+
+/* Statistik: range section. The bar sticks only while its section is on screen;
+   titles inside carry the range so it is clear what it applies to. */
+.range-sec { position: relative; }
+.range-bar {
+  position: sticky; top: calc(var(--safe-top) - var(--pad-top)); z-index: 41;
+  margin: 0 -16px; padding: 10px 16px 10px;
+  background: rgba(0,0,0,.82); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--line);
+}
+.range-bar-head { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); margin-bottom: 8px; }
+.range-bar-head .faint { text-transform: none; letter-spacing: 0; font-weight: 500; }
+.range-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text); box-shadow: 0 0 8px rgba(255,255,255,.6); }
+.range-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; color: var(--text-2); padding: 2px 9px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); white-space: nowrap; }
+.range-tag::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--text); }
+.range-end { display: flex; align-items: center; gap: 12px; margin: 38px 0 0; font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); }
+.range-end::before, .range-end::after { content: ''; flex: 1; height: 1px; background: var(--line-strong); }
