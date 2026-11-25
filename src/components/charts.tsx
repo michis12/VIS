@@ -99,14 +99,22 @@ export function LineChart({ points, height = 200, yFmt = (v) => String(Math.roun
   )
 }
 
-/** heights that grow in on first show and glide from old to new values */
-function useBarTween(values: number[]) {
+/**
+ * Heights that grow in on first show and glide from old to new values. When the
+ * bars themselves change (other weeks / months, e.g. a new range), they grow
+ * fresh from 0 instead: old heights belong to other bars and another scale.
+ */
+function useBarTween(values: number[], layout: string) {
   const [shown, setShown] = useState<number[]>(() => (reducedMotion() ? values : values.map(() => 0)))
   const cur = useRef<number[]>(shown)
-  const key = values.join('|')
+  const lastLayout = useRef(layout)
+  const fresh = lastLayout.current !== layout
+  const key = values.join('|') + '#' + layout
   useEffect(() => {
+    const restart = lastLayout.current !== layout
+    lastLayout.current = layout
     if (reducedMotion()) { cur.current = values; setShown(values); return }
-    const from = values.map((_, i) => cur.current[i] ?? 0)
+    const from = values.map((_, i) => (restart ? 0 : cur.current[i] ?? 0))
     const t0 = performance.now()
     let raf = 0
     const step = (t: number) => {
@@ -121,7 +129,8 @@ function useBarTween(values: number[]) {
     return () => cancelAnimationFrame(raf)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key])
-  return shown
+  // the render right after a layout change already shows empty bars (the effect runs after paint)
+  return fresh && !reducedMotion() ? values.map(() => 0) : shown
 }
 
 export function BarChart({ bars, height = 160, yFmt = (v) => String(Math.round(v)), unit = '' }: {
@@ -131,7 +140,7 @@ export function BarChart({ bars, height = 160, yFmt = (v) => String(Math.round(v
   const [hover, setHover] = useState<number | null>(null)
   const L = 32, R = 4, T = 10, B = 22
   const max = Math.max(1, ...bars.map((b) => b.value))
-  const anim = useBarTween(bars.map((b) => b.value))
+  const anim = useBarTween(bars.map((b) => b.value), bars.map((b) => b.label).join('|'))
   const ticks = niceTicks(0, max, 3)
   const top = ticks[ticks.length - 1]
   const slot = (width - L - R) / Math.max(1, bars.length)
@@ -149,7 +158,8 @@ export function BarChart({ bars, height = 160, yFmt = (v) => String(Math.round(v
           {bars.map((b, i) => (i % labelEvery === 0 ? <text key={i} x={L + i * slot + slot / 2} y={height - 6} textAnchor="middle">{b.label}</text> : null))}
         </g>
         {bars.map((b, i) => {
-          const y = sy(anim[i] ?? b.value), h = height - B - y
+          // never taller than the chart, even mid-animation
+          const y = sy(Math.min(top, anim[i] ?? b.value)), h = height - B - y
           const x = L + i * slot + (slot - bw) / 2
           const r = Math.min(4, bw / 2, h)
           return (
