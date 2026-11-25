@@ -148,11 +148,15 @@ const SUGGEST_SCHEMA = {
   additionalProperties: false,
 }
 
-const SUGGEST_SYSTEM = `Du schlägst vor, was jemand heute noch essen kann, um seine restlichen Kalorien und vor allem sein Eiweiß zu treffen (Fitness-App, Österreich).
-- Nutze NUR Lebensmittel und Rezepte aus der Kandidatenliste (ref = deren id). Bevorzuge, was die Person oft isst (count), und übliche Mengen (typ).
-- Werte in der Liste sind pro 100 g. Rechne nach: Jeder Vorschlag soll die restlichen kcal möglichst treffen (eher etwas darunter als drüber) und das restliche Eiweiß möglichst abdecken.
-- Passe zur Tageszeit (abends eher eine Mahlzeit oder ein Snack, kein Frühstück um 22 Uhr).
-- 2 bis 3 unterschiedliche Vorschläge, je 1 bis 4 Bestandteile. Kurze Sätze auf Deutsch, du-Form.`
+const SUGGEST_SYSTEM = `Du schlägst vor, was jemand heute noch essen kann (Fitness-App, Österreich). Ziel: restliche Kalorien und vor allem Eiweiß treffen – aber mit Essen, das ein normaler Mensch wirklich so isst.
+Wichtigste Regel: Jeder Vorschlag ist EINE stimmige Mahlzeit oder EIN Snack, so wie man es am Tisch hätte.
+- Am besten: eine Mahlzeit aus "Deine echten Mahlzeiten" (genau diese Kombination, Mengen darfst du anpassen) oder ein Rezept allein.
+- Neue Kombinationen nur, wenn sie offensichtlich zusammenpassen (z. B. Skyr + Beeren, Haferflocken + Milch + Banane, Reis + Hühnerbrust + Gemüse). Nie Süßes mit Herzhaftem mischen (kein Whey oder Skyr zu Nudeln/Fleisch, keine Haferflocken zu Hühnchen). Ein fertiges Rezept bekommt keine fremden Zutaten dazu.
+- Lieber die Makros knapp verfehlen als eine komische Kombination. Ein einzelner Eiweiß-Snack (z. B. Skyr oder ein Shake) ist ein völlig okayer Vorschlag.
+- "Reserve"-Lebensmittel nur, wenn deine echten Sachen nicht reichen, und dann als eigener, stimmiger Snack.
+- Nutze NUR ids aus der Kandidatenliste. Werte sind pro 100 g; rechne nach, eher etwas unter den restlichen kcal bleiben.
+- Passe zur Uhrzeit (abends Abendessen oder Snack, kein Frühstück um 22 Uhr; echte Mahlzeiten zeigen, wann die Person was isst).
+- 2 bis 3 deutlich unterschiedliche Vorschläge, je 1 bis 3 Bestandteile. Titel wie ein Gericht, kurze Sätze auf Deutsch, du-Form.`
 
 const SCHEMA = {
   type: 'object',
@@ -210,7 +214,8 @@ Deno.serve(async (req) => {
     text?: string; foods?: { id: string; name: string; g?: number }[]
     goal?: string; activity?: string; wish?: string; data?: unknown
     left?: { kcal: number; p: number; c: number; f: number }; time?: string
-    candidates?: { id: string; name: string; kcal: number; p: number; c: number; f: number; typ: number; count: number }[]
+    candidates?: { id: string; name: string; kcal: number; p: number; c: number; f: number; typ: number; count: number; extra?: boolean }[]
+    meals?: { text: string; hour: number; count: number }[]
   }
   try {
     body = await req.json()
@@ -233,13 +238,15 @@ Deno.serve(async (req) => {
   if (mode === 'suggest') {
     const r = (v: unknown) => Math.round(Number(v) || 0)
     const list = body.candidates!.slice(0, 80)
-      .map((c) => `${c.id} | ${String(c.name).slice(0, 50)} | ${r(c.kcal)} kcal ${r(c.p)} E ${r(c.c)} K ${r(c.f)} F | typ ${r(c.typ)} g | ${r(c.count)}×`).join('\n')
+      .map((c) => `${c.id} | ${String(c.name).slice(0, 50)} | ${r(c.kcal)} kcal ${r(c.p)} E ${r(c.c)} K ${r(c.f)} F | typ ${r(c.typ)} g | ${c.extra ? 'Reserve' : `${r(c.count)}×`}`).join('\n')
+    const meals = (body.meals ?? []).slice(0, 25)
+      .map((m) => `${String(m.text).slice(0, 200)} | um ${r(m.hour)} Uhr | ${r(m.count)}×`).join('\n')
     const l = body.left!
     call = {
       model: FAST_MODEL, system: SUGGEST_SYSTEM, schema: SUGGEST_SCHEMA, effort: 'medium',
       content: [{
         type: 'text',
-        text: `Uhrzeit: ${String(body.time ?? '').slice(0, 5)}\nNoch offen heute: ${r(l.kcal)} kcal, ${r(l.p)} g Eiweiß, ${r(l.c)} g Kohlenhydrate, ${r(l.f)} g Fett\n\nKandidaten (id | Name | pro 100 g | übliche Menge | wie oft gegessen):\n${list}`,
+        text: `Uhrzeit: ${String(body.time ?? '').slice(0, 5)}\nNoch offen heute: ${r(l.kcal)} kcal, ${r(l.p)} g Eiweiß, ${r(l.c)} g Kohlenhydrate, ${r(l.f)} g Fett\n\nKandidaten (id | Name | pro 100 g | übliche Menge | wie oft gegessen):\n${list}\n\nDeine echten Mahlzeiten (was zusammen gegessen wurde | Uhrzeit | wie oft):\n${meals || '(noch keine)'}`,
       }],
     }
   } else if (mode === 'plan') {

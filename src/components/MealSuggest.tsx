@@ -15,7 +15,7 @@ import { Sheet, Tap } from './ui'
  * recipes and frequently eaten foods; all values are recomputed from the app's
  * data, the AI only picks foods and amounts.
  */
-interface Cand { id: string; food: Food; recipeId?: string; typ: number; count: number }
+interface Cand { id: string; food: Food; recipeId?: string; typ: number; count: number; extra?: boolean }
 interface Option { title: string; why: string; items: PhotoItem[]; total: Macros }
 
 const median = (a: number[]) => { const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)] ?? 0 }
@@ -56,10 +56,32 @@ export function MealSuggest({ left, onClose, onAdd }: {
     // a few protein basics so there is always something to close the gap
     for (const id of ['b-skyr', 'b-magerquark', 'b-whey', 'b-huehnerbrust', 'b-ei', 'b-banane', 'b-haferflocken']) {
       const f = BASICS.find((x) => x.id === id)
-      if (f && !have.has(id)) out.push({ id, food: f, typ: f.serving?.g ?? 150, count: 0 })
+      if (f && !have.has(id)) out.push({ id, food: f, typ: f.serving?.g ?? 150, count: 0, extra: true })
     }
     return out
   }, [foodLog, recipes, foods])
+
+  // real meals: entries logged within 30 min of each other on the same day were eaten together
+  const meals = useMemo(() => {
+    const since = new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10)
+    const list = foodLog.filter((e) => e.date >= since).sort((a, b) => a.at.localeCompare(b.at))
+    const groups: (typeof list)[] = []
+    for (const e of list) {
+      const g = groups[groups.length - 1]
+      const prev = g?.[g.length - 1]
+      if (prev && prev.date === e.date && new Date(e.at).getTime() - new Date(prev.at).getTime() <= 30 * 60e3) g.push(e)
+      else groups.push([e])
+    }
+    const byKey = new Map<string, { text: string; hour: number; count: number; last: string }>()
+    for (const g of groups) {
+      const parts = g.map((e) => ({ id: e.ref.kind === 'food' ? e.ref.food.id : e.ref.id, g: Math.round(e.grams) }))
+      const key = parts.map((p) => p.id).sort().join('+')
+      const cur = byKey.get(key)
+      if (cur) { cur.count++; cur.last = g[0].at; continue }
+      byKey.set(key, { text: parts.map((p) => `${p.id} ${p.g} g`).join(' + '), hour: new Date(g[0].at).getHours(), count: 1, last: g[0].at })
+    }
+    return [...byKey.values()].sort((a, b) => b.count - a.count || b.last.localeCompare(a.last)).slice(0, 20)
+  }, [foodLog])
 
   const ask = async () => {
     setErr(null)
@@ -69,7 +91,8 @@ export function MealSuggest({ left, onClose, onAdd }: {
         mode: 'suggest',
         time: new Date().toTimeString().slice(0, 5),
         left: { kcal: left.kcal ?? 0, p: left.p, c: left.c ?? 0, f: left.f ?? 0 },
-        candidates: cands.map((c) => ({ id: c.id, name: c.food.name, kcal: c.food.kcal, p: c.food.p, c: c.food.c, f: c.food.f, typ: c.typ, count: c.count })),
+        candidates: cands.map((c) => ({ id: c.id, name: c.food.name, kcal: c.food.kcal, p: c.food.p, c: c.food.c, f: c.food.f, typ: c.typ, count: c.count, ...(c.extra ? { extra: true } : {}) })),
+        meals,
       })
       const byId = new Map(cands.map((c) => [c.id, c]))
       const opts: Option[] = ((d?.options ?? []) as { title: string; why: string; items: { ref: string; grams: number }[] }[])
