@@ -55,6 +55,72 @@ const FEATURES: { icon: React.JSX.Element; title: string; text: string }[] = [
   { icon: <path d="M12 3v12M7 10l5 5 5-5M4 19h16" />, get title() { return t('Trainings importieren', 'Import workouts') }, get text() { return t('Strong, Hevy, FitNotes oder Notizen – deine Historie kommt mit.', 'Strong, Hevy, FitNotes or notes – your history comes along.') } },
 ]
 
+/**
+ * Emerald "slide to subscribe", like the phone's slide-to-answer: a gem knob
+ * that nudges to the right while idle, a shimmering label, and a track that
+ * fills in emerald as you drag. Past ~85 % it locks in; until purchases exist it
+ * shows when they arrive and slides back.
+ */
+function SlideToBuy({ label, doneLabel, onDone }: { label: string; doneLabel: string; onDone?: () => void }) {
+  const track = useRef<HTMLDivElement>(null)
+  const drag = useRef<{ x0: number; max: number } | null>(null)
+  const [x, setX] = useState(0)
+  const [state, setState] = useState<'idle' | 'drag' | 'back' | 'done'>('idle')
+  const KNOB = 70, PAD = 5
+  const maxX = () => (track.current ? track.current.clientWidth - KNOB - PAD * 2 : 240)
+  const frac = Math.max(0, Math.min(1, x / Math.max(1, maxX())))
+
+  const down = (e: React.PointerEvent) => {
+    if (state === 'done') return
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    drag.current = { x0: e.clientX - x, max: maxX() }
+    setState('drag')
+    haptic()
+  }
+  const move = (e: React.PointerEvent) => {
+    if (!drag.current) return
+    setX(Math.max(0, Math.min(drag.current.max, e.clientX - drag.current.x0)))
+  }
+  const up = () => {
+    if (!drag.current) return
+    const done = x >= drag.current.max * 0.85
+    drag.current = null
+    if (done) {
+      setX(maxX())
+      setState('done')
+      haptic(true)
+      onDone?.()
+      setTimeout(() => { setState('back'); setX(0) }, 1900)
+    } else {
+      setState(x > 0 ? 'back' : 'idle') // a plain tap has nothing to slide back
+      setX(0)
+    }
+  }
+
+  return (
+    // the wrapper carries the glow: a clip-path would cut off a shadow on the track itself
+    <div className={'slide-wrap ' + state}>
+    <div className={'slide-buy ' + state} ref={track} style={{ ['--f' as string]: state === 'done' ? 1 : frac }}>
+      {/* light trail behind the knob: nothing at rest, it builds up as you slide */}
+      <div className="slide-trail" style={{ width: `${x + KNOB / 2 + PAD}px`, opacity: state === 'done' ? 1 : Math.min(1, x / 90) }} />
+      <div className="slide-label" style={{ opacity: state === 'done' ? 1 : Math.max(0, 1 - frac * 1.6) }}>
+        {state === 'done' ? doneLabel : <span className="slide-shine">{label}</span>}
+      </div>
+      <div
+        className="slide-knob" role="slider" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(frac * 100)}
+        style={{ transform: `translateX(${x}px)` }}
+        onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
+        onTransitionEnd={() => state === 'back' && setState('idle')}
+      >
+        {state === 'done'
+          ? <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="square" strokeLinejoin="miter"><path d="M4.5 12.5l5 5L19.5 7" /></svg>
+          : <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="square" strokeLinejoin="miter" strokeMiterlimit="10"><path d="M8 3.5l9 8.5-9 8.5" /></svg>}
+      </div>
+    </div>
+    </div>
+  )
+}
+
 /** The plans page: opens from the Free badge in the profile or when someone without a plan taps an AI feature. */
 export function Paywall({ onClose }: { onClose: () => void }) {
   const s = usePlan()
@@ -89,7 +155,7 @@ export function Paywall({ onClose }: { onClose: () => void }) {
         <div className="pw-desc">
           {k === 'free' && t('Training, Statistiken, Körper und Ernährung – alles ohne KI.', 'Training, stats, body and nutrition – everything without AI.')}
           {k === 'solo' && t(`Alle KI-Funktionen. Reicht für ca. ${PLANS.solo.photos} Essensfotos im Monat.`, `All AI features. Enough for about ${PLANS.solo.photos} food photos a month.`)}
-          {k === 'ultra' && t(`Doppeltes Kontingent – ca. ${PLANS.ultra.photos} Essensfotos im Monat.`, `Double quota – about ${PLANS.ultra.photos} food photos a month.`)}
+          {k === 'ultra' && t(`200 % Limit – ca. ${PLANS.ultra.photos} Essensfotos im Monat.`, `200% limit – about ${PLANS.ultra.photos} food photos a month.`)}
         </div>
       </button>
     )
@@ -129,9 +195,15 @@ export function Paywall({ onClose }: { onClose: () => void }) {
           {card('free')}
         </div>
 
-        <button className="btn btn-chrome btn-block" style={{ marginTop: 18 }} disabled>
-          {current === pick ? t('Dein aktueller Plan', 'Your current plan') : t(`${PLAN_TIER[pick].label} – kommt mit dem App-Store-Start`, `${PLAN_TIER[pick].label} – coming with the App Store launch`)}
-        </button>
+        {current === pick ? (
+          <button className="btn btn-chrome btn-block" style={{ marginTop: 18 }} disabled>{t('Dein aktueller Plan', 'Your current plan')}</button>
+        ) : (
+          <SlideToBuy
+            key={pick}
+            label={t(`${PLAN_TIER[pick].label} kaufen`, `Get ${PLAN_TIER[pick].label}`)}
+            doneLabel={t('Kommt mit dem App-Store-Start', 'Coming with the App Store launch')}
+          />
+        )}
         <div className="pw-fine">
           {s && !s.signedIn
             ? t('Für VIS Pro brauchst du einen Account: Profil › Einstellungen › Cloud.', 'VIS Pro needs an account: Profile › Settings › Cloud.')

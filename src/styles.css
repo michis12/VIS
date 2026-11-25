@@ -772,3 +772,67 @@ button.nut-ring:active { transform: scale(.97); transition: transform .1s; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* plans page: emerald slide-to-subscribe – cut like the Ultra gem, not round */
+.slide-wrap { margin-top: 32px; filter: drop-shadow(0 10px 26px rgba(63,214,154,.16)); transition: filter .4s; }
+.slide-wrap.done { filter: drop-shadow(0 0 22px rgba(63,214,154,.45)); }
+.slide-buy {
+  --cut: 20px;
+  position: relative; height: 62px; touch-action: none; isolation: isolate;
+  clip-path: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% 50%, calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 50%);
+  /* outer layer = hairline edge: emerald at the ends, chrome along the top */
+  background: linear-gradient(90deg, #3fd69a, rgba(230,240,236,.55) 30%, rgba(120,130,126,.35) 70%, #1fae78);
+}
+.slide-buy::before {
+  content: ''; position: absolute; inset: 1px; z-index: -1;
+  clip-path: polygon(calc(var(--cut) - .4px) 0, calc(100% - var(--cut) + .4px) 0, 100% 50%, calc(100% - var(--cut) + .4px) 100%, calc(var(--cut) - .4px) 100%, 0 50%);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,0) 45%),
+    linear-gradient(180deg, #0c2a20, #05140f);
+}
+/* trail behind the knob while sliding: soft emerald light plus a fine bright line, invisible at rest */
+.slide-trail {
+  position: absolute; left: 0; top: 1px; bottom: 1px; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(120% 90% at 100% 50%, rgba(94,240,178,.28), rgba(94,240,178,0) 70%),
+    linear-gradient(90deg, rgba(63,214,154,0) 0%, rgba(63,214,154,.06) 45%, rgba(63,214,154,.18) 100%);
+}
+.slide-trail::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; transform: translateY(-.5px);
+  background: linear-gradient(90deg, rgba(190,255,225,0) 0%, rgba(190,255,225,.15) 50%, rgba(220,255,240,.75) 100%);
+}
+.slide-buy.back .slide-trail { transition: width .5s cubic-bezier(.25,.8,.25,1), opacity .4s ease; }
+.slide-buy.done .slide-trail { transition: width .25s ease-out, opacity .25s; }
+/* label centred over the whole track */
+.slide-label {
+  position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; pointer-events: none;
+  font-size: 13px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: #a9e9cc; transition: opacity .2s;
+}
+.slide-buy.done .slide-label { padding-right: 72px; color: #eafff5; letter-spacing: .06em; text-transform: none; font-size: 14px; }
+/* the phone's moving highlight, chrome over emerald */
+.slide-shine {
+  background: linear-gradient(90deg, rgba(169,233,204,.55) 0%, rgba(169,233,204,.55) 38%, #ffffff 50%, rgba(169,233,204,.55) 62%, rgba(169,233,204,.55) 100%);
+  background-size: 260% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: slide-shine 2.8s linear infinite;
+}
+@keyframes slide-shine { from { background-position: 100% 0; } to { background-position: -160% 0; } }
+/* knob: the track's own frame in small – same cut proportions, hairline edge, arrow inside */
+.slide-knob {
+  --kcut: 17px; /* 20/62 of the track, scaled to 52 px */
+  position: absolute; left: 5px; top: 5px; z-index: 2; width: 70px; height: 52px; isolation: isolate;
+  display: grid; place-items: center; color: #5ef0b2; cursor: grab;
+  clip-path: polygon(var(--kcut) 0, calc(100% - var(--kcut)) 0, 100% 50%, calc(100% - var(--kcut)) 100%, var(--kcut) 100%, 0 50%);
+  background: linear-gradient(90deg, #3fd69a, rgba(230,240,236,.7) 35%, rgba(150,160,156,.45) 70%, #3fd69a);
+}
+.slide-knob::before {
+  content: ''; position: absolute; inset: 1px; z-index: -1;
+  clip-path: polygon(calc(var(--kcut) - .4px) 0, calc(100% - var(--kcut) + .4px) 0, 100% 50%, calc(100% - var(--kcut) + .4px) 100%, calc(var(--kcut) - .4px) 100%, 0 50%);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,0) 50%),
+    linear-gradient(180deg, #123a2c, #071d15);
+}
+.slide-buy.done .slide-knob { color: #b9ffe0; }
+.slide-knob svg { filter: drop-shadow(0 0 6px rgba(94,240,178,.45)); }
+.slide-buy.drag .slide-knob { cursor: grabbing; }
+.slide-buy.back .slide-knob { transition: transform .5s cubic-bezier(.25,.8,.25,1); }
+.slide-buy.done .slide-knob { transition: transform .25s ease-out; }

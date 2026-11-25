@@ -1,4 +1,5 @@
 import { openDB, type IDBPDatabase } from 'idb'
+import { CATALOG } from './data/exercises'
 import { SEED_RECIPES } from './data/foods'
 import type { Exercise, Food, FoodEntry, Measurement, Phase, Recipe, Settings, Template, WeightEntry, Workout } from './types'
 
@@ -130,6 +131,18 @@ export async function loadAll(): Promise<Snapshot> {
     }
     tx.objectStore('meta').put(seed.version, 'seedVersion')
     await tx.done
+  }
+  // standard exercise catalog: adds whatever is missing (by id or name) on every start,
+  // so it also comes back after restoring an older backup; nothing existing is touched
+  {
+    const have = (await d.getAll('exercises')) as Exercise[]
+    const ids = new Set(have.map((e) => e.id)), names = new Set(have.map((e) => e.name.toLowerCase()))
+    const missing = CATALOG.filter((e) => !ids.has(e.id) && !names.has(e.name.toLowerCase()))
+    if (missing.length) {
+      const tx = d.transaction('exercises', 'readwrite')
+      for (const e of missing) tx.store.put(e)
+      await tx.done
+    }
   }
   // starter recipes, once per device (again after restoring a backup that has none)
   if (!(await d.get('meta', 'recipesSeeded'))) {

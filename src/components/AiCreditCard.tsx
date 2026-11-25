@@ -69,7 +69,7 @@ function Offer({ credit }: { credit: Credit }) {
               <div className="plan-offer-price num">{yearly ? p.year : p.month} €<span>/{yearly ? t('Jahr', 'year') : t('Monat', 'month')}</span></div>
               {yearly && <div className="plan-offer-save num">{dec(p.year / 12, 2)} € {t('im Monat · 2 Monate gratis', 'a month · 2 months free')}</div>}
               <div className="faint" style={{ fontSize: 12.5, lineHeight: 1.4 }}>
-                {k === 'ultra' ? t('Doppeltes Kontingent', 'Double quota') : t('Alle KI-Funktionen', 'All AI features')}
+                {k === 'ultra' ? t('200 % Limit', '200% limit') : t('Alle KI-Funktionen', 'All AI features')}
                 <br />{t(`ca. ${p.photos} Essensfotos im Monat`, `about ${p.photos} food photos a month`)}
               </div>
             </div>
@@ -98,7 +98,7 @@ function PaidStatus({ credit }: { credit: Credit }) {
       {credit.resetsAt && <div className="pr-row num"><span className="muted">{t('Wieder 100 % ab', 'Back to 100 % on')}</span><b>{dateDe(credit.resetsAt)}</b></div>}
       {credit.paidUntil && <div className="pr-row num"><span className="muted">{t('Abo läuft bis', 'Subscription runs until')}</span><b>{dateDe(credit.paidUntil)}</b></div>}
       {credit.plan === 'solo' && used >= 80 && (
-        <div className="hint"><span>{t('Fast aufgebraucht? ', 'Almost used up? ')}<b>Ultra</b>{t(` verdoppelt dein Kontingent für ${PLANS.ultra.month} € im Monat.`, ` doubles your quota for ${PLANS.ultra.month} € a month.`)}</span></div>
+        <div className="hint"><span>{t('Fast aufgebraucht? ', 'Almost used up? ')}<b>Ultra</b>{t(` gibt dir 200 % Limit für ${PLANS.ultra.month} € im Monat.`, ` gives you a 200% limit for ${PLANS.ultra.month} € a month.`)}</span></div>
       )}
     </div>
   )
