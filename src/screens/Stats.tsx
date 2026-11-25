@@ -7,6 +7,7 @@ import { pastWeekScores } from '../weekly'
 import { Icon, ProgressBadges } from '../components/ui'
 import { WeeklyReport } from '../components/WeeklyReport'
 import { useNav } from '../nav'
+import { Num } from '../anim'
 import { dateLabel, durationLabel, e1rm, fmtInt, fmtKg, isRealSet, monthLabel, shortDate, weekKey, workoutSetCount, workoutVolume } from '../lib'
 import { kcalTarget } from '../nutrition'
 import { useStore } from '../store'
@@ -281,10 +282,10 @@ export function Stats() {
         )}
 
         <div className="grid-2" style={{ marginTop: 14 }}>
-          <Kpi label="Workouts" value={String(k.n)} sub={`${k.perWeek.toFixed(1).replace('.', ',')} pro Woche`} />
-          <Kpi label="Trainingstage" value={String(k.dayCount)} sub={`längste Serie ${k.streak} Wo.`} />
-          <Kpi label="Volumen" value={fmtInt(k.vol / 1000)} unit="t" sub={`${fmtInt(k.sets)} Sätze`} />
-          <Kpi label="Ø Dauer" value={k.avgDur ? String(Math.round(k.avgDur / 60)) : '–'} unit="min" sub={k.skipped ? `${k.skipped}× ausgelassen` : 'pro Workout'} />
+          <Kpi label="Workouts" value={k.n} sub={`${k.perWeek.toFixed(1).replace('.', ',')} pro Woche`} />
+          <Kpi label="Trainingstage" value={k.dayCount} sub={`längste Serie ${k.streak} Wo.`} />
+          <Kpi label="Volumen" value={k.vol / 1000} unit="t" sub={`${fmtInt(k.sets)} Sätze`} />
+          <Kpi label="Ø Dauer" value={k.avgDur ? k.avgDur / 60 : '–'} unit="min" sub={k.skipped ? `${k.skipped}× ausgelassen` : 'pro Workout'} />
         </div>
 
         <RangeTitle title="Trainingstage" range={R.short} />
@@ -320,9 +321,9 @@ export function Stats() {
 
         <RangeTitle title="Fortschritt & Rekorde" range={R.short} />
         <div className="grid-3">
-          <Kpi label="Rekorde" value={fmtInt(prog.prs)} small />
-          <Kpi label="Fortschritte" value={fmtInt(prog.ups)} small />
-          <Kpi label="Pro Workout" value={prog.per.toFixed(1).replace('.', ',')} sub="Rek. + Fort." small />
+          <Kpi label="Rekorde" value={prog.prs} small />
+          <Kpi label="Fortschritte" value={prog.ups} small />
+          <Kpi label="Pro Workout" value={prog.per} fmt={(v) => v.toFixed(1).replace('.', ',')} sub="Rek. + Fort." small />
         </div>
         <div className="card" style={{ marginTop: 12 }}>
           <div className="segmented" style={{ marginBottom: 10 }}>
@@ -457,11 +458,11 @@ function RangeTitle({ title, range }: { title: string; range: string }) {
   return <div className="section-title"><h2>{title}</h2><span className="range-tag">{range}</span></div>
 }
 
-function Kpi({ label, value, unit, sub, small }: { label: string; value: string; unit?: string; sub?: string; small?: boolean }) {
+function Kpi({ label, value, unit, sub, small, fmt = fmtInt }: { label: string; value: string | number; unit?: string; sub?: string; small?: boolean; fmt?: (v: number) => string }) {
   return (
     <div className="card kpi" style={small ? { padding: 12 } : undefined}>
       <div className="label">{label}</div>
-      <div className="value" style={small ? { fontSize: 20 } : undefined}>{value}{unit && <small>{unit}</small>}</div>
+      <div className="value" style={small ? { fontSize: 20 } : undefined}>{typeof value === 'number' ? <Num value={value} format={fmt} /> : value}{unit && <small>{unit}</small>}</div>
       {sub && <div className="sub">{sub}</div>}
     </div>
   )

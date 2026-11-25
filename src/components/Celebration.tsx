@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { durationLabel, fmtInt, haptic, workoutSetCount, workoutVolume } from '../lib'
 import { useStore } from '../store'
+import { Num } from '../anim'
 import { ScorePill } from './ScoreGauge'
 import { Icon, ProgressBadges } from './ui'
 
@@ -99,31 +100,31 @@ export function Celebration({ id, onClose }: { id: string; onClose: () => void }
   return createPortal(
     <div className="celebrate">
       <ChromeConfetti />
-      <div className="celebrate-card">
+      <div className="celebrate-card stagger">
         <div className="celebrate-check"><Icon.check /></div>
         <div className="eyebrow" style={{ textAlign: 'center', marginTop: 14 }}>Workout abgeschlossen</div>
         <h2 className="chrome-text celebrate-title">{w.name}</h2>
         {workoutScores.has(id) && (
           <div className="celebrate-score">
-            <ScorePill score={workoutScores.get(id)!} size={44} />
+            <ScorePill score={workoutScores.get(id)!} size={44} animate />
             <span>Workout-Score</span>
           </div>
         )}
 
         <div className="grid-3" style={{ marginTop: 18 }}>
           <div className="card kpi"><div className="label">Dauer</div><div className="value" style={{ fontSize: 19 }}>{durationLabel(w.durationSec)}</div></div>
-          <div className="card kpi"><div className="label">Sätze</div><div className="value" style={{ fontSize: 19 }}>{workoutSetCount(w)}</div></div>
-          <div className="card kpi"><div className="label">Volumen</div><div className="value" style={{ fontSize: 19 }}>{fmtInt(workoutVolume(w))}<small>kg</small></div></div>
+          <div className="card kpi"><div className="label">Sätze</div><div className="value" style={{ fontSize: 19 }}><Num value={workoutSetCount(w)} from={0} ms={900} /></div></div>
+          <div className="card kpi"><div className="label">Volumen</div><div className="value" style={{ fontSize: 19 }}><Num value={workoutVolume(w)} format={fmtInt} from={0} ms={900} /><small>kg</small></div></div>
         </div>
 
         <div className="grid-2" style={{ marginTop: 10 }}>
           <div className={'card celebrate-stat' + (rating?.prs ? ' hot' : '')}>
             <Icon.cup size={22} />
-            <div><div className="n">{rating?.prs ?? 0}</div><div className="l">Rekorde</div></div>
+            <div><div className="n"><Num value={rating?.prs ?? 0} from={0} ms={900} /></div><div className="l">Rekorde</div></div>
           </div>
           <div className={'card celebrate-stat' + (rating?.ups ? ' good' : '')}>
             <Icon.up size={22} />
-            <div><div className="n">{rating?.ups ?? 0}</div><div className="l">Fortschritte</div></div>
+            <div><div className="n"><Num value={rating?.ups ?? 0} from={0} ms={900} /></div><div className="l">Fortschritte</div></div>
           </div>
         </div>
 

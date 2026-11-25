@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from 'react'
+import { useTween } from '../anim'
 
 /** 240° arc gauge for a 0–99 score, chrome fill on a dark track. */
 export function ScoreGauge({ score, size = 180, label }: { score: number; size?: number; label?: string }) {
@@ -18,7 +19,8 @@ export function ScoreGauge({ score, size = 180, label }: { score: number; size?:
     const large = to - from > 180 ? 1 : 0
     return `M${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${large} 1 ${x2.toFixed(2)},${y2.toFixed(2)}`
   }
-  const frac = Math.max(0, Math.min(1, score / 99))
+  const shown = useTween(score, { from: 0, ms: 900, intro: `gauge-${label ?? size}` })
+  const frac = Math.max(0, Math.min(1, shown / 99))
   const end = START + SWEEP * frac
   const [kx, ky] = pt(end)
   return (
@@ -36,14 +38,16 @@ export function ScoreGauge({ score, size = 180, label }: { score: number; size?:
         <path d={arc(START, end)} fill="none" stroke={`url(#g${id})`} strokeWidth="12" strokeLinecap="round" className="gauge-fill" />
       )}
       {frac > 0.005 && <circle cx={kx} cy={ky} r="4" fill="#fff" />}
-      <text x="100" y="108" textAnchor="middle" className="gauge-num">{score}</text>
+      <text x="100" y="108" textAnchor="middle" className="gauge-num">{Math.round(shown)}</text>
       {label && <text x="100" y="132" textAnchor="middle" className="gauge-label">{label}</text>}
     </svg>
   )
 }
 
 /** Small round score badge (workout score): chrome ring filled to score/99. */
-export function ScorePill({ score, size = 34 }: { score: number; size?: number }) {
+export function ScorePill({ score: target, size = 34, animate = false }: { score: number; size?: number; animate?: boolean }) {
+  const tw = useTween(target, { from: animate ? 0 : target, ms: 1000 })
+  const score = Math.round(tw)
   const r = 13
   const c = 2 * Math.PI * r
   return (

@@ -4,7 +4,7 @@ import { dateLabel, fmtInt, haptic, pad, uid } from '../lib'
 import { useStore } from '../store'
 import type { Exercise, Workout } from '../types'
 import { CreditPill, useCredit } from './AiCredit'
-import { Sheet, Tap } from './ui'
+import { AiWait, Sheet, Tap } from './ui'
 
 /**
  * Training history from another app (Strong, Hevy, FitNotes, Excel as CSV) or
@@ -311,7 +311,7 @@ export function TrainingImport({ onClose, toast }: { onClose: () => void; toast:
         </>
       )}
 
-      {step.kind === 'busy' && <div className="ai-wait" style={{ padding: '28px 0' }}>{step.text}</div>}
+      {step.kind === 'busy' && <AiWait text={step.text} rows={4} />}
 
       {step.kind === 'preview' && (
         <>

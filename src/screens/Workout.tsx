@@ -359,6 +359,7 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
       {(restEnd || restDone) && (
         <RestDock
           left={restLeft}
+          msLeft={restEnd ? Math.max(0, restEnd - now) : 0}
           total={settings.restSec}
           done={restDone}
           onAdd={(d) => {
@@ -451,14 +452,15 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
   )
 }
 
-function RestDock({ left, total, done, onAdd, onSkip }: {
-  left: number; total: number; done: boolean; onAdd: (d: number) => void; onSkip: () => void
+function RestDock({ left, msLeft, total, done, onAdd, onSkip }: {
+  left: number; msLeft: number; total: number; done: boolean; onAdd: (d: number) => void; onSkip: () => void
 }) {
   const r = 20
   const c = 2 * Math.PI * r
-  const frac = done ? 1 : Math.max(0, Math.min(1, left / total))
+  // from the exact milliseconds: with the 0.5 s tick and a 0.5 s linear transition the ring runs without steps
+  const frac = done ? 1 : Math.max(0, Math.min(1, msLeft / (total * 1000)))
   return (
-    <div className={'dock' + (done ? ' over' : '')}>
+    <div className={'dock' + (done ? ' over' : !done && left <= 3 && left > 0 ? ' ending' : '')}>
       <svg className="ring" viewBox="0 0 48 48">
         <circle cx="24" cy="24" r={r} fill="none" stroke="rgba(255,255,255,.1)" strokeWidth="4" />
         <circle

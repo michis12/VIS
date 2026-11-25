@@ -99,8 +99,15 @@ export function haptic(strong = false) {
       if (strong) setTimeout(iosTick, 90)
       return
     }
-    navigator.vibrate?.(strong ? 20 : 8)
+    // Android: many motors ignore pulses under ~12 ms, so a bit longer than on iPhone
+    navigator.vibrate?.(strong ? [18, 70, 24] : 14)
   } catch {
     /* no haptics */
   }
+}
+
+/** Longer vibration pattern, Android only (iPhone keeps its system haptic). */
+export function buzz(pattern: number | number[]) {
+  if (IS_IOS) return
+  try { navigator.vibrate?.(pattern) } catch { /* no vibration */ }
 }

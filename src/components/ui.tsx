@@ -149,6 +149,7 @@ export function Tap({ onClick, className, children, disabled, ...rest }: {
       onClick={(e) => {
         if ((e.target as HTMLElement).tagName === 'INPUT') return // forwarded click
         if (disabled) { e.preventDefault(); return }
+        if (!IS_TOUCH_IOS) { try { navigator.vibrate?.(14) } catch { /* no vibration */ } }
         onClick()
       }}
       onKeyDown={(e) => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onClick() } }}
@@ -178,6 +179,20 @@ export function SetMark({ flag }: { flag: 'up' | 'pr' | null | undefined }) {
     <span className={'set-mark ' + flag} aria-label={flag === 'pr' ? 'Rekord' : 'Fortschritt'}>
       {flag === 'pr' ? <Icon.cup size={10} /> : <Icon.up size={10} />}
     </span>
+  )
+}
+
+/** Waiting for the AI: a few shimmering placeholder rows shaped like the coming result. */
+export function AiWait({ text, rows = 3 }: { text: string; rows?: number }) {
+  return (
+    <div className="ai-sk" role="status">
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="ai-sk-row" style={{ animationDelay: `${i * 0.08}s` }}>
+          <i style={{ width: `${[62, 48, 70, 54][i % 4]}%` }} /><i className="sm" />
+        </div>
+      ))}
+      <div className="ai-sk-txt">{text}</div>
+    </div>
   )
 }
 

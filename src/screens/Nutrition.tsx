@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { Num, useTween } from '../anim'
 import { requireAi } from '../components/AiCredit'
 import { FoodPhoto, type KnownFood, type PhotoItem } from '../components/FoodPhoto'
 import { MealSuggest } from '../components/MealSuggest'
@@ -175,7 +176,7 @@ function KcalRing({ eaten, target, flash = 0, onClick }: { eaten: number; target
   const r = 52
   const c = 2 * Math.PI * r
   const raw = target ? eaten / target : 0
-  const frac = Math.min(1, raw)
+  const frac = useTween(Math.min(1, raw), { from: 0, ms: 900, intro: 'kcal-ring' })
   const col = progressColors(raw)
   const left = target != null ? Math.round(target - eaten) : null
   return (
@@ -186,7 +187,7 @@ function KcalRing({ eaten, target, flash = 0, onClick }: { eaten: number; target
         </defs>
         <circle cx="60" cy="60" r={r} fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="9" />
         <circle cx="60" cy="60" r={r} fill="none" stroke="url(#nutRing)" strokeWidth="9" strokeLinecap="round"
-          strokeDasharray={c} strokeDashoffset={c * (1 - frac)} transform="rotate(-90 60 60)" style={{ transition: 'stroke-dashoffset .5s' }} />
+          strokeDasharray={c} strokeDashoffset={c * (1 - frac)} transform="rotate(-90 60 60)" />
       </svg>
       {checking ? (
         <div className="nut-ring-txt" key={flash}>
@@ -196,7 +197,7 @@ function KcalRing({ eaten, target, flash = 0, onClick }: { eaten: number; target
         </div>
       ) : (
       <div className="nut-ring-txt ring-back">
-        <b className="num">{fmtInt(eaten)}</b>
+        <b className="num"><Num value={eaten} format={fmtInt} /></b>
         <span className="faint">{target ? `von ${fmtInt(target)}` : 'kcal'}</span>
         {left != null && <span className="nut-left num" style={raw >= 1 ? { color: 'var(--good)' } : undefined}>{left >= 0 ? `${fmtInt(left)} übrig` : `${fmtInt(-left)} drüber`}</span>}
       </div>
@@ -206,10 +207,11 @@ function KcalRing({ eaten, target, flash = 0, onClick }: { eaten: number; target
 }
 
 function MacroBar({ label, v, t }: { label: string; v: number; t: number | null }) {
+  const w = useTween(t ? Math.min(100, (v / t) * 100) : 0, { from: 0, ms: 800, intro: `macro-${label}` })
   return (
     <div className="nut-macro">
-      <div className="nut-macro-top"><span>{label}</span><span className="num faint" style={t && v >= t ? { color: 'var(--good)' } : undefined}>{Math.round(v)}{t ? ` / ${t}` : ''} g</span></div>
-      <div className="track"><div className="fill" style={{ width: `${t ? Math.min(100, (v / t) * 100) : 0}%`, background: t ? `linear-gradient(90deg, ${progressColors(v / t).from}, ${progressColors(v / t).to})` : undefined }} /></div>
+      <div className="nut-macro-top"><span>{label}</span><span className="num faint" style={t && v >= t ? { color: 'var(--good)' } : undefined}><Num value={v} />{t ? ` / ${t}` : ''} g</span></div>
+      <div className="track"><div className="fill" style={{ width: `${w}%`, background: t ? `linear-gradient(90deg, ${progressColors(v / t).from}, ${progressColors(v / t).to})` : undefined }} /></div>
     </div>
   )
 }

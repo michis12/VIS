@@ -1,4 +1,5 @@
-import { useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useTween } from '../anim'
 import { pastWeekScores } from '../weekly'
 import { scorePhases } from '../phaseScore'
 import { kcalTarget } from '../nutrition'
@@ -119,11 +120,11 @@ export function Medal({ glyph, stars, size = 64, ultimate = false }: { glyph: Gl
   )
 }
 
-export function Stars({ n, size = 11 }: { n: number; size?: number }) {
+export function Stars({ n, size = 11, fresh = 0 }: { n: number; size?: number; fresh?: number }) {
   return (
     <span className="stars" aria-label={`${n} von 5 Sternen`}>
       {[0, 1, 2, 3, 4].map((i) => (
-        <svg key={i} width={size} height={size} viewBox="0 0 24 24" className={i < n ? 'on' : ''}>
+        <svg key={i} width={size} height={size} viewBox="0 0 24 24" className={(i < n ? 'on' : '') + (i < n && i >= n - fresh ? ' new' : '')} style={i < n && i >= n - fresh ? { animationDelay: `${0.3 + (i - (n - fresh)) * 0.12}s` } : undefined}>
           <path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8Z" />
         </svg>
       ))}
@@ -216,6 +217,13 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
   }
 
   const total = list.reduce((n, a) => n + a.stars, 0)
+  // stars earned since the last visit glint once (first visit ever: nothing glints)
+  const [seen] = useState<Record<string, number>>(() => {
+    try { const v = localStorage.getItem('vis.seenStars'); return v ? JSON.parse(v) : Object.fromEntries(list.map((a) => [a.def.id, a.stars])) } catch { return {} }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('vis.seenStars', JSON.stringify(Object.fromEntries(list.map((a) => [a.def.id, a.stars])))) } catch { /* ignore */ }
+  }, [list])
   const max = MAX_STARS
   const rank = rankFor(total)
   const nr = nextRank(total)
@@ -229,11 +237,12 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
   const ultimate = maxed === core.length
   const first = workouts.find((w) => w.status === 'done')
   const sorted = [...core].sort(byRank)
+  const rankW = useTween((total / max) * 100, { from: 0, ms: 1000, intro: 'rank' })
   const renderAch = (a: AchievementState) => (
     <button key={a.def.id} className={'ach' + (a.stars === 0 ? ' locked' : '')} onClick={() => setOpen(a)}>
       <Medal glyph={a.def.glyph} stars={a.stars} />
       <div className="ach-name">{a.def.name}</div>
-      <Stars n={a.stars} />
+      <Stars n={a.stars} fresh={Math.max(0, a.stars - (seen[a.def.id] ?? a.stars))} />
       <div className="ach-bar"><div style={{ width: `${a.progress * 100}%` }} /></div>
     </button>
   )
@@ -265,7 +274,7 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
         <div className="eyebrow">Rang</div>
         <div className="rank-name chrome-text">{rank.name}</div>
         <div className="muted num" style={{ marginTop: 2 }}>{total} / {max} Sterne{first ? ` · dabei seit ${dateLabel(first.startedAt)}` : ''}</div>
-        <div className="progress" style={{ marginTop: 14 }}><div style={{ width: `${(total / max) * 100}%` }} /></div>
+        <div className="progress" style={{ marginTop: 14 }}><div style={{ width: `${rankW}%` }} /></div>
         <div className="faint" style={{ fontSize: 12, marginTop: 6 }}>
           {nr ? `Noch ${nr.min - total} Sterne bis ${nr.name}` : 'Höchster Rang erreicht'}
         </div>

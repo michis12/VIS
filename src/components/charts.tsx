@@ -1,4 +1,5 @@
-import { useId, useLayoutEffect, useRef, useState, type PointerEvent } from 'react'
+import { easeOut, reducedMotion } from '../anim'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent } from 'react'
 import { monthLabel, shortDate } from '../lib'
 
 function useWidth() {
@@ -98,6 +99,31 @@ export function LineChart({ points, height = 200, yFmt = (v) => String(Math.roun
   )
 }
 
+/** heights that grow in on first show and glide from old to new values */
+function useBarTween(values: number[]) {
+  const [shown, setShown] = useState<number[]>(() => (reducedMotion() ? values : values.map(() => 0)))
+  const cur = useRef<number[]>(shown)
+  const key = values.join('|')
+  useEffect(() => {
+    if (reducedMotion()) { cur.current = values; setShown(values); return }
+    const from = values.map((_, i) => cur.current[i] ?? 0)
+    const t0 = performance.now()
+    let raf = 0
+    const step = (t: number) => {
+      const k = Math.min(1, (t - t0) / 600)
+      const e = easeOut(k)
+      const next = values.map((v, i) => from[i] + (v - from[i]) * e)
+      cur.current = next
+      setShown(next)
+      if (k < 1) raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key])
+  return shown
+}
+
 export function BarChart({ bars, height = 160, yFmt = (v) => String(Math.round(v)), unit = '' }: {
   bars: { label: string; value: number; tip?: string }[]; height?: number; yFmt?: (v: number) => string; unit?: string
 }) {
@@ -105,6 +131,7 @@ export function BarChart({ bars, height = 160, yFmt = (v) => String(Math.round(v
   const [hover, setHover] = useState<number | null>(null)
   const L = 32, R = 4, T = 10, B = 22
   const max = Math.max(1, ...bars.map((b) => b.value))
+  const anim = useBarTween(bars.map((b) => b.value))
   const ticks = niceTicks(0, max, 3)
   const top = ticks[ticks.length - 1]
   const slot = (width - L - R) / Math.max(1, bars.length)
@@ -122,13 +149,13 @@ export function BarChart({ bars, height = 160, yFmt = (v) => String(Math.round(v
           {bars.map((b, i) => (i % labelEvery === 0 ? <text key={i} x={L + i * slot + slot / 2} y={height - 6} textAnchor="middle">{b.label}</text> : null))}
         </g>
         {bars.map((b, i) => {
-          const y = sy(b.value), h = height - B - y
+          const y = sy(anim[i] ?? b.value), h = height - B - y
           const x = L + i * slot + (slot - bw) / 2
           const r = Math.min(4, bw / 2, h)
           return (
             <g key={i} onPointerEnter={() => setHover(i)} onPointerDown={() => setHover(i)}>
               <rect x={L + i * slot} y={T} width={slot} height={height - T - B} fill="transparent" />
-              {b.value > 0 && (
+              {(anim[i] ?? b.value) > 0 && h > 0.5 && (
                 <path
                   d={`M${x},${height - B}V${y + r}Q${x},${y} ${x + r},${y}H${x + bw - r}Q${x + bw},${y} ${x + bw},${y + r}V${height - B}Z`}
                   fill={hover === i ? '#ffffff' : '#c7c7cc'}

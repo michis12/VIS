@@ -8,7 +8,7 @@ import { useStore } from '../store'
 import type { PhaseType } from '../types'
 import { CreditPill, useCredit } from './AiCredit'
 import { usePhaseScores } from './PhaseScores'
-import { Icon, Tap } from './ui'
+import { AiWait, Icon, Tap } from './ui'
 
 /** Height, birth year and sex (settings) – used by the phase planner. */
 export function BodyDataFields() {
@@ -137,6 +137,7 @@ export function PhasePlanner({ onClose, onApply }: { onClose: () => void; onAppl
             <Tap className="btn btn-chrome btn-block" style={{ marginTop: 16 }} onClick={() => state === 'input' && run()}>
               {state === 'loading' ? 'Wird berechnet…' : 'Berechnen'}
             </Tap>
+            {state === 'loading' && <AiWait text="Deine Daten werden ausgewertet…" />}
           </>
         ) : (
           <>

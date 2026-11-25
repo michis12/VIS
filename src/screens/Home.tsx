@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { requireAi } from '../components/AiCredit'
 import { ScoreGauge } from '../components/ScoreGauge'
+import { TrainingImport } from '../components/TrainingImport'
 import { Icon, Sheet } from '../components/ui'
 import { useWeekScore } from '../components/WeeklyReport'
 import { scoreLabel, WEEKLY_TARGET } from '../weekly'
@@ -25,6 +27,7 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
   const { templates, workouts, exerciseById, active, weights, phases } = store
   const [chosen, setChosen] = useState<Template | null>(null)
   const [manage, setManage] = useState(false)
+  const [importing, setImporting] = useState(false)
   const week = useWeekScore(0)
 
   const importTemplates = async () => {
@@ -127,6 +130,11 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
       <div className="card" style={{ padding: '4px 14px' }}>
         {recent.map((w) => <HistoryRow key={w.id} w={w} onOpen={() => nav.push({ kind: 'workout', id: w.id })} />)}
       </div>
+      <button className="import-link" onClick={() => requireAi() && setImporting(true)}>
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
+        Trainings aus alter App übernehmen
+      </button>
+      {importing && <TrainingImport onClose={() => setImporting(false)} toast={toast} />}
 
       {manage && (
         <Sheet onClose={() => setManage(false)}>

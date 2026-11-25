@@ -728,3 +728,47 @@ button.nut-ring:active { transform: scale(.97); transition: transform .1s; }
   mask-image: linear-gradient(to bottom, transparent 0, #000 26px);
 }
 .paywall .pw-hero { padding-top: 18px; }
+
+
+/* ---------- motion (calm, short; off with "reduce motion") ---------- */
+/* set confirmed: the check settles in with a small pop */
+.check.on { animation: check-pop .34s cubic-bezier(.2,1.5,.4,1); }
+.check.on svg { animation: check-draw .3s .05s ease-out both; }
+@keyframes check-pop { 0% { transform: scale(.82); } 100% { transform: scale(1); } }
+@keyframes check-draw { from { opacity: 0; transform: scale(.6) rotate(-12deg); } }
+.set-row.done { transition: background .35s ease; }
+/* record / progress marker on a set number */
+.set-mark { animation: mark-in .42s cubic-bezier(.2,1.5,.4,1); }
+.set-mark.pr { box-shadow: 0 0 10px rgba(255,255,255,.45); }
+@keyframes mark-in { from { transform: scale(0); opacity: 0; } }
+/* rest: last three seconds breathe, end glows once */
+.dock.ending .t { animation: rest-tick 1s ease-in-out infinite; }
+.dock.ending .ring { filter: drop-shadow(0 0 6px rgba(255,255,255,.35)); }
+@keyframes rest-tick { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+.dock.over { animation: rest-over 1.2s ease-out; }
+@keyframes rest-over { 0% { box-shadow: 0 0 0 0 rgba(143,209,158,.45), 0 20px 60px rgba(0,0,0,.7); } 100% { box-shadow: 0 0 0 14px rgba(143,209,158,0), 0 20px 60px rgba(0,0,0,.7); } }
+/* celebration: blocks arrive one after another */
+.stagger > * { animation: rise-in .5s cubic-bezier(.2,.9,.3,1) both; }
+.stagger > *:nth-child(2) { animation-delay: .06s; } .stagger > *:nth-child(3) { animation-delay: .12s; }
+.stagger > *:nth-child(4) { animation-delay: .18s; } .stagger > *:nth-child(5) { animation-delay: .26s; }
+.stagger > *:nth-child(6) { animation-delay: .34s; } .stagger > *:nth-child(7) { animation-delay: .42s; }
+.stagger > *:nth-child(8) { animation-delay: .5s; } .stagger > *:nth-child(9) { animation-delay: .56s; }
+@keyframes rise-in { from { opacity: 0; transform: translateY(10px); } }
+/* newly earned star: one soft glint */
+.stars svg.new { animation: star-glint .9s cubic-bezier(.2,1.4,.4,1) both; }
+@keyframes star-glint { 0% { transform: scale(.3); opacity: 0; } 55% { transform: scale(1.35); filter: drop-shadow(0 0 5px #fff); } 100% { transform: scale(1); } }
+.progress > div { transition: none; }
+/* AI waiting: shimmer rows */
+.ai-sk { padding: 18px 0 6px; }
+.ai-sk-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--line); animation: rise-in .4s ease-out both; }
+.ai-sk-row i { display: block; height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--surface-2) 0%, var(--surface-3) 40%, rgba(255,255,255,.14) 50%, var(--surface-3) 60%, var(--surface-2) 100%); background-size: 300% 100%; animation: sk-shine 1.6s ease-in-out infinite; }
+.ai-sk-row i.sm { width: 44px; }
+@keyframes sk-shine { from { background-position: 100% 0; } to { background-position: 0 0; } }
+.ai-sk-txt { text-align: center; color: var(--text-3); font-size: 13px; margin-top: 14px; }
+/* training page: import link under the history */
+.import-link { display: flex; align-items: center; justify-content: center; gap: 7px; margin: 12px auto 0; padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; color: var(--text-2); background: var(--surface-2); border: 1px solid var(--line); }
+.import-link:active { transform: scale(.98); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

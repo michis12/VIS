@@ -1,4 +1,4 @@
-import { haptic } from './lib'
+import { buzz, haptic } from './lib'
 
 /** Rest timer end-signal: sound + vibration + (if allowed) a system notification. */
 let ctx: AudioContext | null = null
@@ -39,6 +39,7 @@ export function restFinished() {
   chime()
   haptic(true)
   setTimeout(() => haptic(true), 400)
+  buzz([220, 120, 220]) // Android: a clear double buzz
 }
 
 const KEY = 'vis.restEnd'

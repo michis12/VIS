@@ -7,7 +7,7 @@ import { useStore } from '../store'
 import type { Food } from '../types'
 import { CreditPill, requireAi, useCredit } from './AiCredit'
 import type { PhotoItem } from './FoodPhoto'
-import { Sheet, Tap } from './ui'
+import { AiWait, Sheet, Tap } from './ui'
 
 /**
  * "Was soll ich noch essen?" – opened from the kcal ring. Shows what is left for
@@ -134,7 +134,9 @@ export function MealSuggest({ left, onClose, onAdd }: {
           <Tap className="btn btn-chrome btn-block" style={{ marginTop: 16 }} onClick={() => state === 'idle' && requireAi() && ask()}>
             {state === 'loading' ? 'Wird überlegt…' : '✦ Was soll ich noch essen?'}
           </Tap>
-          <div className="hint"><span>Vorschläge aus deinen Rezepten und dem, was du oft isst.</span></div>
+          {state === 'loading'
+            ? <AiWait text="Passende Mahlzeiten werden gesucht…" />
+            : <div className="hint"><span>Vorschläge aus deinen Rezepten und dem, was du oft isst.</span></div>}
         </>
       ) : (
         <>

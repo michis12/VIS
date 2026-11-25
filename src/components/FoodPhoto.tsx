@@ -5,7 +5,7 @@ import { fmtInt, haptic, uid } from '../lib'
 import { fmtG, sum, type Macros } from '../nutrition'
 import type { Food } from '../types'
 import { CreditPill, useCredit } from './AiCredit'
-import { Icon, Tap } from './ui'
+import { AiWait, Icon, Tap } from './ui'
 
 /**
  * AI food entry with a review list before anything is added:
@@ -130,7 +130,7 @@ export function FoodPhoto({ source, onClose, onAdd }: { source: Source; onClose:
             </Tap>
           </>
         ) : state === 'loading' ? (
-          <div className="ai-wait">Wird zerlegt…</div>
+          <AiWait text="Wird zerlegt…" />
         ) : err ? (
           <>
             <div className="hint" style={{ color: 'var(--danger)' }}><span>{err}</span></div>
