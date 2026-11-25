@@ -1,8 +1,9 @@
-// Food AI for the app, three modes:
-//   photo - estimate the foods on a meal photo (FOOD_MODEL, default Sonnet)
-//   label - read a nutrition label photo into per-100 g values (FAST_MODEL, Haiku)
-//   text  - turn "2 Semmeln mit Schinken" into foods with grams (FAST_MODEL, Haiku)
-//   plan  - next bulk/cut/maintain phase from body data + activity text (FAST_MODEL)
+// Food AI for the app, modes:
+//   photo   - estimate the foods on a meal photo (FOOD_MODEL, default Sonnet)
+//   label   - read a nutrition label photo into per-100 g values (FAST_MODEL, Haiku)
+//   text    - turn "2 Semmeln mit Schinken" into foods with grams (FAST_MODEL, Haiku)
+//   plan    - next bulk/cut/maintain phase from body data + activity text (FAST_MODEL)
+//   suggest - what to eat for the rest of the day, from the user's own foods (FAST_MODEL)
 // Only signed-in accounts on the ai_access allow-list may call it; the Anthropic
 // key is the function secret ANTHROPIC_API_KEY. Each call books its cost in ai_ledger.
 import Anthropic from 'npm:@anthropic-ai/sdk'
@@ -114,6 +115,45 @@ Vorgehen:
 4. Wunsch des Nutzers (Termin, Zielgewicht, Tempo) einbeziehen, wenn gesund machbar; sonst warnen.
 Runde kcal auf 50. Kurze, konkrete Sätze auf Deutsch, du-Form.`
 
+const SUGGEST_SCHEMA = {
+  type: 'object',
+  properties: {
+    options: {
+      type: 'array',
+      description: '2 bis 3 Vorschläge',
+      items: {
+        type: 'object',
+        properties: {
+          title: { type: 'string', description: 'Kurzer Name, z. B. "Skyr mit Beeren"' },
+          items: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                ref: { type: 'string', description: 'id aus der Kandidatenliste' },
+                grams: { type: 'number', description: 'Menge in Gramm' },
+              },
+              required: ['ref', 'grams'],
+              additionalProperties: false,
+            },
+          },
+          why: { type: 'string', description: 'Ein kurzer Satz, warum das passt' },
+        },
+        required: ['title', 'items', 'why'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['options'],
+  additionalProperties: false,
+}
+
+const SUGGEST_SYSTEM = `Du schlägst vor, was jemand heute noch essen kann, um seine restlichen Kalorien und vor allem sein Eiweiß zu treffen (Fitness-App, Österreich).
+- Nutze NUR Lebensmittel und Rezepte aus der Kandidatenliste (ref = deren id). Bevorzuge, was die Person oft isst (count), und übliche Mengen (typ).
+- Werte in der Liste sind pro 100 g. Rechne nach: Jeder Vorschlag soll die restlichen kcal möglichst treffen (eher etwas darunter als drüber) und das restliche Eiweiß möglichst abdecken.
+- Passe zur Tageszeit (abends eher eine Mahlzeit oder ein Snack, kein Frühstück um 22 Uhr).
+- 2 bis 3 unterschiedliche Vorschläge, je 1 bis 4 Bestandteile. Kurze Sätze auf Deutsch, du-Form.`
+
 const SCHEMA = {
   type: 'object',
   properties: {
@@ -166,9 +206,11 @@ Deno.serve(async (req) => {
   if (!key) return json({ error: 'nokey' }, 503)
 
   let body: {
-    mode?: 'photo' | 'label' | 'text' | 'plan'; image?: string; mediaType?: string; note?: string; grams?: number
+    mode?: 'photo' | 'label' | 'text' | 'plan' | 'suggest'; image?: string; mediaType?: string; note?: string; grams?: number
     text?: string; foods?: { id: string; name: string; g?: number }[]
     goal?: string; activity?: string; wish?: string; data?: unknown
+    left?: { kcal: number; p: number; c: number; f: number }; time?: string
+    candidates?: { id: string; name: string; kcal: number; p: number; c: number; f: number; typ: number; count: number }[]
   }
   try {
     body = await req.json()
@@ -182,12 +224,25 @@ Deno.serve(async (req) => {
   if (withImage && (!image || image.length > 4_000_000)) return json({ error: 'image' }, 400)
   if (mode === 'text' && !body.text?.trim()) return json({ error: 'text' }, 400)
   if (mode === 'plan' && !body.activity?.trim()) return json({ error: 'text' }, 400)
+  if (mode === 'suggest' && !(body.candidates?.length && body.left)) return json({ error: 'text' }, 400)
 
   // deno-lint-ignore no-explicit-any
   const img: any = withImage ? { type: 'image', source: { type: 'base64', media_type: mediaType, data: image } } : null
   // deno-lint-ignore no-explicit-any
   let call: any
-  if (mode === 'plan') {
+  if (mode === 'suggest') {
+    const r = (v: unknown) => Math.round(Number(v) || 0)
+    const list = body.candidates!.slice(0, 80)
+      .map((c) => `${c.id} | ${String(c.name).slice(0, 50)} | ${r(c.kcal)} kcal ${r(c.p)} E ${r(c.c)} K ${r(c.f)} F | typ ${r(c.typ)} g | ${r(c.count)}×`).join('\n')
+    const l = body.left!
+    call = {
+      model: FAST_MODEL, system: SUGGEST_SYSTEM, schema: SUGGEST_SCHEMA, effort: 'medium',
+      content: [{
+        type: 'text',
+        text: `Uhrzeit: ${String(body.time ?? '').slice(0, 5)}\nNoch offen heute: ${r(l.kcal)} kcal, ${r(l.p)} g Eiweiß, ${r(l.c)} g Kohlenhydrate, ${r(l.f)} g Fett\n\nKandidaten (id | Name | pro 100 g | übliche Menge | wie oft gegessen):\n${list}`,
+      }],
+    }
+  } else if (mode === 'plan') {
     const goal = body.goal === 'cut' ? 'Cut' : body.goal === 'maintain' ? 'Erhalt' : 'Bulk'
     call = {
       model: FAST_MODEL, system: PLAN_SYSTEM, schema: PLAN_SCHEMA, effort: 'medium',
@@ -241,7 +296,7 @@ Deno.serve(async (req) => {
     const u = res.usage ?? {}
     const usd = ((u.input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) * 1.25 + (u.cache_read_input_tokens ?? 0) * 0.1) * pin / 1e6
       + (u.output_tokens ?? 0) * pout / 1e6
-    const label = mode === 'label' ? 'Etikett' : mode === 'text' ? 'Text' : mode === 'plan' ? 'Phase' : 'Foto'
+    const label = mode === 'label' ? 'Etikett' : mode === 'text' ? 'Text' : mode === 'plan' ? 'Phase' : mode === 'suggest' ? 'Vorschlag' : 'Foto'
     await sb.from('ai_ledger').insert({ user_id: user.id, kind: 'use', usd, note: `${label} · ${res.model}` })
     return json({ ...out, model: res.model, usd })
   } catch (e) {

@@ -640,3 +640,6 @@ label.lbl { display: block; font-size: 12px; font-weight: 600; letter-spacing: .
 .plan-kcal span { font-size: 18px; }
 .ai-person { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
 .ai-person .grow { min-width: 0; flex: 1; }
+.suggest-card { margin-top: 12px; padding: 14px; }
+button.nut-ring { padding: 0; background: none; border: 0; color: inherit; -webkit-tap-highlight-color: transparent; }
+button.nut-ring:active { transform: scale(.97); transition: transform .1s; }

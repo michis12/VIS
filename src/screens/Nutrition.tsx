@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { FoodPhoto, type KnownFood, type PhotoItem } from '../components/FoodPhoto'
+import { MealSuggest } from '../components/MealSuggest'
 import { Scanner } from '../components/Scanner'
 import { Icon, Sheet, Tap } from '../components/ui'
 import { BASICS } from '../data/foods'
@@ -53,6 +54,7 @@ export function Nutrition() {
   const [adding, setAdding] = useState<null | 'search' | 'scan'>(null)
   const [editing, setEditing] = useState<FoodEntry | null>(null)
   const [photo, setPhoto] = useState<File | null>(null)
+  const [suggest, setSuggest] = useState(false)
   const photoInput = useRef<HTMLInputElement>(null)
 
   // newest first
@@ -84,7 +86,7 @@ export function Nutrition() {
       </div>
 
       <div className="card chrome-edge nut-ring-card">
-        <KcalRing eaten={total.kcal} target={target.kcal} flash={added} />
+        <KcalRing eaten={total.kcal} target={target.kcal} flash={added} onClick={() => { haptic(); setSuggest(true) }} />
         <div className="nut-macros">
           <MacroBar label="Eiweiß" v={total.p} t={target.p} />
           <MacroBar label="Kohlenhydrate" v={total.c} t={target.c} />
@@ -143,12 +145,24 @@ export function Nutrition() {
           onAdd={(items) => { saveItems(items); setPhoto(null) }}
         />
       )}
+      {suggest && (
+        <MealSuggest
+          left={{
+            kcal: target.kcal == null ? null : target.kcal - total.kcal,
+            p: target.p - total.p,
+            c: target.c == null ? null : target.c - total.c,
+            f: target.f == null ? null : target.f - total.f,
+          }}
+          onClose={() => setSuggest(false)}
+          onAdd={(items) => { saveItems(items); setSuggest(false) }}
+        />
+      )}
       {editing && <EntrySheet entry={editing} onClose={() => setEditing(null)} />}
     </div>
   )
 }
 
-function KcalRing({ eaten, target, flash = 0 }: { eaten: number; target: number | null; flash?: number }) {
+function KcalRing({ eaten, target, flash = 0, onClick }: { eaten: number; target: number | null; flash?: number; onClick?: () => void }) {
   // after adding: the check plays in the middle of the ring, then the numbers come back
   const [checking, setChecking] = useState(false)
   useEffect(() => {
@@ -164,7 +178,7 @@ function KcalRing({ eaten, target, flash = 0 }: { eaten: number; target: number 
   const col = progressColors(raw)
   const left = target != null ? Math.round(target - eaten) : null
   return (
-    <div className="nut-ring">
+    <button className="nut-ring" onClick={onClick} aria-label="Was soll ich noch essen?">
       <svg viewBox="0 0 120 120" width="132" height="132">
         <defs>
           <linearGradient id="nutRing" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stopColor={col.to} /><stop offset=".55" stopColor={col.from} /><stop offset="1" stopColor={col.to} /></linearGradient>
@@ -186,7 +200,7 @@ function KcalRing({ eaten, target, flash = 0 }: { eaten: number; target: number 
         {left != null && <span className="nut-left num" style={raw >= 1 ? { color: 'var(--good)' } : undefined}>{left >= 0 ? `${fmtInt(left)} übrig` : `${fmtInt(-left)} drüber`}</span>}
       </div>
       )}
-    </div>
+    </button>
   )
 }
 
