@@ -1,28 +1,48 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { haptic } from '../lib'
 import { PLANS, usePlan, type Plan } from './AiCredit'
 import { Icon } from './ui'
 
-/** colours of the plan badge: Free bronze, Solo silver, Ultra gold */
-export const PLAN_TIER: Record<Plan | 'free', { label: string; a: string; b: string }> = {
-  free: { label: 'Free', a: '#e8b48c', b: '#8a5634' },
-  solo: { label: 'Solo', a: '#f4f4f8', b: '#8a8a92' },
-  ultra: { label: 'Ultra', a: '#f8da98', b: '#a8762a' },
-  friend: { label: 'Friend', a: '#dff3fb', b: '#5f8fa3' },
-  dev: { label: 'Dev', a: '#ffffff', b: '#3a3a40' },
+/** plan badges: chrome pills for Free and Solo, a cut emerald for Ultra, Friend and Dev */
+const PLAN_TIER: Record<Plan | 'free', { label: string; gem: boolean }> = {
+  free: { label: 'Free', gem: false },
+  solo: { label: 'Solo', gem: false },
+  ultra: { label: 'Ultra', gem: true },
+  friend: { label: 'Friend', gem: true },
+  dev: { label: 'Dev', gem: true },
 }
+const tierClass = (k: Plan | 'free') => (PLAN_TIER[k].gem ? 'tier-gem' : 'tier-chrome')
 
 export function PlanBadge({ onClick }: { onClick: () => void }) {
   const s = usePlan()
   if (s === undefined) return null
   const key: Plan | 'free' = s.plan && s.active ? s.plan : 'free'
-  const t = PLAN_TIER[key]
   return (
-    <button className="plan-badge" onClick={() => { haptic(); onClick() }} style={{ background: `linear-gradient(135deg, ${t.a}, ${t.b})` }}>
-      {t.label}
+    <button className={'plan-badge ' + tierClass(key)} onClick={() => { haptic(); onClick() }}>
+      {PLAN_TIER[key].label}
     </button>
   )
+}
+
+/** number that glides to its new value instead of jumping */
+function Tween({ value }: { value: number }) {
+  const [shown, setShown] = useState(value)
+  const cur = useRef(value)
+  useEffect(() => {
+    const from = cur.current, t0 = performance.now()
+    let raf = 0
+    const step = (t: number) => {
+      const k = Math.min(1, (t - t0) / 520)
+      const v = from + (value - from) * (1 - Math.pow(1 - k, 3))
+      cur.current = v
+      setShown(v)
+      if (k < 1) raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [value])
+  return <>{Math.round(shown)}</>
 }
 
 const FEATURES: { icon: React.JSX.Element; title: string; text: string }[] = [
@@ -51,17 +71,20 @@ export function Paywall({ onClose }: { onClose: () => void }) {
       <button
         key={k} className={'pw-plan' + (on ? ' on' : '') + (k === 'free' ? ' free' : '')}
         disabled={k === 'free'} onClick={() => { if (k !== 'free') { haptic(); setPick(k) } }}
-        style={on ? { borderColor: t.a } : undefined}
       >
         <div className="pw-plan-top">
-          <span className="pw-tier" style={{ background: `linear-gradient(135deg, ${t.a}, ${t.b})` }}>{t.label}</span>
+          <span className={'pw-tier ' + tierClass(k)}>{t.label}</span>
           {current === k && <span className="pw-current">Dein Plan</span>}
           {k === 'ultra' && current !== 'ultra' && <span className="pw-current">Für Vielnutzer</span>}
         </div>
         <div className="pw-price num">
-          {price} €{p && <span>/{yearly ? 'Jahr' : 'Monat'}</span>}
+          <Tween value={price} /> €{p && <span key={yearly ? 'y' : 'm'} className="pw-unit">/{yearly ? 'Jahr' : 'Monat'}</span>}
         </div>
-        {p && yearly && <div className="plan-offer-save num">{(p.year / 12).toFixed(2).replace('.', ',')} € im Monat · 2 Monate gratis</div>}
+        {p && (
+          <div className={'pw-save' + (yearly ? ' open' : '')}>
+            <div><div className="plan-offer-save num">{(p.year / 12).toFixed(2).replace('.', ',')} € im Monat · 2 Monate gratis</div></div>
+          </div>
+        )}
         <div className="pw-desc">
           {k === 'free' && 'Training, Statistiken, Körper und Ernährung – alles ohne KI.'}
           {k === 'solo' && `Alle KI-Funktionen. Reicht für ca. ${PLANS.solo.photos} Essensfotos im Monat.`}
@@ -94,9 +117,10 @@ export function Paywall({ onClose }: { onClose: () => void }) {
           ))}
         </div>
 
-        <div className="segmented" style={{ marginTop: 22 }}>
-          <button className={!yearly ? 'on' : ''} onClick={() => setYearly(false)}>Monatlich</button>
-          <button className={yearly ? 'on' : ''} onClick={() => setYearly(true)}>Jährlich</button>
+        <div className={'pw-switch' + (yearly ? ' right' : '')} style={{ marginTop: 22 }}>
+          <i aria-hidden="true" />
+          <button className={!yearly ? 'on' : ''} onClick={() => { haptic(); setYearly(false) }}>Monatlich</button>
+          <button className={yearly ? 'on' : ''} onClick={() => { haptic(); setYearly(true) }}>Jährlich <span className="pw-switch-save">−17 %</span></button>
         </div>
         <div className="pw-plans">
           {card('ultra')}

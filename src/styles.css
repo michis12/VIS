@@ -656,7 +656,18 @@ button.nut-ring:active { transform: scale(.97); transition: transform .1s; }
 .plan-offer-save { font-size: 12px; font-weight: 600; color: var(--good); margin: -2px 0 6px; }
 
 /* plan badge (profile) and plans page */
-.plan-badge { flex-shrink: 0; height: 22px; padding: 0 9px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #1a1208; box-shadow: 0 1px 0 rgba(255,255,255,.35) inset, 0 2px 8px rgba(0,0,0,.35); }
+.plan-badge { flex-shrink: 0; height: 22px; padding: 0 10px; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+/* chrome pill (Free, Solo) */
+.tier-chrome { background: var(--chrome); color: #111; border-radius: 999px; box-shadow: 0 1px 0 rgba(255,255,255,.5) inset, 0 2px 8px rgba(0,0,0,.4); }
+/* cut emerald (Ultra, Friend, Dev): angular gem outline with facets and a glint */
+.tier-gem {
+  position: relative; color: #032b1d; padding: 0 13px; border-radius: 0;
+  clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 50%, calc(100% - 7px) 100%, 7px 100%, 0 50%);
+  background:
+    linear-gradient(115deg, rgba(255,255,255,.55) 0 18%, rgba(255,255,255,0) 18% 52%, rgba(255,255,255,.18) 52% 60%, rgba(255,255,255,0) 60%),
+    linear-gradient(180deg, rgba(255,255,255,.25), rgba(0,0,0,.18) 55%, rgba(0,0,0,0)),
+    linear-gradient(135deg, #b8ffe0 0%, #3fd69a 35%, #0f9a64 65%, #6af0b8 100%);
+}
 .profile-head .nm-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
 .paywall .fullsheet-body { padding-top: 0; }
 .pw-hero { text-align: center; padding: 4px 8px 6px; }
@@ -669,12 +680,13 @@ button.nut-ring:active { transform: scale(.97); transition: transform .1s; }
 .pw-feature b { display: block; font-size: 15px; font-weight: 650; }
 .pw-feature span { display: block; font-size: 13px; color: var(--text-2); line-height: 1.4; margin-top: 2px; }
 .pw-plans { display: grid; gap: 10px; margin-top: 12px; }
-.pw-plan { display: block; width: 100%; text-align: left; padding: 14px 16px; border-radius: 16px; background: var(--surface-2); border: 1.5px solid var(--line); transition: border-color .15s, transform .15s; }
-.pw-plan.on { background: linear-gradient(160deg, var(--surface-3), var(--surface-2)); }
+.pw-plan { display: block; width: 100%; text-align: left; padding: 14px 16px; border-radius: 16px; background: var(--surface-2); border: 1.5px solid var(--line); transition: border-color .3s, background .3s, transform .15s; }
+.pw-plan.on { background: linear-gradient(160deg, var(--surface-3), var(--surface-2)); border-color: #d6d6dc; }
 .pw-plan:active:not(:disabled) { transform: scale(.99); }
 .pw-plan.free { opacity: .85; }
 .pw-plan-top { display: flex; align-items: center; gap: 8px; }
-.pw-tier { height: 22px; line-height: 22px; padding: 0 9px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #1a1208; }
+.pw-tier { height: 22px; line-height: 22px; padding: 0 10px; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.pw-tier.tier-gem { padding: 0 13px; }
 .pw-current { margin-left: auto; font-size: 12px; color: var(--text-3); font-weight: 600; }
 .pw-price { font-size: 28px; font-weight: 750; margin-top: 8px; color: var(--text); }
 .pw-price span { font-size: 13px; font-weight: 500; color: var(--text-3); margin-left: 2px; }
@@ -697,3 +709,22 @@ button.nut-ring:active { transform: scale(.97); transition: transform .1s; }
 .range-tag::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--text); }
 .range-end { display: flex; align-items: center; gap: 12px; margin: 38px 0 0; font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); }
 .range-end::before, .range-end::after { content: ''; flex: 1; height: 1px; background: var(--line-strong); }
+
+/* plans page: sliding monthly / yearly switch, gliding prices, unfolding savings line, soft fade at the top */
+.pw-switch { position: relative; display: flex; background: var(--surface-2); border-radius: 12px; padding: 3px; }
+.pw-switch i { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); border-radius: 9px; background: var(--surface-3); box-shadow: 0 1px 0 rgba(255,255,255,.08) inset, 0 2px 10px rgba(0,0,0,.35); transition: transform .38s cubic-bezier(.3,1.25,.5,1); }
+.pw-switch.right i { transform: translateX(100%); }
+.pw-switch button { position: relative; flex: 1; height: 36px; font-size: 14px; font-weight: 600; color: var(--text-3); transition: color .3s; }
+.pw-switch button.on { color: var(--text); }
+.pw-switch-save { font-size: 11px; font-weight: 700; color: var(--good); margin-left: 4px; }
+.pw-unit { display: inline-block; animation: pw-unit-in .38s cubic-bezier(.2,.9,.3,1); }
+@keyframes pw-unit-in { from { opacity: 0; transform: translateY(6px); filter: blur(3px); } }
+.pw-save { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .4s cubic-bezier(.2,.9,.3,1), opacity .3s; }
+.pw-save > div { overflow: hidden; min-height: 0; }
+.pw-save.open { grid-template-rows: 1fr; opacity: 1; }
+.pw-save .plan-offer-save { margin: 2px 0 4px; }
+.paywall .fullsheet-body {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 26px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 26px);
+}
+.paywall .pw-hero { padding-top: 18px; }

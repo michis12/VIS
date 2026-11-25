@@ -289,7 +289,8 @@ export function Stats() {
 
         <RangeTitle title="Trainingstage" range={R.short} />
         <div className="card">
-          <div className="heat">
+          {/* keyed by range: a new range starts scrolled to the newest week again */}
+          <div className="heat" key={range}>
             {[...heat].reverse().map((c) => <div key={c.date} className={c.lvl ? 'l' + c.lvl : ''} title={`${dateLabel(c.date)}`} />)}
           </div>
           <div className="legend" style={{ justifyContent: 'flex-end' }}>
