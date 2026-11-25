@@ -673,10 +673,10 @@ button.nut-ring:active { transform: scale(.97); transition: transform .1s; }
 .pw-hero { text-align: center; padding: 4px 8px 6px; }
 .pw-hero h1 { margin: 6px 0 8px; font-size: 38px; font-weight: 800; letter-spacing: -0.03em; background: linear-gradient(180deg, #ffffff, #9a9aa2); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .pw-hero p { margin: 0 auto; max-width: 320px; color: var(--text-2); font-size: 15px; line-height: 1.45; }
-.pw-spark { font-size: 30px; color: #f8da98; text-shadow: 0 0 24px rgba(248,218,152,.55); }
+.pw-spark { font-size: 30px; color: #4fe3a6; text-shadow: 0 0 24px rgba(63,214,154,.6); }
 .pw-features { margin-top: 22px; display: grid; gap: 14px; }
 .pw-feature { display: flex; gap: 14px; align-items: flex-start; }
-.pw-feature svg { width: 22px; height: 22px; flex-shrink: 0; color: #f8da98; margin-top: 1px; }
+.pw-feature svg { width: 22px; height: 22px; flex-shrink: 0; color: #4fe3a6; margin-top: 1px; filter: drop-shadow(0 0 6px rgba(63,214,154,.35)); }
 .pw-feature b { display: block; font-size: 15px; font-weight: 650; }
 .pw-feature span { display: block; font-size: 13px; color: var(--text-2); line-height: 1.4; margin-top: 2px; }
 .pw-plans { display: grid; gap: 10px; margin-top: 12px; }
