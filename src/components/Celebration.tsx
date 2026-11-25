@@ -7,8 +7,8 @@ import { Num } from '../anim'
 import { ScorePill } from './ScoreGauge'
 import { Icon, ProgressBadges } from './ui'
 
-/** Chrome confetti: flipping silver ribbons and dots, ~3 s, no loop. */
-function ChromeConfetti() {
+/** Chrome (or emerald) confetti: flipping metallic ribbons and dots, ~3 s, no loop. */
+export function ChromeConfetti({ tint = 'chrome', burst = 70, rain = 60, top = 0.3 }: { tint?: 'chrome' | 'emerald'; burst?: number; rain?: number; top?: number } = {}) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
@@ -34,14 +34,14 @@ function ChromeConfetti() {
     }
     // radial burst from behind the check mark …
     const cx = W / 2
-    const cy = Math.min(H * 0.3, 220)
-    for (let i = 0; i < 70; i++) {
+    const cy = Math.min(H * top, 260)
+    for (let i = 0; i < burst; i++) {
       const a = rand(0, Math.PI * 2)
       const speed = rand(4, 11)
       add(cx + Math.cos(a) * 20, cy + Math.sin(a) * 20, Math.cos(a) * speed, Math.sin(a) * speed - 3)
     }
     // … plus a light rain over the whole width
-    for (let i = 0; i < 60; i++) add(rand(0, W), rand(-H * 0.5, -10), rand(-0.8, 0.8), rand(1, 3))
+    for (let i = 0; i < rain; i++) add(rand(0, W), rand(-H * 0.5, -10), rand(-0.8, 0.8), rand(1, 3))
 
     const start = performance.now()
     let raf = 0
@@ -63,7 +63,9 @@ function ChromeConfetti() {
         ctx.globalAlpha = fade
         ctx.translate(p.x, p.y)
         ctx.rotate(p.rot)
-        ctx.fillStyle = `rgb(${v},${v},${Math.min(255, v + 6)})`
+        ctx.fillStyle = tint === 'emerald'
+          ? `rgb(${Math.round(v * 0.35)},${Math.min(255, v + 20)},${Math.round(v * 0.68)})`
+          : `rgb(${v},${v},${Math.min(255, v + 6)})`
         if (p.dot) {
           ctx.beginPath(); ctx.arc(0, 0, p.w, 0, Math.PI * 2); ctx.fill()
         } else {
@@ -77,7 +79,7 @@ function ChromeConfetti() {
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [])
+  }, [tint, burst, rain, top])
   return <canvas ref={ref} className="confetti" />
 }
 

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import {
-  PLANS, addTopup, openPaywall, creditColor, fmtPct, fmtUsd, leftColor, markSettled, setPlan, useCredit,
+  PLANS, addTopup, openPaywall, creditColor, fmtEuro, fmtPct, fmtUsd, leftColor, markSettled, planPhotos, planPrice, setPlan, useCredit,
   type Credit, type Person,
 } from './AiCredit'
 import { TrainingImport } from './TrainingImport'
@@ -9,7 +9,7 @@ import { dec, locale, t } from '../i18n'
 const ct = (usd: number) => dec(usd * 100, 2) + ' ct'
 const who = (p: Person) => (p.isMe ? t('Du', 'You') : p.email.split('@')[0] || p.email)
 const dateDe = (iso: string) => new Date(iso).toLocaleDateString(locale(), { day: 'numeric', month: 'short' })
-const PLAN_NAME = { dev: 'Developer', get friend() { return t('Freund', 'Friend') }, solo: 'Solo', ultra: 'Ultra' }
+const PLAN_NAME = { dev: 'Developer', fam: 'Fam', free: 'Free', friend: 'Friend', solo: 'Solo', ultra: 'Ultra' }
 
 /**
  * Settings "KI & Abo".
@@ -30,7 +30,7 @@ export function AiCreditCard({ toast }: { toast: (t: string) => void }) {
       <div className="section-title"><h2>{t('KI & Abo', 'AI & subscription')}</h2></div>
       {!active && <Offer credit={credit} />}
       {active && (credit.plan === 'solo' || credit.plan === 'ultra') && <PaidStatus credit={credit} />}
-      {active && (credit.plan === 'dev' || credit.plan === 'friend') && <UsageCard credit={credit} reload={reload} toast={toast} />}
+      {active && (credit.plan === 'dev' || credit.plan === 'fam') && <UsageCard credit={credit} reload={reload} toast={toast} />}
       {active && (
         <button className="ai-row" style={{ marginTop: 12 }} onClick={() => setImporting(true)}>
           <span className="ai-spark" aria-hidden="true">✦</span>
@@ -48,9 +48,11 @@ export function AiCreditCard({ toast }: { toast: (t: string) => void }) {
 /** VIS Pro offer: Solo / Ultra, monthly or yearly. Buying comes with the App Store / Play Store release. */
 function Offer({ credit }: { credit: Credit }) {
   const [yearly, setYearly] = useState(false)
-  const expired = !!credit.plan && !credit.active
+  const expired = (credit.plan === 'solo' || credit.plan === 'ultra') && !credit.active
+  const f = credit.friend
   return (
     <div className="card">
+      {f && <div className="hint good" style={{ marginTop: 0, marginBottom: 12 }}><span>{t('Als Friend bekommst du alle Abos zum halben Preis.', 'As a Friend you get every plan at half price.')}</span></div>}
       {expired && <div className="hint" style={{ marginTop: 0, marginBottom: 12 }}><span>{t(`Dein Abo ist am ${dateDe(credit.paidUntil!)} abgelaufen.`, `Your subscription expired on ${dateDe(credit.paidUntil!)}.`)}</span></div>}
       <div style={{ fontWeight: 700, fontSize: 18 }}>VIS Pro</div>
       <div className="muted" style={{ fontSize: 14, lineHeight: 1.45, marginTop: 4 }}>
@@ -66,11 +68,11 @@ function Offer({ credit }: { credit: Credit }) {
           return (
             <div key={k} className={'plan-offer' + (k === 'ultra' ? ' hi' : '')}>
               <div className="plan-offer-name">{p.name}</div>
-              <div className="plan-offer-price num">{yearly ? p.year : p.month} €<span>/{yearly ? t('Jahr', 'year') : t('Monat', 'month')}</span></div>
-              {yearly && <div className="plan-offer-save num">{dec(p.year / 12, 2)} € {t('im Monat · 2 Monate gratis', 'a month · 2 months free')}</div>}
+              <div className="plan-offer-price num">{fmtEuro(planPrice(k, yearly, f))} €<span>/{yearly ? t('Jahr', 'year') : t('Monat', 'month')}</span></div>
+              {yearly && <div className="plan-offer-save num">{dec(planPrice(k, true, f) / 12, 2)} € {t('im Monat · 2 Monate gratis', 'a month · 2 months free')}</div>}
               <div className="faint" style={{ fontSize: 12.5, lineHeight: 1.4 }}>
                 {k === 'ultra' ? t('200 % Limit', '200% limit') : t('Alle KI-Funktionen', 'All AI features')}
-                <br />{t(`ca. ${p.photos} Essensfotos im Monat`, `about ${p.photos} food photos a month`)}
+                <br />{t(`ca. ${planPhotos(k, f)} Essensfotos im Monat`, `about ${planPhotos(k, f)} food photos a month`)}
               </div>
             </div>
           )
@@ -98,7 +100,7 @@ function PaidStatus({ credit }: { credit: Credit }) {
       {credit.resetsAt && <div className="pr-row num"><span className="muted">{t('Wieder 100 % ab', 'Back to 100 % on')}</span><b>{dateDe(credit.resetsAt)}</b></div>}
       {credit.paidUntil && <div className="pr-row num"><span className="muted">{t('Abo läuft bis', 'Subscription runs until')}</span><b>{dateDe(credit.paidUntil)}</b></div>}
       {credit.plan === 'solo' && used >= 80 && (
-        <div className="hint"><span>{t('Fast aufgebraucht? ', 'Almost used up? ')}<b>Ultra</b>{t(` gibt dir 200 % Limit für ${PLANS.ultra.month} € im Monat.`, ` gives you a 200% limit for ${PLANS.ultra.month} € a month.`)}</span></div>
+        <div className="hint"><span>{t('Fast aufgebraucht? ', 'Almost used up? ')}<b>Ultra</b>{t(` gibt dir 200 % Limit für ${fmtEuro(planPrice('ultra', false, credit.friend))} € im Monat.`, ` gives you a 200% limit for ${fmtEuro(planPrice('ultra', false, credit.friend))} € a month.`)}</span></div>
       )}
     </div>
   )
@@ -111,7 +113,7 @@ function UsageCard({ credit, reload, toast }: { credit: Credit; reload: () => vo
   const [busy, setBusy] = useState(false)
   const [confirm, setConfirm] = useState<string | null>(null)
   const [email, setEmail] = useState('')
-  const [newPlan, setNewPlan] = useState<'friend' | 'solo' | 'ultra' | 'none'>('solo')
+  const [newPlan, setNewPlan] = useState<'fam' | 'friend' | 'solo' | 'ultra' | 'none'>('solo')
   const [period, setPeriod] = useState<'month' | 'year'>('month')
 
   const save = async () => {
@@ -182,14 +184,14 @@ function UsageCard({ credit, reload, toast }: { credit: Credit; reload: () => vo
             return (
               <div key={p.userId} className="ai-person">
                 <div className="grow">
-                  <div style={{ fontWeight: 600 }}>{who(p)} <span className="faint" style={{ fontWeight: 500, fontSize: 12 }}>· {PLAN_NAME[p.plan]}</span></div>
+                  <div style={{ fontWeight: 600 }}>{who(p)} <span className="faint" style={{ fontWeight: 500, fontSize: 12 }}>· {PLAN_NAME[p.plan]}{p.friend ? ' · Friend' : ''}</span></div>
                   <div className="faint num" style={{ fontSize: 12 }}>
                     {paid
                       ? t(`${p.limitUsd ? fmtPct(Math.min(100, p.monthUsd / p.limitUsd * 100)) : '–'} genutzt · ${fmtUsd(p.monthUsd)} · ${expired ? 'abgelaufen' : 'bis'} ${p.paidUntil ? dateDe(p.paidUntil) : ''}`, `${p.limitUsd ? fmtPct(Math.min(100, p.monthUsd / p.limitUsd * 100)) : '–'} used · ${fmtUsd(p.monthUsd)} · ${expired ? 'expired' : 'until'} ${p.paidUntil ? dateDe(p.paidUntil) : ''}`)
                       : t(`${p.uses} Anfragen · diesen Monat ${fmtUsd(p.monthUsd)}${p.settledAt ? ` · bezahlt bis ${dateDe(p.settledAt)}` : ''}`, `${p.uses} requests · this month ${fmtUsd(p.monthUsd)}${p.settledAt ? ` · paid until ${dateDe(p.settledAt)}` : ''}`)}
                   </div>
                 </div>
-                {p.plan === 'friend' && (
+                {p.plan === 'fam' && (
                   <>
                     <div style={{ textAlign: 'right' }}>
                       <b className="num">{fmtUsd(p.openUsd)}</b>
@@ -220,8 +222,8 @@ function UsageCard({ credit, reload, toast }: { credit: Credit; reload: () => vo
           <label className="lbl">{t('Abo vergeben', 'Grant subscription')}</label>
           <input className="input" type="email" inputMode="email" autoCapitalize="none" placeholder={t('E-Mail des Accounts', 'Account email')} value={email} onChange={(e) => setEmail(e.target.value)} />
           <div className="segmented" style={{ marginTop: 8 }}>
-            {(['solo', 'ultra', 'friend', 'none'] as const).map((k) => (
-              <button key={k} className={newPlan === k ? 'on' : ''} onClick={() => setNewPlan(k)}>{k === 'none' ? t('Entfernen', 'Remove') : PLAN_NAME[k]}</button>
+            {(['solo', 'ultra', 'fam', 'friend', 'none'] as const).map((k) => (
+              <button key={k} className={newPlan === k ? 'on' : ''} onClick={() => setNewPlan(k)}>{k === 'none' ? '✕' : PLAN_NAME[k]}</button>
             ))}
           </div>
           {(newPlan === 'solo' || newPlan === 'ultra') && (
@@ -233,7 +235,7 @@ function UsageCard({ credit, reload, toast }: { credit: Credit; reload: () => vo
           <button className="btn btn-chrome btn-block" style={{ marginTop: 8 }} disabled={busy || !email.includes('@')} onClick={grant}>
             {newPlan === 'none' ? t('Zugang entfernen', 'Remove access') : t('Vergeben', 'Grant')}
           </button>
-          <div className="hint"><span>{t('Bis zum Store-Start vergibst du Abos hier von Hand. Ein laufendes Abo wird ab seinem Ende verlängert.', 'Until the store launch you grant subscriptions by hand here. A running subscription is extended from its end.')}</span></div>
+          <div className="hint"><span>{t('Fam = alle KI-Funktionen ohne Limit. Friend = halber Preis auf Solo/Ultra (Limit 2 $ bzw. 4 $). Beide bekommen eine Nachricht und ein Willkommens-Pop-up. Ein laufendes Abo wird ab seinem Ende verlängert.', 'Fam = all AI features without a limit. Friend = half price on Solo/Ultra (limit 2 $ / 4 $). Both get a message and a welcome pop-up. A running subscription is extended from its end.')}</span></div>
         </>
       )}
     </div>

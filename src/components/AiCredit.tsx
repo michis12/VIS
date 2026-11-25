@@ -3,23 +3,34 @@ import { getSession, supabase } from '../cloud'
 import { dec, t } from '../i18n'
 
 /**
- * AI access and plans (public.ai_access, migration 0011):
+ * AI access and plans (public.ai_access, migrations 0011 + 0012):
  *   dev    - the developer: estimated API balance, top-ups, everyone's use, hands out plans
- *   friend - unlimited, own use in $
+ *   fam    - unlimited, own use in $
  *   solo / ultra - paid plans with a monthly quota; they only ever see a percentage
+ *   free   - no AI (a friend without a subscription)
+ * `friend` is a status on top: half price on Solo / Ultra with a lower limit.
  */
-export type Plan = 'dev' | 'friend' | 'solo' | 'ultra'
+export type Plan = 'dev' | 'fam' | 'free' | 'solo' | 'ultra'
 
 export const PLANS = {
-  solo: { name: 'Solo', month: 5, year: 50, photos: 300 },
-  ultra: { name: 'Ultra', month: 10, year: 100, photos: 600 },
+  solo: { name: 'Solo', month: 5, year: 50, photos: 300, friendPhotos: 240 },
+  ultra: { name: 'Ultra', month: 10, year: 100, photos: 600, friendPhotos: 480 },
 } as const
+
+/** what a plan costs; friends pay half */
+export const planPrice = (k: 'solo' | 'ultra', yearly: boolean, friend = false) => {
+  const v = yearly ? PLANS[k].year : PLANS[k].month
+  return friend ? v / 2 : v
+}
+export const planPhotos = (k: 'solo' | 'ultra', friend = false) => (friend ? PLANS[k].friendPhotos : PLANS[k].photos)
+/** 5 → "5", 2.5 → "2,50" */
+export const fmtEuro = (v: number) => (Number.isInteger(v) ? String(v) : dec(v, 2))
 
 /** AI use of one account with access (only the developer sees these). */
 export interface Person {
   userId: string; email: string; monthUsd: number; openUsd: number; totalUsd: number
   uses: number; settledAt: string | null; isMe: boolean
-  plan: Plan; period: 'month' | 'year' | null; paidUntil: string | null; limitUsd: number | null
+  plan: Plan; period: 'month' | 'year' | null; paidUntil: string | null; limitUsd: number | null; friend: boolean
 }
 
 export interface Credit {
@@ -31,7 +42,9 @@ export interface Credit {
   resetsAt: string | null
   /** paid plans: share of this month's quota used, 0–100 */
   usedPct: number | null
-  // dev and friend only ($):
+  /** friend status: half-price plans */
+  friend: boolean
+  // dev and fam only ($):
   monthUsed: number; used: number; uses: number
   // dev only:
   balance: number; topups: number; people: Person[]
@@ -41,7 +54,7 @@ const isPaid = (p: Plan | null) => p === 'solo' || p === 'ultra'
 
 // ---- plan state for the AI buttons. Read synchronously on tap, so a file
 // picker can still open from the same tap; undefined = not known yet.
-export type PlanState = { plan: Plan | null; active: boolean; signedIn: boolean } | undefined
+export type PlanState = { plan: Plan | null; active: boolean; signedIn: boolean; friend: boolean; welcome: 'fam' | 'friend' | null } | undefined
 let planState: PlanState
 const listeners = new Set<() => void>()
 const publish = (s: PlanState) => { planState = s; listeners.forEach((f) => f()) }
@@ -49,15 +62,25 @@ const subscribe = (f: () => void) => { listeners.add(f); return () => { listener
 
 export function refreshPlan() {
   (async () => {
-    if (!supabase || !(await getSession())) return publish({ plan: null, active: false, signedIn: false })
+    if (!supabase || !(await getSession())) return publish({ plan: null, active: false, signedIn: false, friend: false, welcome: null })
     const { data, error } = await supabase.rpc('ai_my_plan')
     if (error) return
-    const me = ((data ?? []) as Record<string, unknown>[])[0]
-    publish({ plan: (me?.plan as Plan) ?? null, active: !!me?.active, signedIn: true })
+    publishRow(((data ?? []) as Record<string, unknown>[])[0])
   })().catch(() => {})
 }
 
+const publishRow = (me: Record<string, unknown> | undefined) => publish({
+  plan: (me?.plan as Plan) ?? null, active: !!me?.active, signedIn: true,
+  friend: !!me?.friend, welcome: (me?.welcome as 'fam' | 'friend' | null) ?? null,
+})
+
 export const usePlan = () => useSyncExternalStore(subscribe, () => planState)
+
+/** the welcome pop-up was shown: clear it on the server and here */
+export async function ackWelcome() {
+  if (planState) publish({ ...planState, welcome: null })
+  await supabase?.rpc('ai_ack_welcome')
+}
 export const openPaywall = () => window.dispatchEvent(new Event('vis-paywall'))
 
 /** true if the AI may be used; otherwise opens the plans page */
@@ -72,9 +95,9 @@ export async function fetchCredit(): Promise<Credit | null> {
   const { data: rows, error } = await supabase.rpc('ai_my_plan')
   if (error) return null
   const me = ((rows ?? []) as Record<string, unknown>[])[0]
-  publish({ plan: (me?.plan as Plan) ?? null, active: !!me?.active, signedIn: true })
+  publishRow(me)
   const base: Credit = {
-    plan: null, active: false, period: null, paidUntil: null, resetsAt: null, usedPct: null,
+    plan: null, active: false, period: null, paidUntil: null, resetsAt: null, usedPct: null, friend: false,
     monthUsed: 0, used: 0, uses: 0, balance: 0, topups: 0, people: [],
   }
   if (!me) return base
@@ -85,11 +108,12 @@ export async function fetchCredit(): Promise<Credit | null> {
     paidUntil: (me.paid_until as string | null) ?? null,
     resetsAt: (me.resets_at as string | null) ?? null,
     usedPct: me.used_pct == null ? null : Number(me.used_pct),
+    friend: !!me.friend,
     monthUsed: Number(me.month_usd) || 0,
   }
-  if (isPaid(plan)) return c
+  if (plan !== 'dev' && plan !== 'fam') return c
 
-  // dev and friend: own ledger in $ (paid plans cannot read it)
+  // dev and fam: own ledger in $ (paid plans cannot read it)
   const [{ data }, overview] = await Promise.all([
     supabase.from('ai_ledger').select('kind, usd'),
     plan === 'dev' ? supabase.rpc('ai_usage_overview') : Promise.resolve({ data: [] }),
@@ -105,7 +129,7 @@ export async function fetchCredit(): Promise<Credit | null> {
     settledAt: (r.settled_at as string | null) ?? null, isMe: !!r.is_me,
     plan: r.plan as Plan, period: (r.period as Person['period']) ?? null,
     paidUntil: (r.paid_until as string | null) ?? null,
-    limitUsd: r.limit_usd == null ? null : Number(r.limit_usd),
+    limitUsd: r.limit_usd == null ? null : Number(r.limit_usd), friend: !!r.friend,
   }))
   // the developer's balance subtracts everyone's use (all spend the same key)
   c.balance = c.topups - (plan === 'dev' ? c.people.reduce((a, p) => a + p.totalUsd, 0) : c.used)
@@ -123,7 +147,7 @@ export async function addTopup(usd: number) {
 }
 
 /** developer: give an account a plan by e-mail ('none' removes the access) */
-export async function setPlan(email: string, plan: 'friend' | 'solo' | 'ultra' | 'none', period: 'month' | 'year') {
+export async function setPlan(email: string, plan: 'fam' | 'friend' | 'solo' | 'ultra' | 'none', period: 'month' | 'year') {
   const { error } = await supabase!.rpc('ai_set_plan', { target_email: email, new_plan: plan, new_period: period })
   if (error) throw new Error(error.message.includes('unknown user') ? t('Kein Account mit dieser E-Mail', 'No account with this email') : t('Hat nicht geklappt', 'That did not work'))
 }

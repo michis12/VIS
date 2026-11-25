@@ -2,26 +2,26 @@ import { dec, t } from '../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { haptic } from '../lib'
-import { PLANS, usePlan, type Plan } from './AiCredit'
+import { PLANS, fmtEuro, planPhotos, planPrice, usePlan, type Plan } from './AiCredit'
 import { Icon } from './ui'
 
-/** plan badges: chrome pills for Free and Solo, a cut emerald for Ultra, Friend and Dev */
-const PLAN_TIER: Record<Plan | 'free', { label: string; gem: boolean }> = {
+/** plan badges: chrome pills for Free and Solo, a cut emerald for Ultra, Fam and Dev */
+const PLAN_TIER: Record<Plan, { label: string; gem: boolean }> = {
   free: { label: 'Free', gem: false },
   solo: { label: 'Solo', gem: false },
   ultra: { label: 'Ultra', gem: true },
-  friend: { label: 'Friend', gem: true },
+  fam: { label: 'Fam', gem: true },
   dev: { label: 'Dev', gem: true },
 }
-const tierClass = (k: Plan | 'free') => (PLAN_TIER[k].gem ? 'tier-gem' : 'tier-chrome')
+const tierClass = (k: Plan) => (PLAN_TIER[k].gem ? 'tier-gem' : 'tier-chrome')
 
 export function PlanBadge({ onClick }: { onClick: () => void }) {
   const s = usePlan()
   if (s === undefined) return null
-  const key: Plan | 'free' = s.plan && s.active ? s.plan : 'free'
+  const key: Plan = s.plan && s.active ? s.plan : 'free'
   return (
     <button className={'plan-badge ' + tierClass(key)} onClick={() => { haptic(); onClick() }}>
-      {PLAN_TIER[key].label}
+      {key === 'free' && s.friend ? 'Friend' : PLAN_TIER[key].label}
     </button>
   )
 }
@@ -43,7 +43,7 @@ function Tween({ value }: { value: number }) {
     raf = requestAnimationFrame(step)
     return () => cancelAnimationFrame(raf)
   }, [value])
-  return <>{Math.round(shown)}</>
+  return <>{Number.isInteger(value) ? Math.round(shown) : dec(shown, 2)}</>
 }
 
 const FEATURES: { icon: React.JSX.Element; title: string; text: string }[] = [
@@ -127,12 +127,14 @@ export function Paywall({ onClose }: { onClose: () => void }) {
   const [yearly, setYearly] = useState(true)
   const current: Plan | 'free' = s?.plan && s.active ? s.plan : 'free'
   const [pick, setPick] = useState<'solo' | 'ultra'>(current === 'ultra' ? 'ultra' : 'solo')
-  const expired = !!s?.plan && !s.active
+  const expired = (s?.plan === 'solo' || s?.plan === 'ultra') && !s.active
+  const friend = !!s?.friend
 
   const card = (k: 'free' | 'solo' | 'ultra') => {
     const tier = PLAN_TIER[k]
     const p = k === 'free' ? null : PLANS[k]
-    const price = p ? (yearly ? p.year : p.month) : 0
+    const price = p ? planPrice(k as 'solo' | 'ultra', yearly, friend) : 0
+    const full = p ? planPrice(k as 'solo' | 'ultra', yearly) : 0
     const on = k !== 'free' && pick === k
     return (
       <button
@@ -142,20 +144,21 @@ export function Paywall({ onClose }: { onClose: () => void }) {
         <div className="pw-plan-top">
           <span className={'pw-tier ' + tierClass(k)}>{tier.label}</span>
           {current === k && <span className="pw-current">{t('Dein Plan', 'Your plan')}</span>}
-          {k === 'ultra' && current !== 'ultra' && <span className="pw-current">{t('Für Vielnutzer', 'For heavy users')}</span>}
+          {p && friend && current !== k && <span className="pw-current pw-friend">Friend −50 %</span>}
+          {k === 'ultra' && !friend && current !== 'ultra' && <span className="pw-current">{t('Für Vielnutzer', 'For heavy users')}</span>}
         </div>
         <div className="pw-price num">
-          <Tween value={price} /> €{p && <span key={yearly ? 'y' : 'm'} className="pw-unit">/{yearly ? t('Jahr', 'year') : t('Monat', 'month')}</span>}
+          {p && friend && <s className="pw-old">{fmtEuro(full)} €</s>}<Tween value={price} /> €{p && <span key={yearly ? 'y' : 'm'} className="pw-unit">/{yearly ? t('Jahr', 'year') : t('Monat', 'month')}</span>}
         </div>
         {p && (
           <div className={'pw-save' + (yearly ? ' open' : '')}>
-            <div><div className="plan-offer-save num">{dec(p.year / 12, 2)} € {t('im Monat · 2 Monate gratis', 'a month · 2 months free')}</div></div>
+            <div><div className="plan-offer-save num">{dec(planPrice(k as 'solo' | 'ultra', true, friend) / 12, 2)} € {t('im Monat · 2 Monate gratis', 'a month · 2 months free')}</div></div>
           </div>
         )}
         <div className="pw-desc">
           {k === 'free' && t('Training, Statistiken, Körper und Ernährung – alles ohne KI.', 'Training, stats, body and nutrition – everything without AI.')}
-          {k === 'solo' && t(`Alle KI-Funktionen. Reicht für ca. ${PLANS.solo.photos} Essensfotos im Monat.`, `All AI features. Enough for about ${PLANS.solo.photos} food photos a month.`)}
-          {k === 'ultra' && t(`200 % Limit – ca. ${PLANS.ultra.photos} Essensfotos im Monat.`, `200% limit – about ${PLANS.ultra.photos} food photos a month.`)}
+          {k === 'solo' && t(`Alle KI-Funktionen. Reicht für ca. ${planPhotos('solo', friend)} Essensfotos im Monat.`, `All AI features. Enough for about ${planPhotos('solo', friend)} food photos a month.`)}
+          {k === 'ultra' && t(`200 % Limit – ca. ${planPhotos('ultra', friend)} Essensfotos im Monat.`, `200% limit – about ${planPhotos('ultra', friend)} food photos a month.`)}
         </div>
       </button>
     )

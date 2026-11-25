@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { refreshPlan } from './components/AiCredit'
 import { Celebration } from './components/Celebration'
 import { Paywall } from './components/Paywall'
+import { Welcome } from './components/Welcome'
 import { Icon, Tap, Toast } from './components/ui'
 import { getLang, t } from './i18n'
 import { haptic } from './lib'
@@ -112,6 +113,7 @@ function Shell() {
         {toast && <Toast text={toast} onDone={clearToast} />}
         {celebrate && <Celebration id={celebrate} onClose={() => setCelebrate(null)} />}
         {paywall && <Paywall onClose={() => setPaywall(false)} />}
+        <Welcome />
       </div>
     </NavCtx.Provider>
   )
