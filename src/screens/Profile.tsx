@@ -3,7 +3,9 @@ import { pastWeekScores } from '../weekly'
 import { scorePhases } from '../phaseScore'
 import { kcalTarget } from '../nutrition'
 import { computeMetrics, evaluate, fmtMetric, MAX_STARS, nextRank, rankFor, ULTIMATE, type AchievementState, type Glyph } from '../achievements'
+import { openPaywall } from '../components/AiCredit'
 import { Avatar, ProfileEditor } from '../components/Avatar'
+import { PlanBadge } from '../components/Paywall'
 import { Icon, Sheet } from '../components/ui'
 import { useNav } from '../nav'
 import { shareOrDownload } from '../files'
@@ -19,6 +21,12 @@ const TIER = [
   { name: 'Platin', a: '#d9f1fa', b: '#5f8fa3' },
   { name: 'Obsidian', a: '#ffffff', b: '#2a2a2e' },
 ]
+
+/** profile name: smaller for long names so the longest word fits next to the buttons (~140 px) */
+const nameSize = (name: string) => {
+  const word = Math.max(...name.split(/\s+/).map((w) => w.length))
+  return Math.max(17, Math.min(26, name.length > 20 ? 20 : 26, Math.floor(140 / (0.62 * word))))
+}
 
 const P = { fill: 'none', stroke: 'currentColor', strokeWidth: 2.2, strokeLinecap: 'round', strokeLinejoin: 'round' } as const
 
@@ -236,7 +244,10 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
       <div className="profile-head">
         <Avatar size={76} onClick={() => setEditing(true)} />
         <div className="who">
-          <div className="nm">{settings.name || 'Dein Name'}</div>
+          <div className="nm-row">
+            <div className="nm" lang="de" style={{ fontSize: nameSize(settings.name || 'Dein Name') }}>{settings.name || 'Dein Name'}</div>
+            <PlanBadge onClick={openPaywall} />
+          </div>
           <button className="link muted" style={{ fontSize: 14 }} onClick={() => setEditing(true)}>Profil bearbeiten</button>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>

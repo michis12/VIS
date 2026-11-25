@@ -30,7 +30,7 @@ export interface Workout {
   startedAt: string // ISO local
   durationSec: number | null
   status: WorkoutStatus
-  source?: 'strong' | 'fitnotes' | 'app'
+  source?: 'strong' | 'fitnotes' | 'app' | 'import'
   exercises: WorkoutExercise[]
 }
 

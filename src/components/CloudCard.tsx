@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import * as cloud from '../cloud'
+import { refreshPlan } from './AiCredit'
 import { normalizeSnapshot, snapshotOf, type Snapshot } from '../db'
 import { dateLabel } from '../lib'
 import { useStore } from '../store'
@@ -74,7 +75,7 @@ export function CloudCard({ toast }: { toast: (t: string) => void }) {
         <input className="input" type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} />
         {err && <p style={{ color: 'var(--danger)', fontSize: 13, marginTop: 10 }}>{err}</p>}
         <div className="grid-2" style={{ marginTop: 14 }}>
-          <button className="btn btn-chrome" disabled={busy || !email || !pw} onClick={() => run(() => cloud.signIn(email.trim(), pw))}>Anmelden</button>
+          <button className="btn btn-chrome" disabled={busy || !email || !pw} onClick={() => run(async () => { await cloud.signIn(email.trim(), pw); refreshPlan() })}>Anmelden</button>
           <button className="btn btn-ghost" disabled={busy || !email || !pw} onClick={() => run(async () => {
             const r = await cloud.signUp(email.trim(), pw)
             if (r.needsConfirm) setErr('Fast fertig: Öffne den Link in der Bestätigungs-Mail und melde dich dann hier an.')
@@ -122,7 +123,7 @@ export function CloudCard({ toast }: { toast: (t: string) => void }) {
           <button className="btn btn-ghost" disabled={busy} onClick={() => run(async () => setVersions(await cloud.listBackups()))}>Versionen</button>
         </div>
       )}
-      <button className="btn btn-ghost btn-sm" style={{ marginTop: 12 }} onClick={() => run(async () => { await cloud.signOut(); setReady(false); setFound(null) })}>Abmelden</button>
+      <button className="btn btn-ghost btn-sm" style={{ marginTop: 12 }} onClick={() => run(async () => { await cloud.signOut(); setReady(false); setFound(null); refreshPlan() })}>Abmelden</button>
 
       {versions && (
         <Sheet onClose={() => setVersions(null)}>

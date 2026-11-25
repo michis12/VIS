@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { refreshPlan } from './components/AiCredit'
 import { Celebration } from './components/Celebration'
+import { Paywall } from './components/Paywall'
 import { Icon, Tap, Toast } from './components/ui'
 import { haptic } from './lib'
 import { NavCtx, type Overlay } from './nav'
@@ -36,6 +38,16 @@ function Shell() {
   const [bodyFocus, setBodyFocus] = useState<'phase' | null>(null)
   const [celebrate, setCelebrate] = useState<string | null>(null)
   const clearToast = useCallback(() => setToast(null), [])
+  // plans page: opened by the plan badge or when someone without a plan taps an AI feature
+  const [paywall, setPaywall] = useState(false)
+  useEffect(() => {
+    refreshPlan()
+    const open = () => setPaywall(true)
+    const onShow = () => document.visibilityState === 'visible' && refreshPlan()
+    window.addEventListener('vis-paywall', open)
+    document.addEventListener('visibilitychange', onShow)
+    return () => { window.removeEventListener('vis-paywall', open); document.removeEventListener('visibilitychange', onShow) }
+  }, [])
   const nav = useMemo(() => ({
     push: (o: Overlay) => setStack((s) => [...s, o]),
     pop: () => setStack((s) => s.slice(0, -1)),
@@ -94,6 +106,7 @@ function Shell() {
         {content && <div className="overlay" key={stack.length + (showWorkout ? 'w' : '')}>{content}</div>}
         {toast && <Toast text={toast} onDone={clearToast} />}
         {celebrate && <Celebration id={celebrate} onClose={() => setCelebrate(null)} />}
+        {paywall && <Paywall onClose={() => setPaywall(false)} />}
       </div>
     </NavCtx.Provider>
   )

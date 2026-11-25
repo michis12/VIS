@@ -4,6 +4,7 @@ import { Icon, Sheet, Wheel } from '../components/ui'
 import { dateLabel, fmtInt, fmtKg, shortDate, today, uid } from '../lib'
 import { useNav } from '../nav'
 import { CurrentPhaseScore, usePhaseScores } from '../components/PhaseScores'
+import { requireAi } from '../components/AiCredit'
 import { PhasePlanner } from '../components/PhasePlanner'
 import { useStore } from '../store'
 import { calorieSteps, type Phase, type PhaseType } from '../types'
@@ -145,7 +146,7 @@ export function Body({ focus }: { focus?: 'phase' | null }) {
       ) : (
         <div className="card muted">Noch keine Phase gesetzt. Leg fest, ob du gerade im Bulk, Cut oder Erhalt bist.</div>
       )}
-      <button className="ai-row" style={{ marginTop: 12 }} onClick={() => setPlanning(true)}>
+      <button className="ai-row" style={{ marginTop: 12 }} onClick={() => requireAi() && setPlanning(true)}>
         <span className="ai-spark" aria-hidden="true">✦</span>
         <div className="grow">
           <div className="nut-entry-name">Nächste Phase planen</div>

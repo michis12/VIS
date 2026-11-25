@@ -1,15 +1,18 @@
 import { getSession, supabase } from './cloud'
+import { openPaywall, refreshPlan } from './components/AiCredit'
 
-/** Calls the `food-photo` edge function (modes photo / label / text) with readable errors. */
+/** Calls the `food-photo` edge function (all AI modes) with readable errors. */
 const ERR: Record<string, string> = {
-  access: 'Dein Account ist für die KI-Funktionen nicht freigeschaltet.',
+  access: 'KI-Funktionen gibt es mit VIS Pro (Profil › Einstellungen › KI & Abo).',
+  expired: 'Dein Abo ist abgelaufen – unter Einstellungen › KI & Abo verlängern.',
+  limit: 'Dein KI-Kontingent für diesen Monat ist aufgebraucht. Am 1. geht es wieder los – oder auf Ultra wechseln.',
   auth: 'Dafür musst du in der Cloud angemeldet sein (Profil › Einstellungen).',
   nokey: 'Die KI ist noch nicht eingerichtet (API-Key fehlt oder Guthaben leer).',
   busy: 'Gerade zu viele Anfragen – gleich nochmal probieren.',
   refusal: 'Das konnte nicht ausgewertet werden.',
 }
 
-// each mode returns its own fields plus usd
+// each mode returns its own fields plus usd (dev, friend) or pct (paid plans)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function foodAi(body: Record<string, unknown>): Promise<any> {
   if (!supabase || !(await getSession())) throw new Error(ERR.auth)
@@ -17,9 +20,13 @@ export async function foodAi(body: Record<string, unknown>): Promise<any> {
   if (error) {
     let code = ''
     try { code = (await (error as { context?: Response }).context?.json())?.error ?? '' } catch { /* not json */ }
+    // no plan (or it ran out): show the plans page instead of only an error
+    if (code === 'access' || code === 'expired') { refreshPlan(); openPaywall() }
     throw new Error(ERR[code] ?? 'Hat nicht geklappt – Internet prüfen und nochmal versuchen.')
   }
-  if (typeof data?.usd === 'number') window.dispatchEvent(new CustomEvent('vis-ai-cost', { detail: data.usd }))
+  if (typeof data?.usd === 'number' || typeof data?.pct === 'number') {
+    window.dispatchEvent(new CustomEvent('vis-ai-cost', { detail: { usd: data.usd, pct: data.pct } }))
+  }
   return data
 }
 

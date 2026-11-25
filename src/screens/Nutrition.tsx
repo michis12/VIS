@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { requireAi } from '../components/AiCredit'
 import { FoodPhoto, type KnownFood, type PhotoItem } from '../components/FoodPhoto'
 import { MealSuggest } from '../components/MealSuggest'
 import { Scanner } from '../components/Scanner'
@@ -100,7 +101,7 @@ export function Nutrition() {
 
       <div className="nut-actions">
         <Tap className="btn btn-chrome" onClick={() => { haptic(); setAdding('search') }}><Icon.plus /> Hinzufügen</Tap>
-        <Tap className="nut-scan big" onClick={() => { haptic(); photoInput.current?.click() }} aria-label="Essen fotografieren"><CameraIcon /></Tap>
+        <Tap className="nut-scan big" onClick={() => { haptic(); if (requireAi()) photoInput.current?.click() }} aria-label="Essen fotografieren"><CameraIcon /></Tap>
         <Tap className="nut-scan big" onClick={() => { haptic(); setAdding('scan') }} aria-label="Barcode scannen"><ScanIcon /></Tap>
         <input ref={photoInput} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) setPhoto(f); e.target.value = '' }} />
       </div>
@@ -355,7 +356,7 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
           </>
         )}
         {term && onPickMany && term.length >= 3 && (
-          <button className="ai-row" onClick={() => setAiText(q.trim())}>
+          <button className="ai-row" onClick={() => requireAi() && setAiText(q.trim())}>
             <span className="ai-spark" aria-hidden="true">✦</span>
             <div className="grow">
               <div className="nut-entry-name">Mit KI eintragen</div>
@@ -545,7 +546,7 @@ function CustomFoodSheet({ initial, onClose, onSave }: { initial: { barcode?: st
     <Sheet onClose={onClose}>
       <h3>Eigenes Lebensmittel</h3>
       {initial.barcode && <p className="faint" style={{ fontSize: 13 }}>Barcode {initial.barcode} ist noch unbekannt – einmal anlegen, dann erkennt VIS ihn.</p>}
-      <Tap className="btn btn-ghost btn-block" style={{ marginTop: 10 }} onClick={() => !reading && label.current?.click()}>
+      <Tap className="btn btn-ghost btn-block" style={{ marginTop: 10 }} onClick={() => !reading && requireAi() && label.current?.click()}>
         <CameraIcon /> {reading ? 'Wird abgelesen…' : 'Nährwerttabelle fotografieren'}
       </Tap>
       <input ref={label} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) readLabel(f); e.target.value = '' }} />

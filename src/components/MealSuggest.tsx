@@ -5,7 +5,7 @@ import { fmtInt, haptic } from '../lib'
 import { fmtG, forGrams, recipeAsFood, sum, type Macros } from '../nutrition'
 import { useStore } from '../store'
 import type { Food } from '../types'
-import { CreditPill, useCredit } from './AiCredit'
+import { CreditPill, requireAi, useCredit } from './AiCredit'
 import type { PhotoItem } from './FoodPhoto'
 import { Sheet, Tap } from './ui'
 
@@ -131,7 +131,7 @@ export function MealSuggest({ left, onClose, onAdd }: {
       ) : state !== 'done' ? (
         <>
           {err && <div className="hint" style={{ color: 'var(--danger)' }}><span>{err}</span></div>}
-          <Tap className="btn btn-chrome btn-block" style={{ marginTop: 16 }} onClick={() => state === 'idle' && ask()}>
+          <Tap className="btn btn-chrome btn-block" style={{ marginTop: 16 }} onClick={() => state === 'idle' && requireAi() && ask()}>
             {state === 'loading' ? 'Wird überlegt…' : '✦ Was soll ich noch essen?'}
           </Tap>
           <div className="hint"><span>Vorschläge aus deinen Rezepten und dem, was du oft isst.</span></div>
