@@ -1,12 +1,12 @@
+import { t } from '../i18n'
 import { useMemo, useState } from 'react'
 import { WorkoutScoreButton } from '../components/WorkoutScoreSheet'
 import { Icon, ProgressBadges } from '../components/ui'
-import { dateLabel, durationLabel, fmtInt, workoutSetCount, workoutVolume } from '../lib'
+import { dateLabel, monthLong, durationLabel, fmtInt, workoutSetCount, workoutVolume } from '../lib'
 import { useNav } from '../nav'
 import { useStore } from '../store'
 import type { Workout } from '../types'
 
-const MONTHS = ['Jänner', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
 
 export function History() {
   const { workouts } = useStore()
@@ -20,7 +20,7 @@ export function History() {
       const key = w.startedAt.slice(0, 7)
       let g = out[out.length - 1]
       if (!g || g.key !== key) {
-        g = { key, label: `${MONTHS[Number(key.slice(5)) - 1]} ${key.slice(0, 4)}`, items: [] }
+        g = { key, label: `${monthLong(Number(key.slice(5)) - 1)} ${key.slice(0, 4)}`, items: [] }
         out.push(g)
       }
       g.items.push(w)
@@ -31,10 +31,10 @@ export function History() {
   return (
     <div className="screen no-tabs">
       <div className="wo-head">
-        <button className="icon-btn" onClick={nav.pop} aria-label="Zurück"><Icon.back /></button>
-        <div className="grow"><div className="name">Verlauf</div><div className="wo-timer">{workouts.length} Einträge</div></div>
+        <button className="icon-btn" onClick={nav.pop} aria-label={t('Zurück', 'Back')}><Icon.back /></button>
+        <div className="grow"><div className="name">{t('Verlauf', 'History')}</div><div className="wo-timer">{workouts.length} {t('Einträge', 'entries')}</div></div>
       </div>
-      <input className="input" placeholder="Workout suchen" value={q} onChange={(e) => setQ(e.target.value)} style={{ marginTop: 16 }} />
+      <input className="input" placeholder={t('Workout suchen', 'Search workouts')} value={q} onChange={(e) => setQ(e.target.value)} style={{ marginTop: 16 }} />
 
       {groups.map((g) => (
         <div key={g.key}>
@@ -62,10 +62,10 @@ export function HistoryRow({ w, onOpen }: { w: Workout; onOpen: () => void }) {
         <div className="faint" style={{ fontSize: 13 }}>{dateLabel(w.startedAt)}</div>
       </div>
       {w.status === 'skipped' ? (
-        <span className="pill skip">Ausgelassen</span>
+        <span className="pill skip">{t('Ausgelassen', 'Skipped')}</span>
       ) : (
         <div className="hist-meta num">
-          <div>{workoutSetCount(w)} Sätze</div>
+          <div>{workoutSetCount(w)} {t('Sätze', 'sets')}</div>
           <div>{fmtInt(workoutVolume(w))} kg</div>
           <div className="faint">{durationLabel(w.durationSec)}</div>
         </div>

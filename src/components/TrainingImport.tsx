@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useMemo, useRef, useState } from 'react'
 import { foodAi } from '../foodAi'
 import { dateLabel, fmtInt, haptic, pad, uid } from '../lib'
@@ -173,7 +174,7 @@ export function TrainingImport({ onClose, toast }: { onClose: () => void; toast:
     const catalog = store.exercises.map((e) => ({ id: e.id, name: e.name }))
     const out: Match[] = []
     for (let i = 0; i < names.length; i += 150) {
-      setStep({ kind: 'busy', text: `Übungen zuordnen… (${Math.min(names.length, i + 150)} von ${names.length})` })
+      setStep({ kind: 'busy', text: t(`Übungen zuordnen… (${Math.min(names.length, i + 150)} von ${names.length})`, `Matching exercises… (${Math.min(names.length, i + 150)} of ${names.length})`) })
       const res = await foodAi({ mode: 'import-ex', names: names.slice(i, i + 150), catalog })
       out.push(...((res.exercises ?? []) as Match[]))
     }
@@ -190,7 +191,7 @@ export function TrainingImport({ onClose, toast }: { onClose: () => void; toast:
       const rows = fileText ? parseCsv(fileText) : []
       const tabular = rows.length >= 3 && rows.slice(0, 10).every((r) => r.length >= 4)
       if (tabular) {
-        setStep({ kind: 'busy', text: 'Datei wird gelesen…' })
+        setStep({ kind: 'busy', text: t('Datei wird gelesen…', 'Reading file…') })
         const cols = (await foodAi({ mode: 'import-cols', sample: rows.slice(0, 30) })) as Cols
         if (cols.ok && cols.exercise >= 0 && cols.reps >= 0 && cols.date >= 0) {
           list = workoutsFromRows(rows, cols)
@@ -199,11 +200,11 @@ export function TrainingImport({ onClose, toast }: { onClose: () => void; toast:
       }
       if (!list.length) {
         const src = (fileText ?? text).trim()
-        if (!src) return fail('Keine Trainings gefunden.')
+        if (!src) return fail(t('Keine Trainings gefunden.', 'No workouts found.'))
         const parts = chunks(src)
-        if (parts.length > 12) return fail('Der Text ist zu lang – bitte in mehreren Teilen importieren (je ca. 90.000 Zeichen).')
+        if (parts.length > 12) return fail(t('Der Text ist zu lang – bitte in mehreren Teilen importieren (je ca. 90.000 Zeichen).', 'The text is too long – please import it in several parts (about 90,000 characters each).'))
         for (let i = 0; i < parts.length; i++) {
-          setStep({ kind: 'busy', text: parts.length > 1 ? `Notizen werden gelesen… (Teil ${i + 1} von ${parts.length})` : 'Notizen werden gelesen…' })
+          setStep({ kind: 'busy', text: parts.length > 1 ? t(`Notizen werden gelesen… (Teil ${i + 1} von ${parts.length})`, `Reading notes… (part ${i + 1} of ${parts.length})`) : t('Notizen werden gelesen…', 'Reading notes…') })
           const res = await foodAi({ mode: 'import-text', text: parts[i] })
           for (const w of (res.workouts ?? []) as { date: string; name: string; exercises: RawWorkout['exercises'] }[]) {
             if (!/^\d{4}-\d{2}-\d{2}$/.test(w.date)) continue
@@ -215,7 +216,7 @@ export function TrainingImport({ onClose, toast }: { onClose: () => void; toast:
           if (res.comment) note = res.comment
         }
       }
-      if (!list.length) return fail('Keine Trainings mit Sätzen gefunden. Ist das ein Trainings-Export?')
+      if (!list.length) return fail(t('Keine Trainings mit Sätzen gefunden. Ist das ein Trainings-Export?', 'No workouts with sets found. Is this a workout export?'))
       list.sort((a, b) => (a.date + (a.time ?? '')).localeCompare(b.date + (b.time ?? '')))
       const m = await matchExercises(list)
       setRaw(list)
@@ -231,7 +232,7 @@ export function TrainingImport({ onClose, toast }: { onClose: () => void; toast:
   const onFile = async (f: File | undefined) => {
     if (!f) return
     if (/\.(xlsx?|numbers)$/i.test(f.name)) return fail('Excel-Dateien bitte zuerst als CSV speichern.')
-    if (f.size > 15_000_000) return fail('Die Datei ist zu groß (max. 15 MB).')
+    if (f.size > 15_000_000) return fail(t('Die Datei ist zu groß (max. 15 MB).', 'The file is too big (max. 15 MB).'))
     analyse(await f.text())
   }
 
@@ -282,7 +283,7 @@ export function TrainingImport({ onClose, toast }: { onClose: () => void; toast:
       store.saveWorkout(workout)
     }
     haptic(true)
-    toast(`${plan.fresh.length} Trainings importiert`)
+    toast(t(`${plan.fresh.length} Trainings importiert`, `${plan.fresh.length} workouts imported`))
     setStep({ kind: 'done', count: plan.fresh.length })
   }
 
@@ -290,23 +291,23 @@ export function TrainingImport({ onClose, toast }: { onClose: () => void; toast:
   return (
     <Sheet onClose={onClose}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
-        <h3 style={{ margin: 0 }}>Trainings importieren</h3>
+        <h3 style={{ margin: 0 }}>{t('Trainings importieren', 'Import workouts')}</h3>
         <CreditPill credit={credit} />
       </div>
 
       {step.kind === 'pick' && (
         <>
           <p className="muted" style={{ fontSize: 14, lineHeight: 1.45 }}>
-            Export aus deiner alten App (Strong, Hevy, FitNotes, Excel als CSV) oder einfach deine Notizen. Die KI ordnet Übungen und Sätze zu, du siehst vorher alles.
+            {t('Export aus deiner alten App (Strong, Hevy, FitNotes, Excel als CSV) oder einfach deine Notizen. Die KI ordnet Übungen und Sätze zu, du siehst vorher alles.', 'An export from your old app (Strong, Hevy, FitNotes, Excel as CSV) or simply your notes. The AI matches exercises and sets, and you see everything first.')}
           </p>
           <input ref={fileRef} type="file" accept=".csv,.tsv,.txt,text/csv,text/plain" hidden onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = '' }} />
-          <Tap className="btn btn-chrome btn-block" onClick={() => fileRef.current?.click()}>Datei wählen</Tap>
-          <label className="lbl">oder Notizen einfügen</label>
+          <Tap className="btn btn-chrome btn-block" onClick={() => fileRef.current?.click()}>{t('Datei wählen', 'Choose file')}</Tap>
+          <label className="lbl">{t('oder Notizen einfügen', 'or paste notes')}</label>
           <textarea
             className="input plan-text" rows={6} value={text} onChange={(e) => setText(e.target.value)}
-            placeholder={'12.03. Push\nBankdrücken 80 kg 3×8\nSchrägbank KH 30 kg 10, 10, 8'}
+            placeholder={t('12.03. Push\nBankdrücken 80 kg 3×8\nSchrägbank KH 30 kg 10, 10, 8', '12/03 Push\nBench press 80 kg 3×8\nIncline DB press 30 kg 10, 10, 8')}
           />
-          <Tap className="btn btn-ghost btn-block" style={{ marginTop: 10 }} disabled={!text.trim()} onClick={() => analyse(null)}>Notizen auswerten</Tap>
+          <Tap className="btn btn-ghost btn-block" style={{ marginTop: 10 }} disabled={!text.trim()} onClick={() => analyse(null)}>{t('Notizen auswerten', 'Analyse notes')}</Tap>
           {error && <div className="hint" style={{ color: 'var(--danger)' }}><span>{error}</span></div>}
         </>
       )}
@@ -316,12 +317,12 @@ export function TrainingImport({ onClose, toast }: { onClose: () => void; toast:
       {step.kind === 'preview' && (
         <>
           <div className="card" style={{ marginTop: 4 }}>
-            <div className="pr-row num"><span className="muted">Trainings</span><b>{fmtInt(plan.fresh.length)}</b></div>
-            <div className="pr-row num"><span className="muted">Sätze</span><b>{fmtInt(plan.sets)}</b></div>
-            {first && <div className="pr-row num"><span className="muted">Zeitraum</span><b>{dateLabel(first)} – {dateLabel(last!)}</b></div>}
+            <div className="pr-row num"><span className="muted">{t('Trainings', 'Workouts')}</span><b>{fmtInt(plan.fresh.length)}</b></div>
+            <div className="pr-row num"><span className="muted">{t('Sätze', 'Sets')}</span><b>{fmtInt(plan.sets)}</b></div>
+            {first && <div className="pr-row num"><span className="muted">{t('Zeitraum', 'Period')}</span><b>{dateLabel(first)} – {dateLabel(last!)}</b></div>}
             <button className="pr-row" style={{ width: '100%' }} onClick={() => setShowEx((v) => !v)}>
-              <span className="muted">Übungen</span>
-              <b>{matches.length - plan.created.length} zugeordnet · {plan.created.length} neu {showEx ? '▴' : '▾'}</b>
+              <span className="muted">{t('Übungen', 'Exercises')}</span>
+              <b>{matches.length - plan.created.length} {t('zugeordnet', 'matched')} · {plan.created.length} {t('neu', 'new')} {showEx ? '▴' : '▾'}</b>
             </button>
           </div>
           {showEx && (
@@ -337,26 +338,26 @@ export function TrainingImport({ onClose, toast }: { onClose: () => void; toast:
                     onClick={() => setAsNew((s) => { const n = new Set(s); if (n.has(m.name)) n.delete(m.name); else n.add(m.name); return n })}
                   >
                     <span className="muted" style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</span>
-                    <b style={{ textAlign: 'right' }}>{target}{isNew && <span className="faint" style={{ fontWeight: 500 }}> · neu</span>}</b>
+                    <b style={{ textAlign: 'right' }}>{target}{isNew && <span className="faint" style={{ fontWeight: 500 }}> · {t('neu', 'new')}</span>}</b>
                   </button>
                 )
               })}
-              <div className="hint"><span>Tippe auf eine Zuordnung, um die Übung stattdessen neu anzulegen (oder zurück).</span></div>
+              <div className="hint"><span>{t('Tippe auf eine Zuordnung, um die Übung stattdessen neu anzulegen (oder zurück).', 'Tap a match to create the exercise as new instead (or back).')}</span></div>
             </div>
           )}
-          {plan.skipped > 0 && <div className="hint"><span>{plan.skipped} Tage übersprungen – da hast du schon ein Training eingetragen.</span></div>}
+          {plan.skipped > 0 && <div className="hint"><span>{t(`${plan.skipped} Tage übersprungen – da hast du schon ein Training eingetragen.`, `${plan.skipped} days skipped – you already logged a workout there.`)}</span></div>}
           {comment && <div className="hint"><span>{comment}</span></div>}
           <Tap className="btn btn-chrome btn-block" style={{ marginTop: 14 }} disabled={!plan.fresh.length} onClick={save}>
-            {plan.fresh.length ? `${fmtInt(plan.fresh.length)} Trainings importieren` : 'Nichts Neues zum Importieren'}
+            {plan.fresh.length ? t(`${fmtInt(plan.fresh.length)} Trainings importieren`, `Import ${fmtInt(plan.fresh.length)} workouts`) : t('Nichts Neues zum Importieren', 'Nothing new to import')}
           </Tap>
-          <Tap className="btn btn-ghost btn-block" style={{ marginTop: 8 }} onClick={() => setStep({ kind: 'pick' })}>Andere Datei</Tap>
+          <Tap className="btn btn-ghost btn-block" style={{ marginTop: 8 }} onClick={() => setStep({ kind: 'pick' })}>{t('Andere Datei', 'Other file')}</Tap>
         </>
       )}
 
       {step.kind === 'done' && (
         <>
-          <p className="muted" style={{ fontSize: 15 }}>{step.count} Trainings sind jetzt in deinem Verlauf und zählen für Fortschritt, Rekorde und Statistiken.</p>
-          <Tap className="btn btn-chrome btn-block" onClick={onClose}>Fertig</Tap>
+          <p className="muted" style={{ fontSize: 15 }}>{t(`${step.count} Trainings sind jetzt in deinem Verlauf und zählen für Fortschritt, Rekorde und Statistiken.`, `${step.count} workouts are now in your history and count for progress, records and stats.`)}</p>
+          <Tap className="btn btn-chrome btn-block" onClick={onClose}>{t('Fertig', 'Done')}</Tap>
         </>
       )}
     </Sheet>

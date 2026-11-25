@@ -1,3 +1,4 @@
+import { dec, getLang, t } from './i18n'
 import { e1rm, fmtInt, isRealSet, weekKey, workoutSetCount, workoutVolume } from './lib'
 import type { WorkoutProgress } from './progress'
 import type { Exercise, WeightEntry, Workout } from './types'
@@ -115,7 +116,7 @@ const BENCH = new Set(['bench-press-barbell', 'bench-press-smith-machine', 'decl
 const DEADLIFT = new Set(['deadlift-barbell'])
 const STANDARD_NOTE = 'Die Prozent-Angaben sind grobe Richtwerte für erwachsene Männer allgemein (nicht nur Gym-Gänger), berechnet aus dem geschätzten 1RM (Epley, Sätze bis 10 Wdh).'
 
-export const ACHIEVEMENTS: AchievementDef[] = [
+const DE_ACHIEVEMENTS: AchievementDef[] = [
   { id: 'samurai', name: 'Samurai', glyph: 'katana', metric: 'workouts', unit: 'Workouts', desc: 'Der Weg des Kriegers beginnt mit dem ersten Schritt. Absolviere Workouts.', tiers: [25, 100, 250, 400, 600] },
   { id: 'titan', name: 'Titan', glyph: 'mountain', metric: 'volumeT', unit: 't bewegt', desc: 'Bewege Berge. Gesamtvolumen aller Sätze in Tonnen.', tiers: [100, 500, 1000, 2000, 3500] },
   { id: 'krieger', name: 'Krieger', glyph: 'axe', metric: 'sets', unit: 'Sätze', desc: 'Jeder Satz ist ein Schlag. Sammle bestätigte Sätze.', tiers: [500, 1500, 3000, 5000, 8000] },
@@ -183,25 +184,104 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'ausreden', fun: true, name: 'Ausreden-Meister', glyph: 'couch', metric: 'excuses', unit: 'ausgelassene Übungen', desc: '„Heute nicht.“ – Übungen, die du per „Heute nicht trainieren“ geschwänzt hast.', tiers: [1, 5, 15, 30, 60] },
 ]
 
+type EnText = { name: string; unit: string; desc: string; labels?: [string, string, string, string, string]; note?: string }
+const STANDARD_NOTE_EN = 'The percentages are rough guide values for adult men in general (not just gym-goers), based on the estimated 1RM (Epley, sets up to 10 reps).'
+const STRENGTH_LABELS_EN: [string, string, string, string, string] = ['Beginner', 'Intermediate', 'Strong (~top 20 %)', 'Very strong (~top 5 %)', 'Elite (~top 1 %)']
+const EN: Record<string, EnText> = {
+  samurai: { name: 'Samurai', unit: 'workouts', desc: 'The way of the warrior begins with the first step. Complete workouts.' },
+  titan: { name: 'Titan', unit: 't moved', desc: 'Move mountains. Total volume of all sets in tonnes.' },
+  krieger: { name: 'Warrior', unit: 'sets', desc: 'Every set is a strike. Collect confirmed sets.' },
+  unbeugsam: { name: 'Unbreakable', unit: 'weeks in a row', desc: 'Longest run of weeks with at least one workout.' },
+  schmied: { name: 'Weaponsmith', unit: 'exercises', desc: 'A master knows many weapons. Train different exercises.' },
+  spartaner: { name: 'Spartan', unit: 'sets in one workout', desc: 'This is Sparta. The most sets in a single session.' },
+  berserker: { name: 'Berserker', unit: 'kg in one workout', desc: 'Battle frenzy. Highest volume in one workout.' },
+  moench: { name: 'Shaolin', unit: 'hours', desc: 'Patience forges steel. Total training time.' },
+  nachtwolf: { name: 'Night Wolf', unit: 'workouts from 8 pm', desc: 'Hunting in the dark. Train late in the evening.' },
+  morgenrot: { name: 'Dawn', unit: 'workouts before 9 am', desc: 'Who fights early, wins. Train before 9 am.' },
+  ronin: { name: 'Ronin', unit: 'weeks with 3+ workouts', desc: 'No master, but discipline. Weeks with at least three workouts.' },
+  sensei: { name: 'Sensei', unit: 'records', desc: 'Surpass yourself. New bests (estimated 1RM) per exercise.' },
+  vollmond: { name: 'Full Moon', unit: 'workouts in one month', desc: 'A month full of battle. The most workouts in a calendar month.' },
+  chronist: { name: 'Chronicler', unit: 'weigh-ins', desc: 'Know your body. Log your weight.' },
+  gigant: { name: 'Giant', unit: 'kg in one set', desc: 'Raw strength. The heaviest weight you have ever moved.' },
+  phoenix: { name: 'Phoenix', unit: 'comebacks', desc: 'From the ashes. Back to training after a 14+ day break.' },
+  wochenende: { name: 'Weekend Warrior', unit: 'weekend workouts', desc: 'Others go to brunch, you go pump. Workouts on Saturday or Sunday.' },
+  geisterstunde: { name: 'Witching Hour', unit: 'workouts after 10 pm', desc: 'The gym belongs to you and the cleaners. Start after 10 pm.' },
+  weihnachtself: { name: 'Christmas Elf', unit: 'holiday workouts', desc: 'Burn cookies instead of eating them. Train on 24, 25, 26, 31 December or 1 January.' },
+  brusttag: { name: 'International Chest Day', unit: 'Mondays with chest', desc: 'Monday is chest day worldwide – and you stick to it.' },
+  speedrunner: { name: 'Speedrunner', unit: 'blitz workouts', desc: 'Any% gym run: at least 8 sets in under 30 minutes.' },
+  sitzfleisch: { name: 'Iron Bottom', unit: 'minutes (longest workout)', desc: 'Do you live here? Your longest workout in minutes.' },
+  pyramide: { name: 'Pyramid Builder', unit: 'exercises with 5+ sets', desc: 'The pharaohs would be proud. At least 5 sets of one exercise in a session.' },
+  huehnerbein: { name: 'No Chicken Legs', unit: 'leg sets', desc: 'Skipped leg day? Not you. Sets for legs and calves.' },
+  curlbro: { name: 'Curl Bro', unit: 'curl sets', desc: 'Curls for the girls (and the boys). Every set with “curl” in its name.' },
+  wiederholungstaeter: { name: 'Repeat Offender', unit: 'sets with 20+ reps', desc: 'The burn is the new growth. Sets with at least 20 reps.' },
+  schnapszahl: { name: 'Lucky Digits', unit: 'repdigit sets', desc: 'Cheers! Sets with weights like 11, 22, 55 or 111 kg.' },
+  bankdrueck: { name: 'Bench Elite', unit: 'kg estimated 1RM bench press', desc: 'How strong is your chest really? Best estimated 1RM on the bench press (barbell or Smith, flat, incline or decline).', labels: STRENGTH_LABELS_EN, note: STANDARD_NOTE_EN },
+  kreuzheben: { name: 'Deadlift Colossus', unit: 'kg estimated 1RM deadlift', desc: 'Lift the world off the floor. Best estimated 1RM on the deadlift.', labels: STRENGTH_LABELS_EN, note: STANDARD_NOTE_EN },
+  loewe: { name: 'Lion – King of the Gym', unit: 'workouts in one week', desc: 'The gym is your territory. The most workouts in a calendar week – at 7 you rule.', labels: ['Young lion', 'Pack member', 'Hunter', 'Pack leader', 'King of the gym'] },
+  schwergewicht: { name: 'Heavyweight', unit: 'kg body weight (peak)', desc: 'The scale groans. Your highest logged body weight – goal: three digits.', labels: ['Welterweight', 'Middleweight', 'Light heavy', 'Cruiser', 'Heavyweight (100 kg)'] },
+  massemonster: { name: 'Mass Monster', unit: 'kg gained', desc: 'Bulking for real. Biggest gain from a low to a later high.' },
+  shredder: { name: 'Shredder', unit: 'kg lost', desc: 'Razor sharp. Biggest drop from a high to a later low.' },
+  hunderter: { name: '100 Club', unit: 'sets with 100+ kg', desc: 'Three digits or nothing. Sets with at least 100 kg.' },
+  treue: { name: 'Vow of Loyalty', unit: 'days since the first workout', desc: 'Till soreness do us part. Days since your first workout.', labels: ['1 month', '½ year', '1 year', '2 years', '5 years'] },
+  rekordjaeger: { name: 'Record Hunter', unit: 'record sets', desc: 'Every best counts. Sets with a new top weight or best estimated 1RM for an exercise.' },
+  stufenlaeufer: { name: 'Stair Climber', unit: 'progress sets', desc: 'Step by step upwards. Sets that beat the same set last time.' },
+  rekordflut: { name: 'Record Storm', unit: 'records in one workout', desc: 'A thunderstorm of bests. The most record sets in a single session.' },
+  fortschrittsrausch: { name: 'Progress Rush', unit: 'progress in one workout', desc: 'Everything goes up. The most progress sets in a single session.' },
+  unaufhaltsam: { name: 'Unstoppable', unit: 'workouts in a row with improvement', desc: 'No session without a plus. Workouts in a row with at least one progress or record.' },
+  perfektionist: { name: 'Perfectionist', unit: 'perfect workouts', desc: 'Better across the board. Workouts (3+ exercises) where you improved on every exercise.' },
+  doppelschlag: { name: 'Double Strike', unit: 'double strikes', desc: 'Two hits, one exercise. Record and progress on the same exercise in the same workout.' },
+  wochenheld: { name: 'Week Hero', unit: 'best week score', desc: 'The perfect week. Your highest week score – 99 is the maximum.' },
+  dauerbrenner: { name: 'Eternal Flame', unit: 'weeks in a row with score 60+', desc: 'Never let up. Weeks in a row with a week score of at least 60.' },
+  elitewochen: { name: 'Elite Weeks', unit: 'weeks with score 80+', desc: 'Elite is no accident. Weeks with a week score of at least 80.' },
+  aufwaerts: { name: 'Uptrend', unit: 'weeks better than the week before', desc: 'A bit better every week. Weeks with a higher score than the week before.' },
+  makellos: { name: 'Flawless', unit: 'workouts with score 90+', desc: 'Gave it everything. Workouts with a workout score of at least 90.' },
+  ganzkoerper: { name: 'Full-Body God', unit: 'weeks with all muscle groups', desc: 'The heatmap glows everywhere. Weeks training chest, back, shoulders, legs, biceps, triceps and abs.' },
+  duett: { name: 'Duet', unit: 'supersets', desc: 'Two exercises, one rest. Linked exercises (supersets) in finished workouts.' },
+  phasenmeister: { name: 'Phase Master', unit: 'best phase score', desc: 'Bulk, cut or maintenance – done right. Your highest phase score (2+ weeks).' },
+  saubererbulk: { name: 'Clean Bulk', unit: 'bulks with score 70+', desc: 'Gained optimally and got stronger. Bulk phases (4+ weeks) with score 70+.' },
+  shredded: { name: 'Shredded', unit: 'cuts with score 70+', desc: 'Fat down, strength stays. Cut phases (4+ weeks) with score 70+.' },
+  tagebuch: { name: 'Food Diary', unit: 'days logged', desc: 'What you eat counts. Days with at least one entry in Nutrition.' },
+  eiweissprofi: { name: 'Protein Pro', unit: 'days protein goal reached', desc: 'Muscles need building material. Days with at least 2 g protein per kg body weight.' },
+  punktlandung: { name: 'Bullseye', unit: 'days on calorie target', desc: 'Exactly where you want to be. Days within 5 % of the phase calorie target.' },
+  massband: { name: 'Tape Measure', unit: 'measurements', desc: 'Numbers don’t lie. Entries in body measurements.' },
+  ausreden: { name: 'Master of Excuses', unit: 'skipped exercises', desc: '“Not today.” – exercises you skipped with “Skip today”.' },
+}
+
+/** German definitions; name, unit, text, tier labels and note switch to English with the app language. */
+export const ACHIEVEMENTS: AchievementDef[] = DE_ACHIEVEMENTS.map((d) => {
+  const en = EN[d.id]
+  if (!en) return d
+  const out = { ...d }
+  Object.defineProperties(out, {
+    name: { get: () => t(d.name, en.name), enumerable: true },
+    unit: { get: () => t(d.unit, en.unit), enumerable: true },
+    desc: { get: () => t(d.desc, en.desc), enumerable: true },
+    labels: { get: () => (d.labels && getLang() === 'en' && en.labels ? en.labels : d.labels), enumerable: true },
+    note: { get: () => (d.note ? t(d.note, en.note ?? d.note) : undefined), enumerable: true },
+  })
+  return out
+})
+
 export const ULTIMATE = {
   name: 'Shōgun',
-  desc: 'Herrscher über alle Disziplinen. Bringe jedes ernste Achievement auf 5 Sterne – die Spaß-Achievements zählen hier nicht.',
+  get desc() { return t('Herrscher über alle Disziplinen. Bringe jedes ernste Achievement auf 5 Sterne – die Spaß-Achievements zählen hier nicht.', 'Ruler of all disciplines. Bring every serious achievement to 5 stars – the fun achievements don’t count here.') },
 }
 
 /** Ranks by share of all available stars, so adding achievements keeps them fair. */
+const rank = (share: number, de: string, en: string) => ({ share, get name() { return t(de, en) } })
 export const RANKS: { share: number; name: string }[] = [
-  { share: 0, name: 'Rekrut' },
-  { share: 0.1, name: 'Knappe' },
-  { share: 0.2, name: 'Kämpfer' },
-  { share: 0.325, name: 'Veteran' },
-  { share: 0.475, name: 'Champion' },
-  { share: 0.6, name: 'Meister' },
-  { share: 0.75, name: 'Großmeister' },
-  { share: 0.9, name: 'Legende' },
-  { share: 1, name: 'Shōgun' },
+  rank(0, 'Rekrut', 'Recruit'),
+  rank(0.1, 'Knappe', 'Squire'),
+  rank(0.2, 'Kämpfer', 'Fighter'),
+  rank(0.325, 'Veteran', 'Veteran'),
+  rank(0.475, 'Champion', 'Champion'),
+  rank(0.6, 'Meister', 'Master'),
+  rank(0.75, 'Großmeister', 'Grandmaster'),
+  rank(0.9, 'Legende', 'Legend'),
+  rank(1, 'Shōgun', 'Shōgun'),
 ]
 export const MAX_STARS = ACHIEVEMENTS.length * 5
-const RANK_MIN = RANKS.map((r) => ({ ...r, min: Math.ceil(r.share * MAX_STARS) }))
+const RANK_MIN = RANKS.map((r) => ({ share: r.share, get name() { return r.name }, min: Math.ceil(r.share * MAX_STARS) }))
 
 /** Sets above this are treated as typos (e.g. 1174 kg). */
 const MAX_PLAUSIBLE_KG = 500
@@ -408,4 +488,4 @@ export function evaluate(m: Metrics): AchievementState[] {
 export const rankFor = (stars: number) => [...RANK_MIN].reverse().find((r) => stars >= r.min)!
 export const nextRank = (stars: number) => RANK_MIN.find((r) => r.min > stars) ?? null
 
-export const fmtMetric = (v: number) => (Number.isInteger(v) ? fmtInt(v) : v.toFixed(1).replace('.', ','))
+export const fmtMetric = (v: number) => (Number.isInteger(v) ? fmtInt(v) : dec(v, 1))

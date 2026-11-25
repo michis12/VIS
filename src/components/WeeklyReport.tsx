@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useMemo, useState } from 'react'
 import { fmtInt, shortDate } from '../lib'
 import { useStore } from '../store'
@@ -17,10 +18,10 @@ export function WeeklyReport() {
   return (
     <div className="card chrome-edge score-card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div className="eyebrow">Wochenscore</div>
+        <div className="eyebrow">{t('Wochenscore', 'Week score')}</div>
         <div className="segmented" style={{ width: 190 }}>
-          <button className={ago === 0 ? 'on' : ''} onClick={() => setAgo(0)}>Diese</button>
-          <button className={ago === 1 ? 'on' : ''} onClick={() => setAgo(1)}>Letzte</button>
+          <button className={ago === 0 ? 'on' : ''} onClick={() => setAgo(0)}>{t('Diese', 'This')}</button>
+          <button className={ago === 1 ? 'on' : ''} onClick={() => setAgo(1)}>{t('Letzte', 'Last')}</button>
         </div>
       </div>
       <ScoreGaugeWithSub
@@ -28,9 +29,9 @@ export function WeeklyReport() {
         label={scoreLabel(s.score)}
         sub={
           <>
-            {`Woche ab ${shortDate(s.start)}${s.current ? ' · läuft' : ''}`}
+            {t(`Woche ab ${shortDate(s.start)}${s.current ? ' · läuft' : ''}`, `Week of ${shortDate(s.start)}${s.current ? ' · in progress' : ''}`)}
             {prev.score > 0 && delta !== 0 && (
-              <span className={'week-delta' + (delta > 0 ? ' up' : '')}>{delta > 0 ? '+' : '−'}{Math.abs(delta)} zur Vorwoche</span>
+              <span className={'week-delta' + (delta > 0 ? ' up' : '')}>{delta > 0 ? '+' : '−'}{Math.abs(delta)} {t('zur Vorwoche', 'vs last week')}</span>
             )}
           </>
         }
@@ -46,7 +47,7 @@ export function WeeklyReport() {
         ))}
       </div>
       <div className="faint num" style={{ fontSize: 12, marginTop: 12, textAlign: 'center' }}>
-        {s.workouts} Workouts · {fmtInt(s.sets)} Sätze · {fmtInt(s.volume / 1000)} t Volumen
+        {s.workouts} Workouts · {fmtInt(s.sets)} {t('Sätze', 'sets')} · {fmtInt(s.volume / 1000)} t {t('Volumen', 'volume')}
       </div>
     </div>
   )

@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { haptic } from '../lib'
@@ -166,8 +167,8 @@ export function ProgressBadges({ ups, prs, big = false }: { ups: number; prs: nu
   if (!ups && !prs) return null
   return (
     <span className={'pbadges' + (big ? ' big' : '')}>
-      {prs > 0 && <span className="pbadge pr" title={`${prs} Rekord${prs > 1 ? 'e' : ''}`}><Icon.cup size={big ? 16 : 12} />{prs}</span>}
-      {ups > 0 && <span className="pbadge up" title={`${ups}× Fortschritt`}><Icon.up size={big ? 16 : 12} />{ups}</span>}
+      {prs > 0 && <span className="pbadge pr" title={t(`${prs} Rekord${prs > 1 ? 'e' : ''}`, `${prs} record${prs > 1 ? 's' : ''}`)}><Icon.cup size={big ? 16 : 12} />{prs}</span>}
+      {ups > 0 && <span className="pbadge up" title={t(`${ups}× Fortschritt`, `${ups}× progress`)}><Icon.up size={big ? 16 : 12} />{ups}</span>}
     </span>
   )
 }
@@ -176,7 +177,7 @@ export function ProgressBadges({ ups, prs, big = false }: { ups: number; prs: nu
 export function SetMark({ flag }: { flag: 'up' | 'pr' | null | undefined }) {
   if (!flag) return null
   return (
-    <span className={'set-mark ' + flag} aria-label={flag === 'pr' ? 'Rekord' : 'Fortschritt'}>
+    <span className={'set-mark ' + flag} aria-label={flag === 'pr' ? t('Rekord', 'Record') : t('Fortschritt', 'Progress')}>
       {flag === 'pr' ? <Icon.cup size={10} /> : <Icon.up size={10} />}
     </span>
   )

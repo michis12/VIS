@@ -1,3 +1,4 @@
+import { t } from './i18n'
 /** Draws the shareable profile dashboard (1080 x 1350, story/feed friendly) onto a canvas. */
 
 export interface ShareData {
@@ -118,7 +119,7 @@ export async function renderShareCard(d: ShareData): Promise<Blob> {
   ctx.fillStyle = '#8e8e93'
   ctx.font = `600 26px ${FONT}`
   ctx.letterSpacing = '5px'
-  ctx.fillText('RANG', tx, ay + 40)
+  ctx.fillText(t('RANG', 'RANK'), tx, ay + 40)
   ctx.letterSpacing = '0px'
   ctx.font = `800 76px ${FONT}`
   ctx.fillStyle = chrome(ctx, tx, ay + 40, tx + 520, ay + 130)
@@ -128,7 +129,7 @@ export async function renderShareCard(d: ShareData): Promise<Blob> {
   ctx.fillText(d.name, tx, ay + 170)
   ctx.font = `500 26px ${FONT}`
   ctx.fillStyle = '#a1a1a6'
-  ctx.fillText(`${d.stars} / ${d.maxStars} Sterne${d.since ? ' · seit ' + d.since : ''}`, tx, ay + 212)
+  ctx.fillText(`${d.stars} / ${d.maxStars} ${t('Sterne', 'stars')}${d.since ? t(' · seit ', ' · since ') + d.since : ''}`, tx, ay + 212)
 
   // ---- KPI grid 3 x 2
   const gy = 360, gap = 20
@@ -182,7 +183,7 @@ export async function renderShareCard(d: ShareData): Promise<Blob> {
   ctx.fillStyle = '#8e8e93'
   ctx.font = `650 21px ${FONT}`
   ctx.letterSpacing = '3px'
-  ctx.fillText('WORKOUTS · LETZTE 12 MONATE', PAD, my + 20)
+  ctx.fillText(t('WORKOUTS · LETZTE 12 MONATE', 'WORKOUTS · LAST 12 MONTHS'), PAD, my + 20)
   ctx.letterSpacing = '0px'
   const max = Math.max(1, ...d.months.map((m) => m.value))
   const bw = (W - PAD * 2) / d.months.length
@@ -211,7 +212,7 @@ export async function renderShareCard(d: ShareData): Promise<Blob> {
   ctx.textAlign = 'left'
   ctx.fillStyle = '#636366'
   ctx.font = `500 22px ${FONT}`
-  ctx.fillText('Training · Fortschritt · Körper', PAD, H - 52)
+  ctx.fillText(t('Training · Fortschritt · Körper', 'Training · Progress · Body'), PAD, H - 52)
 
-  return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('Bild fehlgeschlagen'))), 'image/png'))
+  return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error(t('Bild fehlgeschlagen', 'Image failed')))), 'image/png'))
 }

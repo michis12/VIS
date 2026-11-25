@@ -1,3 +1,4 @@
+import { decStr, t as tr } from '../i18n'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Icon, Sheet } from '../components/ui'
@@ -34,24 +35,24 @@ export function RecipeEditor({ recipe, onClose }: { recipe: Recipe | null; onClo
   return createPortal(
     <div className="fullsheet">
       <div className="fullsheet-head">
-        <button className="icon-btn" onClick={onClose} aria-label="Schließen"><Icon.back /></button>
-        <div className="grow" style={{ fontWeight: 700, fontSize: 18 }}>{recipe ? 'Rezept bearbeiten' : 'Neues Rezept'}</div>
-        <button className="btn btn-chrome btn-sm" disabled={!r.name.trim() || !r.items.length} onClick={save}>Speichern</button>
+        <button className="icon-btn" onClick={onClose} aria-label={tr('Schließen', 'Close')}><Icon.back /></button>
+        <div className="grow" style={{ fontWeight: 700, fontSize: 18 }}>{recipe ? tr('Rezept bearbeiten', 'Edit recipe') : tr('Neues Rezept', 'New recipe')}</div>
+        <button className="btn btn-chrome btn-sm" disabled={!r.name.trim() || !r.items.length} onClick={save}>{tr('Speichern', 'Save')}</button>
       </div>
       <div className="fullsheet-body">
         <label className="lbl">Name</label>
-        <input className="input" value={r.name} onChange={(e) => setR({ ...r, name: e.target.value })} placeholder="z. B. Chili con Carne" />
+        <input className="input" value={r.name} onChange={(e) => setR({ ...r, name: e.target.value })} placeholder={tr('z. B. Chili con Carne', 'e.g. chili con carne')} />
 
-        <div className="section-title" style={{ marginTop: 18 }}><h2 style={{ fontSize: 17 }}>Zutaten</h2><button className="link" onClick={() => setPicking(true)}>+ Zutat</button></div>
+        <div className="section-title" style={{ marginTop: 18 }}><h2 style={{ fontSize: 17 }}>{tr('Zutaten', 'Ingredients')}</h2><button className="link" onClick={() => setPicking(true)}>{tr('+ Zutat', '+ Ingredient')}</button></div>
         <div className="card" style={{ padding: '4px 14px' }}>
-          {r.items.length === 0 && <div className="faint" style={{ padding: '14px 0' }}>Noch keine Zutaten</div>}
+          {r.items.length === 0 && <div className="faint" style={{ padding: '14px 0' }}>{tr('Noch keine Zutaten', 'No ingredients yet')}</div>}
           {r.items.map((it, i) => {
             const m = forGrams(it.food, it.grams)
             return (
               <button key={i} className="list-row" style={{ width: '100%', textAlign: 'left' }} onClick={() => setEdit(i)}>
                 <div className="grow">
                   <div className="nut-entry-name">{it.food.name}</div>
-                  <div className="faint num" style={{ fontSize: 12 }}>{fmtG(it.grams)} g · {fmtG(m.p)} g Eiweiß</div>
+                  <div className="faint num" style={{ fontSize: 12 }}>{fmtG(it.grams)} g · {fmtG(m.p)} g {tr('Eiweiß', 'protein')}</div>
                 </div>
                 <span className="num">{fmtInt(m.kcal)} kcal</span>
               </button>
@@ -60,28 +61,28 @@ export function RecipeEditor({ recipe, onClose }: { recipe: Recipe | null; onClo
         </div>
 
         <div className="card" style={{ marginTop: 12 }}>
-          <div className="pr-row num"><span className="muted">Gewicht der Zutaten</span><b>{fmtInt(raw)} g</b></div>
+          <div className="pr-row num"><span className="muted">{tr('Gewicht der Zutaten', 'Weight of ingredients')}</span><b>{fmtInt(raw)} g</b></div>
           <div className="pr-row" style={{ alignItems: 'center' }}>
-            <span className="muted">Gekocht (optional)</span>
+            <span className="muted">{tr('Gekocht (optional)', 'Cooked (optional)')}</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <input className="input num nut-cooked" inputMode="decimal" placeholder="–" value={cooked} onChange={(e) => setCooked(e.target.value)} /> g
             </span>
           </div>
-          <div className="pr-row num"><span className="muted">Gesamt</span><b>{fmtInt(total.kcal)} kcal · {fmtG(total.p)} g E</b></div>
-          <div className="pr-row num"><span className="muted">Pro 100 g</span><b>{fmtInt(per100.kcal)} kcal · {fmtG(per100.p)} E · {fmtG(per100.c)} K · {fmtG(per100.f)} F</b></div>
+          <div className="pr-row num"><span className="muted">{tr('Gesamt', 'Total')}</span><b>{fmtInt(total.kcal)} kcal · {fmtG(total.p)} g {tr('E', 'P')}</b></div>
+          <div className="pr-row num"><span className="muted">{tr('Pro 100 g', 'Per 100 g')}</span><b>{fmtInt(per100.kcal)} kcal · {fmtG(per100.p)} {tr('E', 'P')} · {fmtG(per100.c)} {tr('K', 'C')} · {fmtG(per100.f)} F</b></div>
         </div>
-        <div className="hint"><span>Beim Eintragen wählst du die Menge vom fertigen Gericht in g oder als ¼ / ½ / ganz. Wiegst du gekocht ab, hier das Gewicht nach dem Kochen eintragen.</span></div>
+        <div className="hint"><span>{tr('Beim Eintragen wählst du die Menge vom fertigen Gericht in g oder als ¼ / ½ / ganz. Wiegst du gekocht ab, hier das Gewicht nach dem Kochen eintragen.', 'When logging you pick the amount of the finished dish in g or as ¼ / ½ / whole. If you weigh it cooked, enter the weight after cooking here.')}</span></div>
 
         {recipe && (
           confirmDel
-            ? <button className="btn btn-danger btn-block" style={{ marginTop: 18 }} onClick={() => { store.deleteRecipe(r.id); onClose() }}>Wirklich löschen</button>
-            : <button className="btn btn-ghost btn-block" style={{ marginTop: 18 }} onClick={() => setConfirmDel(true)}>Rezept löschen</button>
+            ? <button className="btn btn-danger btn-block" style={{ marginTop: 18 }} onClick={() => { store.deleteRecipe(r.id); onClose() }}>{tr('Wirklich löschen', 'Really delete')}</button>
+            : <button className="btn btn-ghost btn-block" style={{ marginTop: 18 }} onClick={() => setConfirmDel(true)}>{tr('Rezept löschen', 'Delete recipe')}</button>
         )}
       </div>
 
       {picking && (
         <FoodPicker
-          title="Zutat hinzufügen"
+          title={tr('Zutat hinzufügen', 'Add ingredient')}
           noRecipes
           onClose={() => setPicking(false)}
           onPickMany={(items) => { setR((x) => ({ ...x, items: [...x.items, ...items.map((i) => ({ food: i.food, grams: i.grams }))] })); setPicking(false) }}
@@ -106,7 +107,7 @@ export function RecipeEditor({ recipe, onClose }: { recipe: Recipe | null; onClo
 }
 
 function ItemSheet({ item, onClose, onSave, onDelete }: { item: RecipeItem; onClose: () => void; onSave: (g: number) => void; onDelete: () => void }) {
-  const [t, setT] = useState(String(item.grams).replace('.', ','))
+  const [t, setT] = useState(decStr(item.grams))
   const g = Math.max(0, Number(t.replace(',', '.')) || 0)
   return (
     <Sheet onClose={onClose}>
@@ -116,8 +117,8 @@ function ItemSheet({ item, onClose, onSave, onDelete }: { item: RecipeItem; onCl
         <span className="muted">g</span>
       </div>
       <p className="faint num" style={{ fontSize: 13, textAlign: 'center' }}>{fmtInt(forGrams(item.food, g).kcal)} kcal</p>
-      <button className="btn btn-chrome btn-block" style={{ marginTop: 12 }} disabled={g <= 0} onClick={() => onSave(g)}>Übernehmen</button>
-      <button className="btn btn-danger btn-block" style={{ marginTop: 10 }} onClick={onDelete}>Zutat entfernen</button>
+      <button className="btn btn-chrome btn-block" style={{ marginTop: 12 }} disabled={g <= 0} onClick={() => onSave(g)}>{tr('Übernehmen', 'Apply')}</button>
+      <button className="btn btn-danger btn-block" style={{ marginTop: 10 }} onClick={onDelete}>{tr('Zutat entfernen', 'Remove ingredient')}</button>
     </Sheet>
   )
 }

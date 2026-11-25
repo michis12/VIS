@@ -1,3 +1,4 @@
+import { dec, t as tr } from './i18n'
 import { e1rm, isRealSet } from './lib'
 import type { WorkoutProgress } from './progress'
 import type { Phase, PhaseType, WeightEntry, Workout } from './types'
@@ -40,10 +41,10 @@ const clamp = (v: number, a = 0, b = 1) => Math.max(a, Math.min(b, v))
 const DAY = 864e5
 const t = (iso: string) => new Date(iso.slice(0, 10) + 'T12:00:00').getTime()
 const today = () => new Date().toISOString().slice(0, 10)
-const pct = (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(2).replace('.', ',')} %`
-const kg1 = (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(1).replace('.', ',')} kg`
+const pct = (v: number) => `${v > 0 ? '+' : ''}${dec(v, 2)} %`
+const kg1 = (v: number) => `${v > 0 ? '+' : ''}${dec(v, 1)} kg`
 
-export const phaseName = (t: PhaseType) => (t === 'bulk' ? 'Bulk' : t === 'cut' ? 'Cut' : 'Erhalt')
+export const phaseName = (p: PhaseType) => (p === 'bulk' ? 'Bulk' : p === 'cut' ? 'Cut' : tr('Erhalt', 'Maintain'))
 
 /** Least-squares slope in kg per week. */
 function slope(pts: { x: number; y: number }[]) {
@@ -115,70 +116,70 @@ export function scorePhases(phases: Phase[], workouts: Workout[], weights: Weigh
 
     const parts: PhasePart[] = []
     const weightDetail = ratePct != null
-      ? `${rate! > 0 ? "+" : ""}${rate!.toFixed(2).replace(".", ",")} kg/Woche · ${pct(ratePct)} KG`
-      : 'zu wenig Gewichtseinträge'
+      ? `${rate! > 0 ? "+" : ""}${dec(rate!, 2)} ${tr('kg/Woche', 'kg/week')} · ${pct(ratePct)} ${tr('KG', 'BW')}`
+      : tr('zu wenig Gewichtseinträge', 'too few weight entries')
     const trainPart = (max: number) => ({
       key: 'train', label: 'Training', max,
       pts: clamp(perWeek / 3) * max,
-      detail: `${perWeek.toFixed(1).replace('.', ',')} Workouts/Woche`,
-      tip: perWeek >= 3 ? 'Konstant trainiert.' : 'Ziel: mindestens 3 Workouts pro Woche.',
+      detail: `${dec(perWeek, 1)} ${tr('Workouts/Woche', 'workouts/week')}`,
+      tip: perWeek >= 3 ? tr('Konstant trainiert.', 'Trained consistently.') : tr('Ziel: mindestens 3 Workouts pro Woche.', 'Goal: at least 3 workouts per week.'),
     })
-    const progPart = (max: number, full: number, label = 'Fortschritt') => ({
+    const progPart = (max: number, full: number, label = tr('Fortschritt', 'Progress')) => ({
       key: 'prog', label, max,
       pts: clamp(gainRatio / full) * max,
-      detail: `${prs} ${prs === 1 ? 'Rekord' : 'Rekorde'} · ${ups} ${ups === 1 ? 'Fortschritt' : 'Fortschritte'} · ${Math.round(gainRatio * 100)} % deines Schnitts`,
-      tip: gainRatio >= full ? 'Mehr Verbesserungen als sonst – stark.' : 'Schlag in möglichst vielen Sätzen dein letztes Mal; Rekorde zählen doppelt.',
+      detail: tr(`${prs} ${prs === 1 ? 'Rekord' : 'Rekorde'} · ${ups} ${ups === 1 ? 'Fortschritt' : 'Fortschritte'} · ${Math.round(gainRatio * 100)} % deines Schnitts`, `${prs} ${prs === 1 ? 'record' : 'records'} · ${ups} progress · ${Math.round(gainRatio * 100)} % of your average`),
+      tip: gainRatio >= full ? tr('Mehr Verbesserungen als sonst – stark.', 'More improvements than usual – strong.') : tr('Schlag in möglichst vielen Sätzen dein letztes Mal; Rekorde zählen doppelt.', 'Beat your last time in as many sets as possible; records count double.'),
     })
-    const strDetail = strength != null ? `1RM ${pct((strength - 1) * 100)} (Anfang → Ende)` : weeks < 3 ? 'ab 3 Wochen bewertet' : 'zu wenig gleiche Übungen'
+    const strDetail = strength != null ? `1RM ${pct((strength - 1) * 100)} ${tr('(Anfang → Ende)', '(start → end)')}` : weeks < 3 ? tr('ab 3 Wochen bewertet', 'rated from 3 weeks') : tr('zu wenig gleiche Übungen', 'too few matching exercises')
 
     if (phase.type === 'bulk') {
       parts.push({
-        key: 'weight', label: 'Gewichtszunahme', max: 40,
+        key: 'weight', label: tr('Gewichtszunahme', 'Weight gain'), max: 40,
         pts: ratePct != null ? band(ratePct, -0.05, 0.2, 0.5, 1.1) * 40 : 20,
         detail: weightDetail,
-        tip: ratePct == null ? 'Wieg dich regelmäßig, damit die Zunahme bewertet werden kann.'
-          : ratePct < 0.2 ? `Zu langsam – Ziel +0,2–0,5 % pro Woche (${kg1((startKg ?? 0) * 0.002)}–${kg1((startKg ?? 0) * 0.005)}). Etwas mehr essen.`
-          : ratePct > 0.5 ? 'Zu schnell – mehr Fett als nötig. Kalorien leicht senken.'
-          : 'Optimales Tempo für einen sauberen Bulk.',
+        tip: ratePct == null ? tr('Wieg dich regelmäßig, damit die Zunahme bewertet werden kann.', 'Weigh yourself regularly so the gain can be rated.')
+          : ratePct < 0.2 ? tr(`Zu langsam – Ziel +0,2–0,5 % pro Woche (${kg1((startKg ?? 0) * 0.002)}–${kg1((startKg ?? 0) * 0.005)}). Etwas mehr essen.`, `Too slow – aim for +0.2–0.5 % per week (${kg1((startKg ?? 0) * 0.002)}–${kg1((startKg ?? 0) * 0.005)}). Eat a bit more.`)
+          : ratePct > 0.5 ? tr('Zu schnell – mehr Fett als nötig. Kalorien leicht senken.', 'Too fast – more fat than needed. Lower calories slightly.')
+          : tr('Optimales Tempo für einen sauberen Bulk.', 'Optimal pace for a clean bulk.'),
       })
       parts.push({
-        key: 'str', label: 'Kraft', max: 30,
+        key: 'str', label: tr('Kraft', 'Strength'), max: 30,
         pts: strength != null ? clamp((strength - 0.96) / 0.1) * 30 : 15,
         detail: strDetail,
-        tip: strength == null ? 'Wird bewertet, sobald genug Daten da sind.' : strength >= 1.06 ? 'Deutlich stärker geworden.' : 'Im Bulk sollte dein 1RM klar steigen – volle Punkte ab +6 % über die Phase.',
+        tip: strength == null ? tr('Wird bewertet, sobald genug Daten da sind.', 'Rated once there is enough data.') : strength >= 1.06 ? tr('Deutlich stärker geworden.', 'Clearly got stronger.') : tr('Im Bulk sollte dein 1RM klar steigen – volle Punkte ab +6 % über die Phase.', 'In a bulk your 1RM should clearly rise – full points from +6 % over the phase.'),
       })
       parts.push(progPart(20, 1.2))
       parts.push(trainPart(10))
     } else if (phase.type === 'cut') {
       parts.push({
-        key: 'weight', label: 'Gewichtsverlust', max: 40,
+        key: 'weight', label: tr('Gewichtsverlust', 'Weight loss'), max: 40,
         pts: ratePct != null ? band(-ratePct, 0, 0.5, 1.0, 1.8) * 40 : 20,
         detail: weightDetail,
-        tip: ratePct == null ? 'Wieg dich regelmäßig, damit der Verlust bewertet werden kann.'
-          : -ratePct < 0.5 ? `Zu langsam – Ziel −0,5–1 % pro Woche (${kg1(-(startKg ?? 0) * 0.005)} bis ${kg1(-(startKg ?? 0) * 0.01)}).`
-          : -ratePct > 1.0 ? 'Zu schnell – du riskierst Muskel- und Kraftverlust. Etwas mehr essen.'
-          : 'Optimales Tempo – Fett runter, Muskeln bleiben.',
+        tip: ratePct == null ? tr('Wieg dich regelmäßig, damit der Verlust bewertet werden kann.', 'Weigh yourself regularly so the loss can be rated.')
+          : -ratePct < 0.5 ? tr(`Zu langsam – Ziel −0,5–1 % pro Woche (${kg1(-(startKg ?? 0) * 0.005)} bis ${kg1(-(startKg ?? 0) * 0.01)}).`, `Too slow – aim for −0.5–1 % per week (${kg1(-(startKg ?? 0) * 0.005)} to ${kg1(-(startKg ?? 0) * 0.01)}).`)
+          : -ratePct > 1.0 ? tr('Zu schnell – du riskierst Muskel- und Kraftverlust. Etwas mehr essen.', 'Too fast – you risk losing muscle and strength. Eat a bit more.')
+          : tr('Optimales Tempo – Fett runter, Muskeln bleiben.', 'Optimal pace – fat down, muscle stays.'),
       })
       parts.push({
-        key: 'str', label: 'Kraft halten', max: 35,
+        key: 'str', label: tr('Kraft halten', 'Keep strength'), max: 35,
         pts: strength != null ? clamp((strength - 0.9) / 0.1) * 35 : 17.5,
         detail: strDetail,
-        tip: strength == null ? 'Wird bewertet, sobald genug Daten da sind.' : strength >= 1 ? 'Kraft voll gehalten – perfekt im Cut.' : 'Schwer bleiben: Gewicht halten, lieber Wdh reduzieren als Last.',
+        tip: strength == null ? tr('Wird bewertet, sobald genug Daten da sind.', 'Rated once there is enough data.') : strength >= 1 ? tr('Kraft voll gehalten – perfekt im Cut.', 'Strength fully kept – perfect in a cut.') : tr('Schwer bleiben: Gewicht halten, lieber Wdh reduzieren als Last.', 'Stay heavy: keep the weight, cut reps rather than load.'),
       })
       parts.push(trainPart(15))
-      parts.push(progPart(10, 0.7, 'Fortschritt (Bonus)'))
+      parts.push(progPart(10, 0.7, tr('Fortschritt (Bonus)', 'Progress (bonus)')))
     } else {
       parts.push({
-        key: 'weight', label: 'Gewicht stabil', max: 30,
+        key: 'weight', label: tr('Gewicht stabil', 'Weight stable'), max: 30,
         pts: ratePct != null ? band(ratePct, -0.6, -0.15, 0.15, 0.6) * 30 : 15,
         detail: weightDetail,
-        tip: ratePct == null ? 'Wieg dich regelmäßig.' : Math.abs(ratePct) <= 0.15 ? 'Gewicht schön stabil.' : 'Im Erhalt sollte das Gewicht kaum wandern (±0,15 % pro Woche).',
+        tip: ratePct == null ? tr('Wieg dich regelmäßig.', 'Weigh yourself regularly.') : Math.abs(ratePct) <= 0.15 ? tr('Gewicht schön stabil.', 'Weight nicely stable.') : tr('Im Erhalt sollte das Gewicht kaum wandern (±0,15 % pro Woche).', 'In maintenance the weight should barely move (±0.15 % per week).'),
       })
       parts.push({
-        key: 'str', label: 'Kraft', max: 25,
+        key: 'str', label: tr('Kraft', 'Strength'), max: 25,
         pts: strength != null ? clamp((strength - 0.95) / 0.08) * 25 : 12.5,
         detail: strDetail,
-        tip: strength == null ? 'Wird bewertet, sobald genug Daten da sind.' : 'Auch im Erhalt langsam stärker werden.',
+        tip: strength == null ? tr('Wird bewertet, sobald genug Daten da sind.', 'Rated once there is enough data.') : tr('Auch im Erhalt langsam stärker werden.', 'Slowly get stronger in maintenance too.'),
       })
       parts.push(progPart(30, 1.1))
       parts.push(trainPart(15))

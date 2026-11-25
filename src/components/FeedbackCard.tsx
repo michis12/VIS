@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useEffect, useState } from 'react'
 import { getSession, supabase } from '../cloud'
 import { haptic } from '../lib'
@@ -33,11 +34,11 @@ export function FeedbackCard({ toast }: { toast: (t: string) => void }) {
       if (error) {
         let code = ''
         try { code = (await (error as { context?: Response }).context?.json())?.error ?? '' } catch { /* not json */ }
-        throw new Error(code === 'limit' ? 'Zu viele Nachrichten – in einer Stunde nochmal.' : 'Senden hat nicht geklappt – Internet prüfen.')
+        throw new Error(code === 'limit' ? t('Zu viele Nachrichten – in einer Stunde nochmal.', 'Too many messages – try again in an hour.') : t('Senden hat nicht geklappt – Internet prüfen.', 'Sending failed – check your connection.'))
       }
       setText('')
       haptic(true)
-      toast(kind === 'problem' ? 'Danke – Problem ist angekommen' : 'Danke für die Idee!')
+      toast(kind === 'problem' ? t('Danke – Problem ist angekommen', 'Thanks – your report arrived') : t('Danke für die Idee!', 'Thanks for the idea!'))
     } catch (e) {
       toast((e as Error).message)
     } finally {
@@ -51,17 +52,17 @@ export function FeedbackCard({ toast }: { toast: (t: string) => void }) {
       <div className="card">
         <div className="segmented">
           <button className={kind === 'problem' ? 'on' : ''} onClick={() => setKind('problem')}>Problem</button>
-          <button className={kind === 'idea' ? 'on' : ''} onClick={() => setKind('idea')}>Idee</button>
+          <button className={kind === 'idea' ? 'on' : ''} onClick={() => setKind('idea')}>{t('Idee', 'Idea')}</button>
         </div>
         <textarea
           className="input plan-text" rows={4} style={{ marginTop: 12 }} value={text} maxLength={4000}
           onChange={(e) => setText(e.target.value)}
-          placeholder={kind === 'problem' ? 'Was ist passiert? Wo in der App?' : 'Was würde VIS besser machen?'}
+          placeholder={kind === 'problem' ? t('Was ist passiert? Wo in der App?', 'What happened? Where in the app?') : t('Was würde VIS besser machen?', 'What would make VIS better?')}
         />
         <Tap className="btn btn-chrome btn-block" style={{ marginTop: 12 }} onClick={send}>
-          {busy ? 'Wird gesendet…' : 'Senden'}
+          {busy ? t('Wird gesendet…', 'Sending…') : t('Senden', 'Send')}
         </Tap>
-        <div className="hint"><span>Geht direkt an den Entwickler – mit deinem Namen, deiner E-Mail und App-Version, damit er antworten kann.</span></div>
+        <div className="hint"><span>{t('Geht direkt an den Entwickler – mit deinem Namen, deiner E-Mail und App-Version, damit er antworten kann.', 'Goes straight to the developer – with your name, email and app version so he can reply.')}</span></div>
       </div>
     </>
   )

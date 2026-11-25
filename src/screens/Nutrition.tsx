@@ -1,3 +1,4 @@
+import { decStr, t as tr } from '../i18n'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Num, useTween } from '../anim'
@@ -78,32 +79,32 @@ export function Nutrition() {
 
   return (
     <div className="screen">
-      <div className="eyebrow">Ernährung</div>
+      <div className="eyebrow">{tr('Ernährung', 'Nutrition')}</div>
       <div className="nut-day">
-        <button className="icon-btn" style={dayNav ? undefined : { visibility: 'hidden' }} onClick={() => setDate(addDays(date, -1))} aria-label="Vorheriger Tag"><Icon.back /></button>
+        <button className="icon-btn" style={dayNav ? undefined : { visibility: 'hidden' }} onClick={() => setDate(addDays(date, -1))} aria-label={tr('Vorheriger Tag', 'Previous day')}><Icon.back /></button>
         <button className="nut-day-title" onClick={() => { if (dayNav && date !== today()) setDate(today()); else setDayNav(!dayNav) }}>
-          <h1 className="title" style={{ margin: 0 }}>{date === today() ? 'Heute' : date === addDays(today(), -1) ? 'Gestern' : dateLabel(date, false)}</h1>
+          <h1 className="title" style={{ margin: 0 }}>{date === today() ? tr('Heute', 'Today') : date === addDays(today(), -1) ? tr('Gestern', 'Yesterday') : dateLabel(date, false)}</h1>
         </button>
-        <button className="icon-btn" style={{ transform: 'scaleX(-1)', visibility: dayNav && date < today() ? undefined : 'hidden' }} onClick={() => setDate(addDays(date, 1))} aria-label="Nächster Tag"><Icon.back /></button>
+        <button className="icon-btn" style={{ transform: 'scaleX(-1)', visibility: dayNav && date < today() ? undefined : 'hidden' }} onClick={() => setDate(addDays(date, 1))} aria-label={tr('Nächster Tag', 'Next day')}><Icon.back /></button>
       </div>
 
       <div className="card chrome-edge nut-ring-card">
         <KcalRing eaten={total.kcal} target={target.kcal} flash={added} onClick={() => { haptic(); setSuggest(true) }} />
         <div className="nut-macros">
-          <MacroBar label="Eiweiß" v={total.p} t={target.p} />
-          <MacroBar label="Kohlenhydrate" v={total.c} t={target.c} />
-          <MacroBar label="Fett" v={total.f} t={target.f} />
+          <MacroBar label={tr('Eiweiß', 'Protein')} v={total.p} t={target.p} />
+          <MacroBar label={tr('Kohlenhydrate', 'Carbs')} v={total.c} t={target.c} />
+          <MacroBar label={tr('Fett', 'Fat')} v={total.f} t={target.f} />
         </div>
       </div>
-      {target.kcal == null && <div className="hint"><span>Kein Kalorienziel – leg unter Körper eine Phase mit Kalorien an.</span></div>}
+      {target.kcal == null && <div className="hint"><span>{tr('Kein Kalorienziel – leg unter Körper eine Phase mit Kalorien an.', 'No calorie target – create a phase with calories under Body.')}</span></div>}
       {target.kcal != null && date === today() && new Date().getHours() >= 18 && total.kcal > 0 && total.p < target.p * 0.75 && (
-        <div className="hint"><span>Noch <b>{Math.round(target.p - total.p)} g Eiweiß</b> bis zu deinem Ziel – z. B. Skyr, Topfen oder ein Shake.</span></div>
+        <div className="hint"><span>{tr('Noch ', 'Still ')}<b>{Math.round(target.p - total.p)} g {tr('Eiweiß', 'protein')}</b>{tr(' bis zu deinem Ziel – z. B. Skyr, Topfen oder ein Shake.', ' to your goal – e.g. skyr, quark or a shake.')}</span></div>
       )}
 
       <div className="nut-actions">
-        <Tap className="btn btn-chrome" onClick={() => { haptic(); setAdding('search') }}><Icon.plus /> Hinzufügen</Tap>
-        <Tap className="nut-scan big" onClick={() => { haptic(); if (requireAi()) photoInput.current?.click() }} aria-label="Essen fotografieren"><CameraIcon /></Tap>
-        <Tap className="nut-scan big" onClick={() => { haptic(); setAdding('scan') }} aria-label="Barcode scannen"><ScanIcon /></Tap>
+        <Tap className="btn btn-chrome" onClick={() => { haptic(); setAdding('search') }}><Icon.plus /> {tr('Hinzufügen', 'Add')}</Tap>
+        <Tap className="nut-scan big" onClick={() => { haptic(); if (requireAi()) photoInput.current?.click() }} aria-label={tr('Essen fotografieren', 'Photograph food')}><CameraIcon /></Tap>
+        <Tap className="nut-scan big" onClick={() => { haptic(); setAdding('scan') }} aria-label={tr('Barcode scannen', 'Scan barcode')}><ScanIcon /></Tap>
         <input ref={photoInput} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) setPhoto(f); e.target.value = '' }} />
       </div>
 
@@ -113,7 +114,7 @@ export function Nutrition() {
             <button key={e.id} className="nut-entry" onClick={() => setEditing(e)}>
               <div className="grow">
                 <div className="nut-entry-name">{e.name}</div>
-                <div className="faint num" style={{ fontSize: 12 }}>{e.at.slice(11, 16)} · {fmtG(e.grams)} g · {fmtG(e.p)} E · {fmtG(e.c)} K · {fmtG(e.f)} F</div>
+                <div className="faint num" style={{ fontSize: 12 }}>{e.at.slice(11, 16)} · {fmtG(e.grams)} g · {fmtG(e.p)} {tr('E', 'P')} · {fmtG(e.c)} {tr('K', 'C')} · {fmtG(e.f)} F</div>
               </div>
               <span className="num">{fmtInt(e.kcal)}</span>
             </button>
@@ -123,7 +124,7 @@ export function Nutrition() {
 
       {adding && (
         <FoodPicker
-          title="Hinzufügen"
+          title={tr('Hinzufügen', 'Add')}
           startScan={adding === 'scan'}
           onClose={() => setAdding(null)}
           onPickMany={(items) => { saveItems(items); setAdding(null) }}
@@ -180,7 +181,7 @@ function KcalRing({ eaten, target, flash = 0, onClick }: { eaten: number; target
   const col = progressColors(raw)
   const left = target != null ? Math.round(target - eaten) : null
   return (
-    <button className="nut-ring" onClick={onClick} aria-label="Was soll ich noch essen?">
+    <button className="nut-ring" onClick={onClick} aria-label={tr('Was soll ich noch essen?', 'What should I still eat?')}>
       <svg viewBox="0 0 120 120" width="132" height="132">
         <defs>
           <linearGradient id="nutRing" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stopColor={col.to} /><stop offset=".55" stopColor={col.from} /><stop offset="1" stopColor={col.to} /></linearGradient>
@@ -198,8 +199,8 @@ function KcalRing({ eaten, target, flash = 0, onClick }: { eaten: number; target
       ) : (
       <div className="nut-ring-txt ring-back">
         <b className="num"><Num value={eaten} format={fmtInt} /></b>
-        <span className="faint">{target ? `von ${fmtInt(target)}` : 'kcal'}</span>
-        {left != null && <span className="nut-left num" style={raw >= 1 ? { color: 'var(--good)' } : undefined}>{left >= 0 ? `${fmtInt(left)} übrig` : `${fmtInt(-left)} drüber`}</span>}
+        <span className="faint">{target ? tr(`von ${fmtInt(target)}`, `of ${fmtInt(target)}`) : 'kcal'}</span>
+        {left != null && <span className="nut-left num" style={raw >= 1 ? { color: 'var(--good)' } : undefined}>{left >= 0 ? tr(`${fmtInt(left)} übrig`, `${fmtInt(left)} left`) : tr(`${fmtInt(-left)} drüber`, `${fmtInt(-left)} over`)}</span>}
       </div>
       )}
     </button>
@@ -323,20 +324,20 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
   return createPortal(
     <div className="fullsheet">
       <div className="fullsheet-head">
-        <button className="icon-btn" onClick={onClose} aria-label="Schließen"><Icon.back /></button>
+        <button className="icon-btn" onClick={onClose} aria-label={tr('Schließen', 'Close')}><Icon.back /></button>
         <div className="grow" style={{ fontWeight: 700, fontSize: 18 }}>{title}</div>
-        <button className="btn btn-ghost btn-sm" onClick={() => setCustom({})}>Eigenes</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => setCustom({})}>{tr('Eigenes', 'Custom')}</button>
       </div>
       <div className="nut-search">
-        <input className="input" placeholder="Lebensmittel, Marke oder Rezept" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
-        <Tap className="nut-scan" onClick={() => setScan(true)} aria-label="Barcode scannen"><ScanIcon /></Tap>
+        <input className="input" placeholder={tr('Lebensmittel, Marke oder Rezept', 'Food, brand or recipe')} value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+        <Tap className="nut-scan" onClick={() => setScan(true)} aria-label={tr('Barcode scannen', 'Scan barcode')}><ScanIcon /></Tap>
       </div>
 
       <div className="fullsheet-body">
         {!term && !noRecipes && (
           <div className="segmented" style={{ marginBottom: 10 }}>
-            <button className={view === 'recent' ? 'on' : ''} onClick={() => setView('recent')}>Zuletzt</button>
-            <button className={view === 'recipes' ? 'on' : ''} onClick={() => setView('recipes')}>Rezepte</button>
+            <button className={view === 'recent' ? 'on' : ''} onClick={() => setView('recent')}>{tr('Zuletzt', 'Recent')}</button>
+            <button className={view === 'recipes' ? 'on' : ''} onClick={() => setView('recipes')}>{tr('Rezepte', 'Recipes')}</button>
           </div>
         )}
         {!term && view === 'recipes' && !noRecipes ? (
@@ -344,14 +345,14 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
             {recipes.map((r) => (
               <div key={r.id} className="nut-pick-row">
                 <PickRow p={{ kind: 'recipe', recipe: r }} onClick={() => setChosen({ kind: 'recipe', recipe: r })} />
-                <button className="nut-edit" onClick={() => setEditRecipe(r)} aria-label={`${r.name} bearbeiten`}>Bearbeiten</button>
+                <button className="nut-edit" onClick={() => setEditRecipe(r)} aria-label={tr(`${r.name} bearbeiten`, `Edit ${r.name}`)}>{tr('Bearbeiten', 'Edit')}</button>
               </div>
             ))}
-            <button className="btn btn-ghost btn-block" style={{ marginTop: 12 }} onClick={() => setEditRecipe('new')}><Icon.plus /> Neues Rezept</button>
+            <button className="btn btn-ghost btn-block" style={{ marginTop: 12 }} onClick={() => setEditRecipe('new')}><Icon.plus /> {tr('Neues Rezept', 'New recipe')}</button>
           </>
         ) : (
           <>
-            {!term && recents.length === 0 && <div className="faint" style={{ fontSize: 13, padding: '6px 2px' }}>Noch nichts eingetragen – suchen oder Barcode scannen.</div>}
+            {!term && recents.length === 0 && <div className="faint" style={{ fontSize: 13, padding: '6px 2px' }}>{tr('Noch nichts eingetragen – suchen oder Barcode scannen.', 'Nothing logged yet – search or scan a barcode.')}</div>}
             {list.map((p) => (
               <PickRow key={(p.kind === 'food' ? p.food.id : p.recipe.id)} p={p} onClick={() => setChosen(p)} />
             ))}
@@ -361,17 +362,17 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
           <button className="ai-row" onClick={() => requireAi() && setAiText(q.trim())}>
             <span className="ai-spark" aria-hidden="true">✦</span>
             <div className="grow">
-              <div className="nut-entry-name">Mit KI eintragen</div>
-              <div className="faint" style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>„{q.trim()}“ – auch mehrere Sachen mit Mengen</div>
+              <div className="nut-entry-name">{tr('Mit KI eintragen', 'Log with AI')}</div>
+              <div className="faint" style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tr(`„${q.trim()}“ – auch mehrere Sachen mit Mengen`, `“${q.trim()}” – several items with amounts too`)}</div>
             </div>
           </button>
         )}
         {term && (
           <>
             <div className="eyebrow" style={{ margin: '14px 2px 6px', display: 'flex', justifyContent: 'space-between' }}>
-              <span>Produkte</span><span className="faint">{loading ? 'suche…' : offline ? 'offline' : 'Open Food Facts'}</span>
+              <span>{tr('Produkte', 'Products')}</span><span className="faint">{loading ? tr('suche…', 'searching…') : offline ? 'offline' : 'Open Food Facts'}</span>
             </div>
-            {term.length < 3 && <div className="faint" style={{ fontSize: 13, padding: '4px 2px' }}>Ab 3 Buchstaben wird online gesucht</div>}
+            {term.length < 3 && <div className="faint" style={{ fontSize: 13, padding: '4px 2px' }}>{tr('Ab 3 Buchstaben wird online gesucht', 'Online search starts at 3 letters')}</div>}
             {remote.map((h) => (
               <button key={h.code} className="nut-pick" onClick={() => openProduct(h.code, h.name)} disabled={busy === h.code}>
                 <div className="grow">
@@ -381,7 +382,7 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
                 <span className="faint num" style={{ fontSize: 13 }}>{busy === h.code ? '…' : h.kcal != null ? `${Math.round(h.kcal)} kcal` : ''}</span>
               </button>
             ))}
-            {!loading && !offline && term.length >= 3 && remote.length === 0 && <div className="faint" style={{ fontSize: 13, padding: '4px 2px' }}>Nichts gefunden – „Eigenes“ anlegen.</div>}
+            {!loading && !offline && term.length >= 3 && remote.length === 0 && <div className="faint" style={{ fontSize: 13, padding: '4px 2px' }}>{tr('Nichts gefunden – „Eigenes“ anlegen.', 'Nothing found – create a “Custom” one.')}</div>}
           </>
         )}
       </div>
@@ -393,7 +394,7 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
           onCode={(code) => { setScan(false); openProduct(code) }}
         />
       )}
-      {busy && !scan && <div className="nut-loading">Produkt wird geladen…</div>}
+      {busy && !scan && <div className="nut-loading">{tr('Produkt wird geladen…', 'Loading product…')}</div>}
       {aiText && onPickMany && (
         <FoodPhoto
           source={{ kind: 'text', text: aiText, known }}
@@ -404,13 +405,13 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
       {editRecipe && <RecipeEditor recipe={editRecipe === 'new' ? null : editRecipe} onClose={() => setEditRecipe(null)} />}
       {missing && (
         <Sheet onClose={() => setMissing(null)}>
-          <h3>Produkt nicht gefunden</h3>
+          <h3>{tr('Produkt nicht gefunden', 'Product not found')}</h3>
           <p className="faint" style={{ fontSize: 13 }}>
-            {missing.name ? `„${missing.name}“ hat noch keine Nährwerte.` : 'Diesen Barcode kennt die Datenbank noch nicht.'} Leg es einmal an – danach erkennt VIS es beim Scannen automatisch.
+            {missing.name ? tr(`„${missing.name}“ hat noch keine Nährwerte.`, `“${missing.name}” has no nutrition values yet.`) : tr('Diesen Barcode kennt die Datenbank noch nicht.', 'The database does not know this barcode yet.')} {tr('Leg es einmal an – danach erkennt VIS es beim Scannen automatisch.', 'Create it once – after that VIS recognises it when scanning.')}
           </p>
           <p className="faint num" style={{ fontSize: 12, marginTop: 4 }}>Barcode {missing.code}</p>
-          <Tap className="btn btn-chrome btn-block" style={{ marginTop: 16 }} onClick={() => { setCustom({ barcode: missing.code, name: missing.name }); setMissing(null) }}>Produkt anlegen</Tap>
-          <button className="btn btn-ghost btn-block" style={{ marginTop: 10 }} onClick={() => { setMissing(null); setScan(true) }}>Erneut scannen</button>
+          <Tap className="btn btn-chrome btn-block" style={{ marginTop: 16 }} onClick={() => { setCustom({ barcode: missing.code, name: missing.name }); setMissing(null) }}>{tr('Produkt anlegen', 'Create product')}</Tap>
+          <button className="btn btn-ghost btn-block" style={{ marginTop: 10 }} onClick={() => { setMissing(null); setScan(true) }}>{tr('Erneut scannen', 'Scan again')}</button>
         </Sheet>
       )}
       {chosen && <AmountSheet pick={chosen} onClose={() => setChosen(null)} onDone={(g) => { onPick(chosen, g); setChosen(null) }} />}
@@ -428,7 +429,7 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
 
 function PickRow({ p, onClick }: { p: Pick; onClick: () => void }) {
   const f = pickFood(p)
-  const sub = p.kind === 'recipe' ? 'Rezept' : p.food.brand ?? (p.food.source === 'basic' ? 'Grundnahrungsmittel' : p.food.source === 'custom' ? 'Eigenes' : '')
+  const sub = p.kind === 'recipe' ? tr('Rezept', 'Recipe') : p.food.brand ?? (p.food.source === 'basic' ? tr('Grundnahrungsmittel', 'Basic food') : p.food.source === 'custom' ? tr('Eigenes', 'Custom') : '')
   return (
     <button className="nut-pick" onClick={onClick}>
       <div className="grow">
@@ -441,7 +442,7 @@ function PickRow({ p, onClick }: { p: Pick; onClick: () => void }) {
 }
 
 /** Amount in grams with quick chips; live macros. */
-function AmountSheet({ pick, onClose, onDone, initial, action = 'Hinzufügen', extra }: {
+function AmountSheet({ pick, onClose, onDone, initial, action = tr('Hinzufügen', 'Add'), extra }: {
   pick: Pick
   onClose: () => void
   onDone: (grams: number) => void
@@ -454,7 +455,7 @@ function AmountSheet({ pick, onClose, onDone, initial, action = 'Hinzufügen', e
     const c: { label: string; g: number }[] = []
     if (pick.kind === 'recipe') {
       const w = recipeWeight(pick.recipe)
-      c.push({ label: '¼', g: w / 4 }, { label: '⅓', g: w / 3 }, { label: '½', g: w / 2 }, { label: 'Ganz', g: w })
+      c.push({ label: '¼', g: w / 4 }, { label: '⅓', g: w / 3 }, { label: '½', g: w / 2 }, { label: tr('Ganz', 'Whole'), g: w })
     } else {
       if (food.serving) c.push({ label: food.serving.label, g: food.serving.g })
       for (const g of [50, 100, 150, 200, 250]) c.push({ label: `${g} g`, g })
@@ -468,7 +469,7 @@ function AmountSheet({ pick, onClose, onDone, initial, action = 'Hinzufügen', e
     <Sheet onClose={onClose}>
       <h3 style={{ paddingRight: 8 }}>{pickName(pick)}</h3>
       <p className="faint num" style={{ fontSize: 13 }}>
-        pro 100 g: {Math.round(food.kcal)} kcal · {fmtG(food.p)} E · {fmtG(food.c)} K · {fmtG(food.f)} F
+        {tr('pro 100 g', 'per 100 g')}: {Math.round(food.kcal)} kcal · {fmtG(food.p)} {tr('E', 'P')} · {fmtG(food.c)} {tr('K', 'C')} · {fmtG(food.f)} F
       </p>
       <div className="chips" style={{ margin: '12px -18px 0', padding: '2px 18px 4px' }}>
         {chips.map((c) => <button key={c.label} className={'chip' + (Math.round(c.g) === Math.round(grams) ? ' on' : '')} onClick={() => setText(String(Math.round(c.g)))}>{c.label}</button>)}
@@ -479,8 +480,8 @@ function AmountSheet({ pick, onClose, onDone, initial, action = 'Hinzufügen', e
       </div>
       <div className="grid-3 nut-sum">
         <div><b className="num">{fmtInt(m.kcal)}</b><span>kcal</span></div>
-        <div><b className="num">{fmtG(m.p)}</b><span>Eiweiß</span></div>
-        <div><b className="num">{fmtG(m.c)} / {fmtG(m.f)}</b><span>KH / Fett</span></div>
+        <div><b className="num">{fmtG(m.p)}</b><span>{tr('Eiweiß', 'Protein')}</span></div>
+        <div><b className="num">{fmtG(m.c)} / {fmtG(m.f)}</b><span>{tr('KH / Fett', 'Carbs / fat')}</span></div>
       </div>
       {extra}
       <Tap className="btn btn-chrome btn-block" style={{ marginTop: 14 }} onClick={() => grams > 0 && onDone(grams)}>{action}</Tap>
@@ -500,7 +501,7 @@ function EntrySheet({ entry, onClose }: { entry: FoodEntry; onClose: () => void 
     <AmountSheet
       pick={pick}
       initial={entry.grams}
-      action="Speichern"
+      action={tr('Speichern', 'Save')}
       onClose={onClose}
       onDone={(g) => {
         store.saveFoodEntry({ ...entry, grams: g, ...forGrams(pickFood(pick), g) })
@@ -508,7 +509,7 @@ function EntrySheet({ entry, onClose }: { entry: FoodEntry; onClose: () => void 
       }}
       extra={
         <>
-          <button className="btn btn-danger btn-block" style={{ marginTop: 10 }} onClick={() => { store.deleteFoodEntry(entry.id); onClose() }}>Eintrag löschen</button>
+          <button className="btn btn-danger btn-block" style={{ marginTop: 10 }} onClick={() => { store.deleteFoodEntry(entry.id); onClose() }}>{tr('Eintrag löschen', 'Delete entry')}</button>
         </>
       }
     />
@@ -529,14 +530,14 @@ function CustomFoodSheet({ initial, onClose, onSave }: { initial: { barcode?: st
     try {
       // labels have small print: a bit more resolution than meal photos
       const d = await foodAi({ mode: 'label', image: await shrink(file, 1400), mediaType: 'image/jpeg' })
-      if (!d?.found) throw new Error('Keine Nährwerttabelle erkannt – näher ran und gerade fotografieren.')
-      const n = (x: unknown) => (Number(x) > 0 ? String(Math.round(Number(x) * 10) / 10).replace('.', ',') : '0')
+      if (!d?.found) throw new Error(tr('Keine Nährwerttabelle erkannt – näher ran und gerade fotografieren.', 'No nutrition label recognised – get closer and shoot it straight.'))
+      const n = (x: unknown) => (Number(x) > 0 ? decStr(Math.round(Number(x) * 10) / 10) : '0')
       setV((cur) => ({
         name: cur.name || d.name || '', brand: cur.brand || d.brand || '',
         kcal: String(Math.round(Number(d.kcal) || 0)), p: n(d.protein), c: n(d.carbs), f: n(d.fat),
         serving: Number(d.serving) > 0 ? String(Math.round(Number(d.serving))) : cur.serving,
       }))
-      setLabelMsg('Abgelesen – kurz mit der Packung vergleichen.')
+      setLabelMsg(tr('Abgelesen – kurz mit der Packung vergleichen.', 'Read – quickly compare with the pack.'))
       haptic(true)
     } catch (e) {
       setLabelMsg((e as Error).message)
@@ -546,35 +547,35 @@ function CustomFoodSheet({ initial, onClose, onSave }: { initial: { barcode?: st
   }
   return (
     <Sheet onClose={onClose}>
-      <h3>Eigenes Lebensmittel</h3>
-      {initial.barcode && <p className="faint" style={{ fontSize: 13 }}>Barcode {initial.barcode} ist noch unbekannt – einmal anlegen, dann erkennt VIS ihn.</p>}
+      <h3>{tr('Eigenes Lebensmittel', 'Custom food')}</h3>
+      {initial.barcode && <p className="faint" style={{ fontSize: 13 }}>{tr(`Barcode ${initial.barcode} ist noch unbekannt – einmal anlegen, dann erkennt VIS ihn.`, `Barcode ${initial.barcode} is still unknown – create it once, then VIS recognises it.`)}</p>}
       <Tap className="btn btn-ghost btn-block" style={{ marginTop: 10 }} onClick={() => !reading && requireAi() && label.current?.click()}>
-        <CameraIcon /> {reading ? 'Wird abgelesen…' : 'Nährwerttabelle fotografieren'}
+        <CameraIcon /> {reading ? tr('Wird abgelesen…', 'Reading…') : tr('Nährwerttabelle fotografieren', 'Photograph nutrition label')}
       </Tap>
       <input ref={label} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) readLabel(f); e.target.value = '' }} />
       {labelMsg && <div className="hint"><span>{labelMsg}</span></div>}
       <label className="lbl">Name</label>
-      <input className="input" value={v.name} onChange={set('name')} placeholder="z. B. Proteinriegel" />
-      <label className="lbl">Marke (optional)</label>
+      <input className="input" value={v.name} onChange={set('name')} placeholder={tr('z. B. Proteinriegel', 'e.g. protein bar')} />
+      <label className="lbl">{tr('Marke (optional)', 'Brand (optional)')}</label>
       <input className="input" value={v.brand} onChange={set('brand')} />
-      <label className="lbl">Pro 100 g</label>
+      <label className="lbl">{tr('Pro 100 g', 'Per 100 g')}</label>
       <div className="grid-2">
         <input className="input num" inputMode="decimal" placeholder="kcal" value={v.kcal} onChange={set('kcal')} />
-        <input className="input num" inputMode="decimal" placeholder="Eiweiß g" value={v.p} onChange={set('p')} />
-        <input className="input num" inputMode="decimal" placeholder="Kohlenhydrate g" value={v.c} onChange={set('c')} />
-        <input className="input num" inputMode="decimal" placeholder="Fett g" value={v.f} onChange={set('f')} />
+        <input className="input num" inputMode="decimal" placeholder={tr('Eiweiß g', 'Protein g')} value={v.p} onChange={set('p')} />
+        <input className="input num" inputMode="decimal" placeholder={tr('Kohlenhydrate g', 'Carbs g')} value={v.c} onChange={set('c')} />
+        <input className="input num" inputMode="decimal" placeholder={tr('Fett g', 'Fat g')} value={v.f} onChange={set('f')} />
       </div>
-      <label className="lbl">Portion in g (optional)</label>
-      <input className="input num" inputMode="decimal" value={v.serving} onChange={set('serving')} placeholder="z. B. 45" />
+      <label className="lbl">{tr('Portion in g (optional)', 'Serving in g (optional)')}</label>
+      <input className="input num" inputMode="decimal" value={v.serving} onChange={set('serving')} placeholder={tr('z. B. 45', 'e.g. 45')} />
       <button
         className="btn btn-chrome btn-block" style={{ marginTop: 16 }} disabled={!ok}
         onClick={() => onSave({
           id: 'c-' + uid(), name: v.name.trim(), brand: v.brand.trim() || undefined,
           kcal: num(v.kcal), p: num(v.p), c: num(v.c), f: num(v.f), source: 'custom',
           ...(initial.barcode ? { barcode: initial.barcode } : {}),
-          ...(num(v.serving) > 0 ? { serving: { label: '1 Portion', g: num(v.serving) } } : {}),
+          ...(num(v.serving) > 0 ? { serving: { label: tr('1 Portion', '1 serving'), g: num(v.serving) } } : {}),
         })}
-      >Speichern</button>
+      >{tr('Speichern', 'Save')}</button>
     </Sheet>
   )
 }

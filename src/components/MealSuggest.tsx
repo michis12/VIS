@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useMemo, useState } from 'react'
 import { BASICS } from '../data/foods'
 import { foodAi } from '../foodAi'
@@ -103,7 +104,7 @@ export function MealSuggest({ left, onClose, onAdd }: {
           return { title: o.title, why: o.why, items, total: sum(items.map((i) => forGrams(i.food, i.grams))) }
         })
         .filter((o) => o.items.length)
-      if (!opts.length) throw new Error('Keine passenden Vorschläge – trag erst ein paar Mahlzeiten ein.')
+      if (!opts.length) throw new Error(t('Keine passenden Vorschläge – trag erst ein paar Mahlzeiten ein.', 'No matching suggestions – log a few meals first.'))
       setOptions(opts)
       setState('done')
       haptic(true)
@@ -117,26 +118,26 @@ export function MealSuggest({ left, onClose, onAdd }: {
   return (
     <Sheet onClose={onClose}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <h3 style={{ margin: 0, flex: 1 }}>Noch offen heute</h3>
+        <h3 style={{ margin: 0, flex: 1 }}>{t('Noch offen heute', 'Still open today')}</h3>
         <CreditPill credit={credit} />
       </div>
       <div className="grid-3 nut-sum">
         <div><b className="num">{left.kcal == null ? '–' : fmtInt(Math.max(0, left.kcal))}</b><span>kcal</span></div>
-        <div><b className="num">{fmtInt(Math.max(0, left.p))} g</b><span>Eiweiß</span></div>
-        <div><b className="num">{left.c == null ? '–' : `${fmtInt(Math.max(0, left.c))} / ${fmtInt(Math.max(0, left.f ?? 0))}`}</b><span>KH / Fett</span></div>
+        <div><b className="num">{fmtInt(Math.max(0, left.p))} g</b><span>{t('Eiweiß', 'Protein')}</span></div>
+        <div><b className="num">{left.c == null ? '–' : `${fmtInt(Math.max(0, left.c))} / ${fmtInt(Math.max(0, left.f ?? 0))}`}</b><span>{t('KH / Fett', 'Carbs / fat')}</span></div>
       </div>
 
       {done ? (
-        <div className="hint good"><span>Ziel für heute erreicht – nichts mehr nötig.</span></div>
+        <div className="hint good"><span>{t('Ziel für heute erreicht – nichts mehr nötig.', 'Today’s goal reached – nothing more needed.')}</span></div>
       ) : state !== 'done' ? (
         <>
           {err && <div className="hint" style={{ color: 'var(--danger)' }}><span>{err}</span></div>}
           <Tap className="btn btn-chrome btn-block" style={{ marginTop: 16 }} onClick={() => state === 'idle' && requireAi() && ask()}>
-            {state === 'loading' ? 'Wird überlegt…' : '✦ Was soll ich noch essen?'}
+            {state === 'loading' ? t('Wird überlegt…', 'Thinking…') : t('✦ Was soll ich noch essen?', '✦ What should I still eat?')}
           </Tap>
           {state === 'loading'
-            ? <AiWait text="Passende Mahlzeiten werden gesucht…" />
-            : <div className="hint"><span>Vorschläge aus deinen Rezepten und dem, was du oft isst.</span></div>}
+            ? <AiWait text={t('Passende Mahlzeiten werden gesucht…', 'Looking for matching meals…')} />
+            : <div className="hint"><span>{t('Vorschläge aus deinen Rezepten und dem, was du oft isst.', 'Suggestions from your recipes and what you often eat.')}</span></div>}
         </>
       ) : (
         <>
@@ -150,10 +151,10 @@ export function MealSuggest({ left, onClose, onAdd }: {
                 {o.items.map((it) => `${it.food.name} ${fmtInt(it.grams)} g`).join(' · ')}
               </div>
               <div className="faint" style={{ fontSize: 12, marginTop: 6 }}>{o.why}</div>
-              <Tap className="btn btn-ghost btn-sm" style={{ marginTop: 10 }} onClick={() => onAdd(o.items)}>Eintragen</Tap>
+              <Tap className="btn btn-ghost btn-sm" style={{ marginTop: 10 }} onClick={() => onAdd(o.items)}>{t('Eintragen', 'Add')}</Tap>
             </div>
           ))}
-          <button className="btn btn-ghost btn-block" style={{ marginTop: 12 }} onClick={ask}>Andere Vorschläge</button>
+          <button className="btn btn-ghost btn-block" style={{ marginTop: 12 }} onClick={ask}>{t('Andere Vorschläge', 'Other suggestions')}</button>
         </>
       )}
     </Sheet>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { dec, t } from '../i18n'
 import { fmtInt } from '../lib'
 import { useStore } from '../store'
 import { scoreLabel } from '../weekly'
@@ -6,7 +7,6 @@ import { ScoreGaugeWithSub, ScorePill } from './ScoreGauge'
 import { Sheet } from './ui'
 
 const pct = (v: number) => `${Math.round(v * 100)} %`
-const dec = (v: number) => v.toFixed(1).replace('.', ',')
 
 /** Workout score pill that opens the breakdown when tapped. Safe inside a row button. */
 export function WorkoutScoreButton({ id, size = 34 }: { id: string; size?: number }) {
@@ -20,7 +20,7 @@ export function WorkoutScoreButton({ id, size = 34 }: { id: string; size?: numbe
         role="button"
         tabIndex={0}
         className="score-tap"
-        aria-label={`Workout-Score ${score}, Details`}
+        aria-label={t(`Workout-Score ${score}, Details`, `Workout score ${score}, details`)}
         onClick={(e) => { e.stopPropagation(); setOpen(true) }}
         onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); setOpen(true) } }}
       >
@@ -45,36 +45,36 @@ export function WorkoutScoreSheet({ id, onClose }: { id: string; onClose: () => 
 
   const parts = [
     {
-      label: 'Volumen', pts: d.volPts, max: 40,
-      detail: d.baseVol ? `${fmtInt(d.vol)} kg · ${pct(volRatio)} deines Schnitts` : `${fmtInt(d.vol)} kg · noch kein Vergleich`,
+      label: t('Volumen', 'Volume'), pts: d.volPts, max: 40,
+      detail: d.baseVol ? t(`${fmtInt(d.vol)} kg · ${pct(volRatio)} deines Schnitts`, `${fmtInt(d.vol)} kg · ${pct(volRatio)} of your average`) : t(`${fmtInt(d.vol)} kg · noch kein Vergleich`, `${fmtInt(d.vol)} kg · no comparison yet`),
       tip: d.baseVol
         ? d.volPts >= 39.5
-          ? 'Volle Punkte – deutlich mehr bewegt als sonst.'
-          : `Verglichen mit deinen letzten 5 „${w.name}“-Workouts (Ø ${fmtInt(d.baseVol)} kg). Volle Punkte ab ca. ${fmtInt(volTarget)} kg – mehr Gewicht, mehr Wdh oder ein Extra-Satz.`
-        : 'Sobald es Vergleichs-Workouts gibt, zählt dein Volumen gegen deinen Schnitt.',
+          ? t('Volle Punkte – deutlich mehr bewegt als sonst.', 'Full points – moved clearly more than usual.')
+          : t(`Verglichen mit deinen letzten 5 „${w.name}“-Workouts (Ø ${fmtInt(d.baseVol)} kg). Volle Punkte ab ca. ${fmtInt(volTarget)} kg – mehr Gewicht, mehr Wdh oder ein Extra-Satz.`, `Compared with your last 5 “${w.name}” workouts (avg ${fmtInt(d.baseVol)} kg). Full points from about ${fmtInt(volTarget)} kg – more weight, more reps or an extra set.`)
+        : t('Sobald es Vergleichs-Workouts gibt, zählt dein Volumen gegen deinen Schnitt.', 'Once there are workouts to compare, your volume counts against your average.'),
     },
     {
-      label: 'Fortschritt', pts: d.gainPts, max: 40,
-      detail: `${d.prs} ${d.prs === 1 ? 'Rekord' : 'Rekorde'} · ${d.ups} ${d.ups === 1 ? 'Fortschritt' : 'Fortschritte'} · ${dec(perEx)} Pkt./Übung`,
+      label: t('Fortschritt', 'Progress'), pts: d.gainPts, max: 40,
+      detail: t(`${d.prs} ${d.prs === 1 ? 'Rekord' : 'Rekorde'} · ${d.ups} ${d.ups === 1 ? 'Fortschritt' : 'Fortschritte'} · ${dec(perEx)} Pkt./Übung`, `${d.prs} ${d.prs === 1 ? 'record' : 'records'} · ${d.ups} progress · ${dec(perEx)} pts/exercise`),
       tip: d.baseGain
         ? d.gainPts >= 39.5
-          ? 'Volle Punkte – überdurchschnittlich viele Verbesserungen.'
-          : `Pro Übung zählt jeder Satz, der dein letztes Mal schlägt (1 Pkt.), ein Rekord doppelt (2 Pkt.). Dein Schnitt: ${dec(d.baseGain)} Pkt./Übung – volle Punkte ab ca. ${dec(gainTarget)}.`
-        : 'Schlag in möglichst vielen Sätzen dein letztes Mal – Rekorde zählen doppelt.',
+          ? t('Volle Punkte – überdurchschnittlich viele Verbesserungen.', 'Full points – more improvements than average.')
+          : t(`Pro Übung zählt jeder Satz, der dein letztes Mal schlägt (1 Pkt.), ein Rekord doppelt (2 Pkt.). Dein Schnitt: ${dec(d.baseGain)} Pkt./Übung – volle Punkte ab ca. ${dec(gainTarget)}.`, `Per exercise, every set that beats your last time counts (1 pt), a record double (2 pts). Your average: ${dec(d.baseGain)} pts/exercise – full points from about ${dec(gainTarget)}.`)
+        : t('Schlag in möglichst vielen Sätzen dein letztes Mal – Rekorde zählen doppelt.', 'Beat your last time in as many sets as possible – records count double.'),
     },
     {
-      label: 'Vollständigkeit', pts: d.fullPts, max: 20,
-      detail: `${d.trained} von ${d.planned} Übungen trainiert`,
-      tip: d.fullPts >= 19.5 ? 'Alles durchgezogen.' : 'Jede ausgelassene Übung kostet Punkte – lieber leichter trainieren als auslassen.',
+      label: t('Vollständigkeit', 'Completeness'), pts: d.fullPts, max: 20,
+      detail: t(`${d.trained} von ${d.planned} Übungen trainiert`, `${d.trained} of ${d.planned} exercises trained`),
+      tip: d.fullPts >= 19.5 ? t('Alles durchgezogen.', 'Saw it all through.') : t('Jede ausgelassene Übung kostet Punkte – lieber leichter trainieren als auslassen.', 'Every skipped exercise costs points – better train lighter than skip.'),
     },
   ]
 
   return (
     <Sheet onClose={onClose}>
-      <h3>Workout-Score</h3>
-      <p className="faint" style={{ fontSize: 13 }}>{w.name} · im Vergleich zu deinem eigenen Verlauf</p>
+      <h3>{t('Workout-Score', 'Workout score')}</h3>
+      <p className="faint" style={{ fontSize: 13 }}>{w.name} · {t('im Vergleich zu deinem eigenen Verlauf', 'compared with your own history')}</p>
       <div style={{ margin: '6px auto 0', maxWidth: 220 }}>
-        <ScoreGaugeWithSub score={d.score} label={scoreLabel(d.score)} sub="max. 99 – 99 ist selten" />
+        <ScoreGaugeWithSub score={d.score} label={scoreLabel(d.score)} sub={t('max. 99 – 99 ist selten', 'max. 99 – 99 is rare')} />
       </div>
       <div className="score-parts" style={{ marginTop: 8 }}>
         {parts.map((p) => (

@@ -1,5 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { getSession, supabase } from '../cloud'
+import { dec, t } from '../i18n'
 
 /**
  * AI access and plans (public.ai_access, migration 0011):
@@ -124,14 +125,14 @@ export async function addTopup(usd: number) {
 /** developer: give an account a plan by e-mail ('none' removes the access) */
 export async function setPlan(email: string, plan: 'friend' | 'solo' | 'ultra' | 'none', period: 'month' | 'year') {
   const { error } = await supabase!.rpc('ai_set_plan', { target_email: email, new_plan: plan, new_period: period })
-  if (error) throw new Error(error.message.includes('unknown user') ? 'Kein Account mit dieser E-Mail' : 'Hat nicht geklappt')
+  if (error) throw new Error(error.message.includes('unknown user') ? t('Kein Account mit dieser E-Mail', 'No account with this email') : t('Hat nicht geklappt', 'That did not work'))
 }
 
 /** green while there is enough, amber below 2 $, red below 1 $ (time to top up) */
 export const creditColor = (b: number) => (b < 1 ? 'var(--danger)' : b < 2 ? '#e0a050' : 'var(--good)')
 /** same idea for the share of a paid plan that is left */
 export const leftColor = (left: number) => (left < 10 ? 'var(--danger)' : left < 30 ? '#e0a050' : 'var(--good)')
-export const fmtUsd = (v: number) => (Math.abs(v) < 10 ? v.toFixed(2) : v.toFixed(1)).replace('.', ',') + ' $'
+export const fmtUsd = (v: number) => dec(v, Math.abs(v) < 10 ? 2 : 1) + ' $'
 export const fmtPct = (v: number) => `${Math.round(v)} %`
 
 export function useCredit() {
@@ -164,7 +165,7 @@ export function CreditPill({ credit }: { credit: Credit | null }) {
   if (isPaid(credit.plan) && credit.usedPct != null) {
     const left = 100 - credit.usedPct
     return (
-      <span className="credit-pill num" title="Noch übrig diesen Monat">
+      <span className="credit-pill num" title={t('Noch übrig diesen Monat', 'Left this month')}>
         <i style={{ background: leftColor(left) }} />
         {fmtPct(left)}
       </span>
@@ -172,7 +173,7 @@ export function CreditPill({ credit }: { credit: Credit | null }) {
   }
   if (credit.plan !== 'dev' || credit.topups <= 0) return null
   return (
-    <span className="credit-pill num" title="Geschätztes KI-Guthaben">
+    <span className="credit-pill num" title={t('Geschätztes KI-Guthaben', 'Estimated AI balance')}>
       <i style={{ background: creditColor(credit.balance) }} />
       {fmtUsd(credit.balance)}
     </span>

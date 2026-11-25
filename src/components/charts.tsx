@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { easeOut, reducedMotion } from '../anim'
 import { useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent } from 'react'
 import { monthLabel, shortDate } from '../lib'
@@ -36,7 +37,7 @@ export function LineChart({ points, height = 200, yFmt = (v) => String(Math.roun
   const [ref, width] = useWidth()
   const [hover, setHover] = useState<number | null>(null)
   const gid = useId().replace(/:/g, '')
-  if (points.length < 2) return <div ref={ref} className="faint" style={{ padding: 20, textAlign: 'center' }}>Noch zu wenig Daten</div>
+  if (points.length < 2) return <div ref={ref} className="faint" style={{ padding: 20, textAlign: 'center' }}>{t('Noch zu wenig Daten', 'Not enough data yet')}</div>
 
   const L = 36, R = 8, T = 12, B = 24
   const xs = points.map((p) => p.x), ys = points.map((p) => p.y)

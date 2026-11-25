@@ -1,9 +1,10 @@
+import { dec, t } from '../i18n'
 import { useMemo, useState } from 'react'
 import { LineChart } from '../components/charts'
 import { MuscleFigures } from '../components/MuscleMap'
 import { Icon, SetMark } from '../components/ui'
 import { dateLabel, e1rm, fmtInt, fmtKg, isRealSet } from '../lib'
-import { musclesFor } from '../muscles'
+import { muscleLabel, musclesFor } from '../muscles'
 import { useNav } from '../nav'
 import { useStore } from '../store'
 import type { SetEntry } from '../types'
@@ -21,9 +22,9 @@ type Session = {
 type Rec = { label: string; value: string; sub: string; date: string; workoutId: string }
 
 const CHARTS = [
-  { id: 'w', label: 'Gewicht' },
+  { id: 'w', get label() { return t('Gewicht', 'Weight') } },
   { id: 'e', label: '1RM' },
-  { id: 'v', label: 'Volumen' },
+  { id: 'v', get label() { return t('Volumen', 'Volume') } },
 ] as const
 
 const PAGE = 15
@@ -85,11 +86,11 @@ export function ExerciseDetail({ id }: { id: string }) {
     }
     const recs: Rec[] = []
     const add = (label: string, value: string, sub: string, s: Session | null) => s && recs.push({ label, value, sub, date: s.date, workoutId: s.workoutId })
-    add('Schwerstes Gewicht', `${fmtKg(heavy.w)} kg`, `× ${heavy.r} Wdh`, heavy.s)
-    add('Bestes 1RM (geschätzt)', `${fmtKg(Math.round(best.e * 10) / 10)} kg`, `${fmtKg(best.w)} × ${best.r}`, best.s)
-    add('Meiste Wiederholungen', `${most.r} Wdh`, `bei ${fmtKg(most.w)} kg`, most.s)
-    add('Bester Satz (Volumen)', `${fmtInt(setVol.v)} kg`, `${fmtKg(setVol.w)} × ${setVol.r}`, setVol.s)
-    add('Beste Einheit (Volumen)', `${fmtInt(sessVol.v)} kg`, 'gesamt', sessVol.s)
+    add(t('Schwerstes Gewicht', 'Heaviest weight'), `${fmtKg(heavy.w)} kg`, `× ${heavy.r} ${t('Wdh', 'reps')}`, heavy.s)
+    add(t('Bestes 1RM (geschätzt)', 'Best 1RM (estimated)'), `${fmtKg(Math.round(best.e * 10) / 10)} kg`, `${fmtKg(best.w)} × ${best.r}`, best.s)
+    add(t('Meiste Wiederholungen', 'Most reps'), `${most.r} ${t('Wdh', 'reps')}`, t(`bei ${fmtKg(most.w)} kg`, `at ${fmtKg(most.w)} kg`), most.s)
+    add(t('Bester Satz (Volumen)', 'Best set (volume)'), `${fmtInt(setVol.v)} kg`, `${fmtKg(setVol.w)} × ${setVol.r}`, setVol.s)
+    add(t('Beste Einheit (Volumen)', 'Best session (volume)'), `${fmtInt(sessVol.v)} kg`, t('gesamt', 'total'), sessVol.s)
     return { sets, reps, prs, ups, recs, best, repPR: [...repPR.entries()].sort((a, b) => a[0] - b[0]) }
   }, [sessions])
 
@@ -124,37 +125,37 @@ export function ExerciseDetail({ id }: { id: string }) {
   return (
     <div className="screen no-tabs">
       <div className="wo-head">
-        <button className="icon-btn" onClick={nav.pop} aria-label="Zurück"><Icon.back /></button>
+        <button className="icon-btn" onClick={nav.pop} aria-label={t('Zurück', 'Back')}><Icon.back /></button>
         <div className="grow">
           <div className="name">{ex?.name ?? id}</div>
-          <div className="wo-timer">{ex?.muscle} · {sessions.length} Einheiten</div>
+          <div className="wo-timer">{ex && muscleLabel(ex.muscle)} · {sessions.length} {t('Einheiten', 'sessions')}</div>
         </div>
       </div>
 
       {!sessions.length ? (
-        <div className="card faint" style={{ marginTop: 18, textAlign: 'center', padding: 28 }}>Noch keine Sätze zu dieser Übung</div>
+        <div className="card faint" style={{ marginTop: 18, textAlign: 'center', padding: 28 }}>{t('Noch keine Sätze zu dieser Übung', 'No sets for this exercise yet')}</div>
       ) : (
         <>
           <div className="grid-3" style={{ marginTop: 18 }}>
-            <div className="card kpi" style={{ padding: 12 }}><div className="label">Bestes 1RM</div><div className="value" style={{ fontSize: 20 }}>{fmtKg(Math.round(stats.best.e))}<small>kg</small></div></div>
-            <div className="card kpi" style={{ padding: 12 }}><div className="label">Sätze</div><div className="value" style={{ fontSize: 20 }}>{fmtInt(stats.sets)}</div><div className="sub">{fmtInt(stats.reps)} Wdh</div></div>
+            <div className="card kpi" style={{ padding: 12 }}><div className="label">{t('Bestes 1RM', 'Best 1RM')}</div><div className="value" style={{ fontSize: 20 }}>{fmtKg(Math.round(stats.best.e))}<small>kg</small></div></div>
+            <div className="card kpi" style={{ padding: 12 }}><div className="label">{t('Sätze', 'Sets')}</div><div className="value" style={{ fontSize: 20 }}>{fmtInt(stats.sets)}</div><div className="sub">{fmtInt(stats.reps)} {t('Wdh', 'reps')}</div></div>
             <div className="card kpi" style={{ padding: 12 }}>
-              <div className="label">Rekorde</div>
+              <div className="label">{t('Rekorde', 'Records')}</div>
               <div className="value" style={{ fontSize: 20 }}>{stats.prs}</div>
-              <div className="sub" style={{ color: stats.ups ? 'var(--good)' : undefined }}>{stats.ups} Fortschritte</div>
+              <div className="sub" style={{ color: stats.ups ? 'var(--good)' : undefined }}>{stats.ups} {t('Fortschritte', 'progress')}</div>
             </div>
           </div>
 
           {plateau > 0 && (
             <div className="hint">
-              <span>Seit <b>{plateau} Einheiten</b> kein Fortschritt – Wdh-Bereich wechseln oder 1 Woche leichter trainieren.</span>
+              <span>{t('Seit ', 'No progress for ')}<b>{plateau} {t('Einheiten', 'sessions')}</b>{t(' kein Fortschritt – Wdh-Bereich wechseln oder 1 Woche leichter trainieren.', ' – switch the rep range or train lighter for 1 week.')}</span>
             </div>
           )}
 
-          <div className="section-title"><h2>Entwicklung</h2>
+          <div className="section-title"><h2>{t('Entwicklung', 'Progress')}</h2>
             {change != null && (
               <span className="num" style={{ fontSize: 13, fontWeight: 650, color: change >= 0 ? 'var(--good)' : 'var(--text-3)' }}>
-                {change >= 0 ? '▲' : '▼'} {Math.abs(change).toFixed(1).replace('.', ',')} % seit Beginn
+                {change >= 0 ? '▲' : '▼'} {dec(Math.abs(change), 1)} % {t('seit Beginn', 'since start')}
               </span>
             )}
           </div>
@@ -165,12 +166,12 @@ export function ExerciseDetail({ id }: { id: string }) {
             <LineChart
               points={points}
               dots={points.length < 60}
-              unit={chart === 'w' ? 'kg schwerster Satz' : chart === 'e' ? 'kg 1RM' : 'kg Volumen'}
+              unit={chart === 'w' ? t('kg schwerster Satz', 'kg heaviest set') : chart === 'e' ? 'kg 1RM' : t('kg Volumen', 'kg volume')}
               yFmt={(v) => (chart === 'v' ? fmtInt(v) : fmtKg(Math.round(v * 10) / 10))}
             />
           </div>
 
-          <div className="section-title"><h2>Rekorde</h2></div>
+          <div className="section-title"><h2>{t('Rekorde', 'Records')}</h2></div>
           <div className="card" style={{ padding: '4px 14px' }}>
             {stats.recs.map((r) => (
               <button key={r.label} className="list-row" style={{ width: '100%', textAlign: 'left' }} onClick={() => nav.push({ kind: 'workout', id: r.workoutId })}>
@@ -187,28 +188,28 @@ export function ExerciseDetail({ id }: { id: string }) {
           </div>
           {stats.repPR.length > 0 && (
             <div className="card" style={{ marginTop: 12 }}>
-              <div className="eyebrow" style={{ marginBottom: 4 }}>Bestes Gewicht nach Wiederholungen</div>
+              <div className="eyebrow" style={{ marginBottom: 4 }}>{t('Bestes Gewicht nach Wiederholungen', 'Best weight by reps')}</div>
               {stats.repPR.map(([r, p]) => (
-                <div className="pr-row num" key={r}><span className="muted">{r} Wdh</span><span><b>{fmtKg(p.w)} kg</b> <span className="faint">· {dateLabel(p.s.date)}</span></span></div>
+                <div className="pr-row num" key={r}><span className="muted">{r} {t('Wdh', 'reps')}</span><span><b>{fmtKg(p.w)} kg</b> <span className="faint">· {dateLabel(p.s.date)}</span></span></div>
               ))}
             </div>
           )}
         </>
       )}
 
-      <div className="section-title"><h2>Muskeln</h2></div>
+      <div className="section-title"><h2>{t('Muskeln', 'Muscles')}</h2></div>
       <div className="card mm">
         <MuscleFigures fill={fill} />
         <div className="ex-muscles">
-          <span className="chip on">{m.primary}</span>
-          {m.secondary.map((g) => <span key={g} className="chip">{g}</span>)}
+          <span className="chip on">{muscleLabel(m.primary)}</span>
+          {m.secondary.map((g) => <span key={g} className="chip">{muscleLabel(g)}</span>)}
         </div>
-        <div className="faint" style={{ fontSize: 11, textAlign: 'center', marginTop: 8 }}>hell = Hauptmuskel · gedimmt = unterstützend</div>
+        <div className="faint" style={{ fontSize: 11, textAlign: 'center', marginTop: 8 }}>{t('hell = Hauptmuskel · gedimmt = unterstützend', 'bright = main muscle · dimmed = supporting')}</div>
       </div>
 
       {recent.length > 0 && (
         <>
-          <div className="section-title"><h2>Verlauf</h2><span className="faint" style={{ fontSize: 13 }}>alle Sätze</span></div>
+          <div className="section-title"><h2>{t('Verlauf', 'History')}</h2><span className="faint" style={{ fontSize: 13 }}>{t('alle Sätze', 'all sets')}</span></div>
           {recent.slice(0, shown).map((s) => (
             <button key={s.workoutId + s.date} className="card ex-hist" onClick={() => nav.push({ kind: 'workout', id: s.workoutId })}>
               <div className="ex-hist-head">
@@ -226,7 +227,7 @@ export function ExerciseDetail({ id }: { id: string }) {
           ))}
           {recent.length > shown && (
             <button className="btn btn-ghost btn-block" style={{ marginTop: 12 }} onClick={() => setShown((n) => n + PAGE * 2)}>
-              Ältere laden ({recent.length - shown})
+              {t('Ältere laden', 'Load older')} ({recent.length - shown})
             </button>
           )}
         </>

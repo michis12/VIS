@@ -1,3 +1,4 @@
+import { t as tr } from '../i18n'
 import { useState } from 'react'
 import { requireAi } from '../components/AiCredit'
 import { ScoreGauge } from '../components/ScoreGauge'
@@ -36,10 +37,10 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
     if (!file) return
     try {
       const { templates: imported, newExercises } = await parseTemplatesFile(file, store.exercises)
-      if (!imported.length) throw new Error('Keine Templates in der Datei')
+      if (!imported.length) throw new Error(tr('Keine Templates in der Datei', 'No templates in the file'))
       for (const e of newExercises) store.saveExercise(e)
       for (const t of imported) store.saveTemplate(t)
-      toast(`${imported.length} Template${imported.length > 1 ? 's' : ''} importiert`)
+      toast(tr(`${imported.length} Template${imported.length > 1 ? 's' : ''} importiert`, `${imported.length} template${imported.length > 1 ? 's' : ''} imported`))
     } catch (e) {
       toast((e as Error).message)
     }
@@ -56,7 +57,7 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
   const lastWeight = weights[weights.length - 1]
   const phase = phases[phases.length - 1]
   const hour = new Date().getHours()
-  const greet = hour < 11 ? 'Guten Morgen' : hour < 18 ? 'Bereit?' : 'Guten Abend'
+  const greet = hour < 11 ? tr('Guten Morgen', 'Good morning') : hour < 18 ? tr('Bereit?', 'Ready?') : tr('Guten Abend', 'Good evening')
 
   return (
     <div className="screen">
@@ -65,15 +66,15 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
 
       {active && (
         <button className="card chrome-edge hero" style={{ width: '100%', textAlign: 'left', marginBottom: 12 }} onClick={onOpenWorkout}>
-          <div className="eyebrow">Läuft gerade</div>
+          <div className="eyebrow">{tr('Läuft gerade', 'In progress')}</div>
           <h3 style={{ marginTop: 4 }}>{active.name}</h3>
-          <p className="muted" style={{ marginTop: 2 }}>Seit {active.startedAt.slice(11, 16)} Uhr · Tippen zum Fortsetzen</p>
+          <p className="muted" style={{ marginTop: 2 }}>{tr(`Seit ${active.startedAt.slice(11, 16)} Uhr · Tippen zum Fortsetzen`, `Since ${active.startedAt.slice(11, 16)} · tap to continue`)}</p>
         </button>
       )}
 
       <div className="grid-2">
         <button className="card kpi kpi-link" onClick={() => onOpenBody()}>
-          <div className="label">Gewicht</div>
+          <div className="label">{tr('Gewicht', 'Weight')}</div>
           <div className="value">{lastWeight ? fmtKg(lastWeight.kg) : '–'}<small>kg</small></div>
           <span className="kpi-chev"><Icon.chevron /></span>
         </button>
@@ -81,9 +82,9 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
           <span className="kpi-chev"><Icon.chevron /></span>
           <div className="label">Phase</div>
           <div className="value" style={{ fontSize: 22, marginTop: 10 }}>
-            {phase ? <><span className={'phase-dot phase-' + phase.type} /> {phaseName(phase.type)}</> : <span className="faint">Nicht gesetzt</span>}
+            {phase ? <><span className={'phase-dot phase-' + phase.type} /> {phaseName(phase.type)}</> : <span className="faint">{tr('Nicht gesetzt', 'Not set')}</span>}
           </div>
-          {phase && <div className="sub">{fmtInt(phase.calories)} kcal/Tag</div>}
+          {phase && <div className="sub">{fmtInt(phase.calories)} {tr('kcal/Tag', 'kcal/day')}</div>}
         </button>
       </div>
 
@@ -92,16 +93,16 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
       <button className="card score-mini" style={{ width: '100%', textAlign: 'left' }} onClick={onOpenStats}>
         <ScoreGauge score={week.score} size={78} />
         <div style={{ flex: 1 }}>
-          <div className="eyebrow">Wochenscore</div>
+          <div className="eyebrow">{tr('Wochenscore', 'Week score')}</div>
           <div style={{ fontSize: 18, fontWeight: 700 }}>{scoreLabel(week.score)}</div>
-          <div className="faint" style={{ fontSize: 12 }}>{week.workouts} / {WEEKLY_TARGET} Workouts · Zusammensetzung ansehen</div>
+          <div className="faint" style={{ fontSize: 12 }}>{week.workouts} / {WEEKLY_TARGET} Workouts · {tr('Zusammensetzung ansehen', 'see breakdown')}</div>
         </div>
         <span className="chev"><Icon.chevron /></span>
       </button>
 
       <div className="section-title">
-        <h2>Training starten</h2>
-        <button className="link" onClick={() => setManage(true)}>Verwalten</button>
+        <h2>{tr('Training starten', 'Start training')}</h2>
+        <button className="link" onClick={() => setManage(true)}>{tr('Verwalten', 'Manage')}</button>
       </div>
       {templates.map((t) => {
         const last = lastOf(t)
@@ -111,7 +112,7 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
             <div className="tpl-main">
               <div className="name">{t.name}</div>
               <div className="meta">{t.exercises.map((e) => exerciseById.get(e.exerciseId)?.name).join(' · ')}</div>
-              {last && <div className="meta faint" style={{ marginTop: 2 }}>Zuletzt {dateLabel(last.startedAt)}</div>}
+              {last && <div className="meta faint" style={{ marginTop: 2 }}>{tr('Zuletzt', 'Last')} {dateLabel(last.startedAt)}</div>}
             </div>
             <span className="chev"><Icon.chevron /></span>
           </button>
@@ -119,20 +120,20 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
       })}
       {!active && (
         <button className="btn btn-ghost btn-block" style={{ marginTop: 12 }} onClick={() => start(null)}>
-          <Icon.plus /> Leeres Training
+          <Icon.plus /> {tr('Leeres Training', 'Empty workout')}
         </button>
       )}
 
       <div className="section-title">
-        <h2>Verlauf</h2>
-        <button className="link" onClick={() => nav.push({ kind: 'history' })}>Alle anzeigen</button>
+        <h2>{tr('Verlauf', 'History')}</h2>
+        <button className="link" onClick={() => nav.push({ kind: 'history' })}>{tr('Alle anzeigen', 'Show all')}</button>
       </div>
       <div className="card" style={{ padding: '4px 14px' }}>
         {recent.map((w) => <HistoryRow key={w.id} w={w} onOpen={() => nav.push({ kind: 'workout', id: w.id })} />)}
       </div>
       <button className="import-link" onClick={() => requireAi() && setImporting(true)}>
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
-        Trainings aus alter App übernehmen
+        {tr('Trainings aus alter App übernehmen', 'Bring workouts from your old app')}
       </button>
       {importing && <TrainingImport onClose={() => setImporting(false)} toast={toast} />}
 
@@ -140,13 +141,13 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
         <Sheet onClose={() => setManage(false)}>
           <h3>Templates</h3>
           <div className="menu">
-            <button onClick={() => { setManage(false); nav.push({ kind: 'template', template: null }) }}><Icon.plus /> Neues Template</button>
-            <button onClick={importTemplates}>Template-Datei importieren</button>
+            <button onClick={() => { setManage(false); nav.push({ kind: 'template', template: null }) }}><Icon.plus /> {tr('Neues Template', 'New template')}</button>
+            <button onClick={importTemplates}>{tr('Template-Datei importieren', 'Import template file')}</button>
             <button disabled={!templates.length} onClick={async () => {
               setManage(false)
               const r = await shareOrDownload(templatesFile(templates, exerciseById), 'VIS Templates')
-              if (r === 'downloaded') toast('Templates gespeichert')
-            }}>Alle Templates exportieren</button>
+              if (r === 'downloaded') toast(tr('Templates gespeichert', 'Templates saved'))
+            }}>{tr('Alle Templates exportieren', 'Export all templates')}</button>
           </div>
         </Sheet>
       )}
@@ -155,9 +156,9 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
         <Sheet onClose={() => setChosen(null)}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h3>{chosen.name}</h3>
-            <button className="link muted" onClick={() => { const t = chosen; setChosen(null); nav.push({ kind: 'template', template: t }) }}>Bearbeiten</button>
+            <button className="link muted" onClick={() => { const t = chosen; setChosen(null); nav.push({ kind: 'template', template: t }) }}>{tr('Bearbeiten', 'Edit')}</button>
           </div>
-          <p className="muted" style={{ marginBottom: 14 }}>{chosen.exercises.length} Übungen · {chosen.exercises.reduce((n, e) => n + e.sets, 0)} Sätze</p>
+          <p className="muted" style={{ marginBottom: 14 }}>{chosen.exercises.length} {tr('Übungen', 'exercises')} · {chosen.exercises.reduce((n, e) => n + e.sets, 0)} {tr('Sätze', 'sets')}</p>
           <div className="menu" style={{ marginBottom: 16 }}>
             {chosen.exercises.map((e, i) => (
               <div key={i} className="list-row">
@@ -166,8 +167,8 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
               </div>
             ))}
           </div>
-          <button className="btn btn-chrome btn-block" onClick={() => start(chosen)}>Workout starten</button>
-          <p className="faint" style={{ fontSize: 12, textAlign: 'center', marginTop: 10 }}>Einzelne Übungen kannst du im Workout über ⋯ auslassen.</p>
+          <button className="btn btn-chrome btn-block" onClick={() => start(chosen)}>{tr('Workout starten', 'Start workout')}</button>
+          <p className="faint" style={{ fontSize: 12, textAlign: 'center', marginTop: 10 }}>{tr('Einzelne Übungen kannst du im Workout über ⋯ auslassen.', 'You can skip single exercises in the workout via ⋯.')}</p>
         </Sheet>
       )}
 
@@ -181,7 +182,7 @@ function badge(name: string) {
   return (parts.length >= 2 ? parts.slice(-2).join('') : name.slice(0, 2)).toUpperCase()
 }
 
-export const phaseName =(t: string) => (t === 'bulk' ? 'Bulk' : t === 'cut' ? 'Cut' : 'Erhalt')
+export const phaseName = (p: string) => (p === 'bulk' ? 'Bulk' : p === 'cut' ? 'Cut' : tr('Erhalt', 'Maintain'))
 
 /** Thin calorie line for today (opens Ernährung). */
 function KcalStrip({ onOpen }: { onOpen: () => void }) {
@@ -194,7 +195,7 @@ function KcalStrip({ onOpen }: { onOpen: () => void }) {
   return (
     <button className="card kcal-strip" onClick={onOpen}>
       <div className="kcal-strip-top">
-        <span className="eyebrow" style={{ margin: 0 }}>Kalorien heute</span>
+        <span className="eyebrow" style={{ margin: 0 }}>{tr('Kalorien heute', 'Calories today')}</span>
         <span className="num" style={target && frac >= 1 ? { color: 'var(--good)' } : undefined}>
           <b>{fmtInt(eaten)}</b>{target ? <span className="faint"> / {fmtInt(target)} kcal</span> : <span className="faint"> kcal</span>}
         </span>

@@ -1,6 +1,7 @@
+import { t } from '../i18n'
 import { useMemo, useState } from 'react'
 import { isRealSet } from '../lib'
-import { musclesFor } from '../muscles'
+import { muscleLabel, musclesFor } from '../muscles'
 import { useStore } from '../store'
 
 /**
@@ -72,7 +73,7 @@ const BACK: Region[] = [
 ]
 
 const MAIN = ['Brust', 'Rücken', 'Schultern', 'Beine', 'Bizeps', 'Trizeps', 'Bauch']
-const PERIODS = [{ days: 7, label: '7 Tage', full: 12 }, { days: 30, label: '30 Tage', full: 45 }]
+const PERIODS = [{ days: 7, get label() { return t('7 Tage', '7 days') }, full: 12 }, { days: 30, get label() { return t('30 Tage', '30 days') }, full: 45 }]
 const MIRROR = 'translate(120 0) scale(-1 1)'
 
 /** Front + back figure; `fill` colors each muscle group, tapping selects a group. */
@@ -110,8 +111,8 @@ export function MuscleFigures({ fill, sel = null, onSel }: { fill: (group: strin
 
   return (
     <div className="mm-figs">
-      {figure(FRONT, 'Vorne')}
-      {figure(BACK, 'Hinten')}
+      {figure(FRONT, t('Vorne', 'Front'))}
+      {figure(BACK, t('Hinten', 'Back'))}
     </div>
   )
 }
@@ -148,11 +149,11 @@ export function MuscleMap() {
     const lastDay = new Map<string, number>()
     for (const w of workouts) {
       if (w.status !== 'done') continue
-      const t = new Date(w.startedAt).getTime()
+      const ts = new Date(w.startedAt).getTime()
       for (const e of w.exercises) {
         if (!e.sets.some(isRealSet)) continue
         const { primary, secondary } = musclesFor(exerciseById.get(e.exerciseId))
-        for (const g of [primary, ...secondary]) lastDay.set(g, Math.max(lastDay.get(g) ?? 0, t))
+        for (const g of [primary, ...secondary]) lastDay.set(g, Math.max(lastDay.get(g) ?? 0, ts))
       }
     }
     return MAIN
@@ -170,19 +171,19 @@ export function MuscleMap() {
       <MuscleFigures fill={fill} sel={sel} onSel={setSel} />
       <div className="mm-info">
         {sel ? (
-          <span><b>{sel}</b> · {sets.get(sel) ?? 0} Sätze</span>
+          <span><b>{muscleLabel(sel)}</b> · {sets.get(sel) ?? 0} {t('Sätze', 'sets')}</span>
         ) : ranked.length ? (
-          <span className="muted">Am meisten: <b>{ranked[0][0]}</b> ({ranked[0][1]} Sätze)</span>
+          <span className="muted">{t('Am meisten', 'Most')}: <b>{muscleLabel(ranked[0][0])}</b> ({ranked[0][1]} {t('Sätze', 'sets')})</span>
         ) : (
-          <span className="faint">Keine Sätze in diesem Zeitraum</span>
+          <span className="faint">{t('Keine Sätze in diesem Zeitraum', 'No sets in this period')}</span>
         )}
       </div>
       {neglected.length > 0 && (
         <div className="hint" style={{ justifyContent: 'center' }}>
-          <span>{neglected.map((x, i) => <span key={x.g}>{i ? ' · ' : ''}<b>{x.g}</b> seit {x.days} Tagen</span>)} nicht trainiert</span>
+          <span>{neglected.map((x, i) => <span key={x.g}>{i ? ' · ' : ''}<b>{muscleLabel(x.g)}</b> {t(`seit ${x.days} Tagen`, `for ${x.days} days`)}</span>)} {t('nicht trainiert', 'not trained')}</span>
         </div>
       )}
-      <div className="mm-legend"><span>0</span><div className="mm-scale" /><span>{period.full}+ Sätze</span></div>
+      <div className="mm-legend"><span>0</span><div className="mm-scale" /><span>{period.full}+ {t('Sätze', 'sets')}</span></div>
     </div>
   )
 }

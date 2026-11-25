@@ -1,3 +1,5 @@
+import { t as tr } from '../i18n'
+import { muscleLabel } from '../muscles'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Icon, ProgressBadges, SetMark, Sheet, Tap, Wheel } from '../components/ui'
 import { clock, fmtKg, haptic, isRealSet, localIso, uid, workoutVolume, fmtInt } from '../lib'
@@ -22,7 +24,7 @@ const REPS = Array.from({ length: 51 }, (_, i) => i)
 export function newWorkoutFromTemplate(t: Template | null): Workout {
   return {
     id: uid(),
-    name: t?.name ?? 'Freies Training',
+    name: t?.name ?? tr('Freies Training', 'Free workout'),
     templateId: t?.id,
     startedAt: localIso(),
     durationSec: null,
@@ -263,7 +265,7 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
     store.deleteWorkout(w.id)
     storeRestEnd(null)
     cancelRestPush()
-    onClose('Workout verworfen')
+    onClose(tr('Workout verworfen', 'Workout discarded'))
   }
 
   const ed = editing && w.exercises[editing.ex]?.sets[editing.set] ? editing : null
@@ -271,16 +273,16 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
   return (
     <div className="screen no-tabs">
       <div className="wo-head">
-        <button className="icon-btn" onClick={() => onClose()} aria-label="Minimieren"><Icon.back /></button>
+        <button className="icon-btn" onClick={() => onClose()} aria-label={tr('Minimieren', 'Minimise')}><Icon.back /></button>
         <div className="grow">
           <div className="name">{w.name}</div>
           <div className="wo-timer" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span><b>{clock(elapsed)}</b> · {doneSets}/{totalSets} Sätze{skippedCount ? ` · ${skippedCount} ausgelassen` : ''}</span>
+            <span><b>{clock(elapsed)}</b> · {doneSets}/{totalSets} {tr('Sätze', 'sets')}{skippedCount ? ` · ${skippedCount} ${tr('ausgelassen', 'skipped')}` : ''}</span>
             <ProgressBadges ups={live.ups} prs={live.prs} />
           </div>
         </div>
-        <button className="icon-btn" onClick={() => setWoMenu(true)} aria-label="Menü"><Icon.more /></button>
-        <Tap className="btn btn-chrome btn-sm" onClick={() => setFinish(true)}>Beenden</Tap>
+        <button className="icon-btn" onClick={() => setWoMenu(true)} aria-label={tr('Menü', 'Menu')}><Icon.more /></button>
+        <Tap className="btn btn-chrome btn-sm" onClick={() => setFinish(true)}>{tr('Beenden', 'Finish')}</Tap>
       </div>
 
       {w.exercises.map((e, ei) => {
@@ -292,9 +294,9 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
               <div className="ex-title">
                 <div>
                   <div className="name">{ex?.name ?? e.exerciseId}</div>
-                  <div className="muscle">Heute nicht trainiert · {e.sets.length} Sätze geplant</div>
+                  <div className="muscle">{tr(`Heute nicht trainiert · ${e.sets.length} Sätze geplant`, `Not trained today · ${e.sets.length} sets planned`)}</div>
                 </div>
-                <button className="btn btn-ghost btn-sm" onClick={() => setSkipped(ei, false)}>Doch trainieren</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setSkipped(ei, false)}>{tr('Doch trainieren', 'Train it after all')}</button>
               </div>
             </div>
           )
@@ -304,14 +306,14 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
             <div className="ex-title">
               <button className="ex-link" onClick={() => nav.push({ kind: 'exercise', id: e.exerciseId })}>
                 <div className="name">{ex?.name ?? e.exerciseId} <span className="faint" style={{ fontSize: 13, fontWeight: 500 }}>›</span></div>
-                <div className="muscle">{ex?.muscle}{supersetOf(w.exercises, ei).length > 1 && <span className="ss-label"> · Supersatz</span>}</div>
+                <div className="muscle">{ex && muscleLabel(ex.muscle)}{supersetOf(w.exercises, ei).length > 1 && <span className="ss-label"> · {tr('Supersatz', 'Superset')}</span>}</div>
               </button>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <ProgressBadges ups={live.exercises[ei]?.ups ?? 0} prs={live.exercises[ei]?.prs ?? 0} />
-                <button className="icon-btn" style={{ width: 34, height: 34 }} onClick={() => setExMenu(ei)} aria-label="Übungsmenü"><Icon.more /></button>
+                <button className="icon-btn" style={{ width: 34, height: 34 }} onClick={() => setExMenu(ei)} aria-label={tr('Übungsmenü', 'Exercise menu')}><Icon.more /></button>
               </div>
             </div>
-            <div className="set-head"><span>Satz</span><span>Vorher</span><span>kg</span><span>Wdh</span><span /></div>
+            <div className="set-head"><span>{tr('Satz', 'Set')}</span><span>{tr('Vorher', 'Previous')}</span><span>kg</span><span>{tr('Wdh', 'Reps')}</span><span /></div>
             {e.sets.map((s, si) => {
               const ps = p?.[si]
               return (
@@ -337,24 +339,24 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
                     className={'val' + (s.reps == null ? ' empty' : s.suggested ? ' suggested' : '')}
                     onClick={() => setEditing({ ex: ei, set: si, focus: 'reps' })}
                   >
-                    {s.reps != null ? s.reps : ps ? ps.reps : 'Wdh'}
+                    {s.reps != null ? s.reps : ps ? ps.reps : tr('Wdh', 'Reps')}
                   </button>
-                  <Tap className={'check' + (s.done ? ' on' : '')} onClick={() => complete(ei, si)} aria-label="Satz bestätigen">
+                  <Tap className={'check' + (s.done ? ' on' : '')} onClick={() => complete(ei, si)} aria-label={tr('Satz bestätigen', 'Confirm set')}>
                     <Icon.check />
                   </Tap>
                 </div>
               )
             })}
-            <Tap className="add-set" onClick={() => addSet(ei)}>+ Satz hinzufügen</Tap>
+            <Tap className="add-set" onClick={() => addSet(ei)}>{tr('+ Satz hinzufügen', '+ Add set')}</Tap>
           </div>
         )
       })}
 
       <button className="btn btn-ghost btn-block" style={{ marginTop: 16 }} onClick={() => setPicker(true)}>
-        <Icon.plus /> Übung hinzufügen
+        <Icon.plus /> {tr('Übung hinzufügen', 'Add exercise')}
       </button>
 
-      {prFlash && <div className="pr-flash"><Icon.cup size={18} /> Neuer Rekord!</div>}
+      {prFlash && <div className="pr-flash"><Icon.cup size={18} /> {tr('Neuer Rekord!', 'New record!')}</div>}
 
       {(restEnd || restDone) && (
         <RestDock
@@ -378,7 +380,7 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
           key={`${ed.ex}-${ed.set}`}
           initial={w.exercises[ed.ex].sets[ed.set]}
           fallback={prev.get(w.exercises[ed.ex].exerciseId)?.[ed.set]}
-          title={`${exerciseById.get(w.exercises[ed.ex].exerciseId)?.name ?? ''} · Satz ${ed.set + 1}`}
+          title={`${exerciseById.get(w.exercises[ed.ex].exerciseId)?.name ?? ''} · ${tr('Satz', 'Set')} ${ed.set + 1}`}
           dumbbell={isDumbbell(exerciseById.get(w.exercises[ed.ex].exerciseId)?.name)}
           onClose={() => setEditing(null)}
           onApply={(v) => { updateSet(ed.ex, ed.set, { ...v, suggested: false }); setEditing(null) }}
@@ -388,10 +390,10 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
 
       {setMenu && (
         <Sheet onClose={() => setSetMenu(null)}>
-          <h3>Satz {setMenu.set + 1}</h3>
+          <h3>{tr('Satz', 'Set')} {setMenu.set + 1}</h3>
           <div className="menu">
-            <button onClick={() => { updateSet(setMenu.ex, setMenu.set, { weight: null, reps: null, done: false, suggested: false }); setSetMenu(null) }}>Werte leeren</button>
-            <button className="danger" onClick={() => { deleteSet(setMenu.ex, setMenu.set); setSetMenu(null) }}>Satz löschen</button>
+            <button onClick={() => { updateSet(setMenu.ex, setMenu.set, { weight: null, reps: null, done: false, suggested: false }); setSetMenu(null) }}>{tr('Werte leeren', 'Clear values')}</button>
+            <button className="danger" onClick={() => { deleteSet(setMenu.ex, setMenu.set); setSetMenu(null) }}>{tr('Satz löschen', 'Delete set')}</button>
           </div>
         </Sheet>
       )}
@@ -400,14 +402,14 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
         <Sheet onClose={() => setExMenu(null)}>
           <h3>{exerciseById.get(w.exercises[exMenu].exerciseId)?.name}</h3>
           <div className="menu">
-            <button onClick={() => { setSkipped(exMenu, true); setExMenu(null) }}>Heute nicht trainieren</button>
+            <button onClick={() => { setSkipped(exMenu, true); setExMenu(null) }}>{tr('Heute nicht trainieren', 'Skip today')}</button>
             {exMenu < w.exercises.length - 1 && (
               <button onClick={() => { save({ ...w, exercises: toggleLink(w.exercises, exMenu) }); haptic(); setExMenu(null) }}>
-                {linkedToNext(exMenu) ? 'Kopplung mit nächster Übung lösen' : 'Mit nächster Übung koppeln (Supersatz)'}
+                {linkedToNext(exMenu) ? tr('Kopplung mit nächster Übung lösen', 'Unlink from next exercise') : tr('Mit nächster Übung koppeln (Supersatz)', 'Link with next exercise (superset)')}
               </button>
             )}
-            <button onClick={() => { addSet(exMenu); setExMenu(null) }}>Satz hinzufügen</button>
-            <button className="danger" onClick={() => { removeExercise(exMenu); setExMenu(null) }}>Übung aus diesem Workout entfernen</button>
+            <button onClick={() => { addSet(exMenu); setExMenu(null) }}>{tr('Satz hinzufügen', 'Add set')}</button>
+            <button className="danger" onClick={() => { removeExercise(exMenu); setExMenu(null) }}>{tr('Übung aus diesem Workout entfernen', 'Remove exercise from this workout')}</button>
           </div>
         </Sheet>
       )}
@@ -416,26 +418,26 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
         <Sheet onClose={() => setWoMenu(false)}>
           <h3>Workout</h3>
           <div className="menu">
-            <button onClick={() => { setWoMenu(false); startRest() }}>Pause jetzt starten ({clock(settings.restSec)})</button>
-            <button className="danger" onClick={() => { setWoMenu(false); discard() }}>Workout verwerfen</button>
+            <button onClick={() => { setWoMenu(false); startRest() }}>{tr('Pause jetzt starten', 'Start rest now')} ({clock(settings.restSec)})</button>
+            <button className="danger" onClick={() => { setWoMenu(false); discard() }}>{tr('Workout verwerfen', 'Discard workout')}</button>
           </div>
         </Sheet>
       )}
 
       {finish && (
         <Sheet onClose={() => setFinish(false)}>
-          <h3>Workout beenden?</h3>
+          <h3>{tr('Workout beenden?', 'Finish workout?')}</h3>
           <p className="muted" style={{ marginBottom: 16 }}>
-            {doneSets} von {totalSets} Sätzen bestätigt · {clock(elapsed)}
-            {doneSets < totalSets && ' · Nicht bestätigte Sätze werden nicht gespeichert.'}
+            {tr(`${doneSets} von ${totalSets} Sätzen bestätigt`, `${doneSets} of ${totalSets} sets confirmed`)} · {clock(elapsed)}
+            {doneSets < totalSets && tr(' · Nicht bestätigte Sätze werden nicht gespeichert.', ' · Unconfirmed sets are not saved.')}
           </p>
           <div className="grid-3" style={{ marginBottom: 18 }}>
-            <div className="card kpi"><div className="label">Dauer</div><div className="value" style={{ fontSize: 20 }}>{clock(elapsed)}</div></div>
-            <div className="card kpi"><div className="label">Sätze</div><div className="value" style={{ fontSize: 20 }}>{doneSets}</div></div>
-            <div className="card kpi"><div className="label">Volumen</div><div className="value" style={{ fontSize: 20 }}>{fmtInt(workoutVolume({ ...w, exercises: w.exercises }))}</div></div>
+            <div className="card kpi"><div className="label">{tr('Dauer', 'Duration')}</div><div className="value" style={{ fontSize: 20 }}>{clock(elapsed)}</div></div>
+            <div className="card kpi"><div className="label">{tr('Sätze', 'Sets')}</div><div className="value" style={{ fontSize: 20 }}>{doneSets}</div></div>
+            <div className="card kpi"><div className="label">{tr('Volumen', 'Volume')}</div><div className="value" style={{ fontSize: 20 }}>{fmtInt(workoutVolume({ ...w, exercises: w.exercises }))}</div></div>
           </div>
-          <button className="btn btn-chrome btn-block" onClick={finishWorkout} disabled={doneSets === 0}>Speichern & beenden</button>
-          <button className="btn btn-ghost btn-block" style={{ marginTop: 10 }} onClick={() => setFinish(false)}>Weiter trainieren</button>
+          <button className="btn btn-chrome btn-block" onClick={finishWorkout} disabled={doneSets === 0}>{tr('Speichern & beenden', 'Save & finish')}</button>
+          <button className="btn btn-ghost btn-block" style={{ marginTop: 10 }} onClick={() => setFinish(false)}>{tr('Weiter trainieren', 'Keep training')}</button>
         </Sheet>
       )}
 
@@ -470,8 +472,8 @@ function RestDock({ left, msLeft, total, done, onAdd, onSkip }: {
         />
       </svg>
       <div className="grow">
-        <div className="lbl">{done ? 'Pause vorbei' : 'Pause'}</div>
-        <div className="t">{done ? 'Los geht’s' : clock(left)}</div>
+        <div className="lbl">{done ? tr('Pause vorbei', 'Rest over') : tr('Pause', 'Rest')}</div>
+        <div className="t">{done ? tr('Los geht’s', 'Let’s go') : clock(left)}</div>
       </div>
       {!done && <button className="btn btn-ghost btn-sm" onClick={() => onAdd(-15)}>−15</button>}
       {!done && <button className="btn btn-ghost btn-sm" onClick={() => onAdd(15)}>+15</button>}
@@ -512,25 +514,25 @@ function SetEditor({ initial, fallback, title, dumbbell, onClose, onApply, onCom
   return (
     <Sheet onClose={onClose}>
       <h3>{title}</h3>
-      {fallback && <p className="faint" style={{ fontSize: 13 }}>Letztes Mal: {fmtKg(fallback.weight ?? 0)} kg × {fallback.reps}</p>}
+      {fallback && <p className="faint" style={{ fontSize: 13 }}>{tr('Letztes Mal', 'Last time')}: {fmtKg(fallback.weight ?? 0)} kg × {fallback.reps}</p>}
       <div className="segmented" style={{ marginTop: 14 }}>
-        <button className={mode === 'wheel' ? 'on' : ''} onClick={() => switchMode('wheel')}>Drehrad</button>
-        <button className={mode === 'keys' ? 'on' : ''} onClick={() => switchMode('keys')}>Tastatur</button>
+        <button className={mode === 'wheel' ? 'on' : ''} onClick={() => switchMode('wheel')}>{tr('Drehrad', 'Wheel')}</button>
+        <button className={mode === 'keys' ? 'on' : ''} onClick={() => switchMode('keys')}>{tr('Tastatur', 'Keyboard')}</button>
       </div>
       {mode === 'wheel' ? (
         <div className="wheels">
           <div className="wheel-col"><div className="cap">kg</div><Wheel values={kgValues} value={weight} onChange={setWeight} format={fmtKg} /></div>
-          <div className="wheel-col"><div className="cap">Wdh</div><Wheel values={REPS} value={reps} onChange={setReps} /></div>
+          <div className="wheel-col"><div className="cap">{tr('Wdh', 'Reps')}</div><Wheel values={REPS} value={reps} onChange={setReps} /></div>
         </div>
       ) : (
         <div className="grid-2" style={{ margin: '18px 0' }}>
           <div><label className="lbl">kg</label><input className="field" inputMode="decimal" value={wText} onChange={(e) => setWText(e.target.value)} onFocus={(e) => e.target.select()} autoFocus /></div>
-          <div><label className="lbl">Wiederholungen</label><input className="field" inputMode="numeric" value={rText} onChange={(e) => setRText(e.target.value)} onFocus={(e) => e.target.select()} /></div>
+          <div><label className="lbl">{tr('Wiederholungen', 'Reps')}</label><input className="field" inputMode="numeric" value={rText} onChange={(e) => setRText(e.target.value)} onFocus={(e) => e.target.select()} /></div>
         </div>
       )}
       <div className="grid-2">
-        <button className="btn btn-ghost" onClick={() => onApply(values())}>Übernehmen</button>
-        <Tap className="btn btn-chrome" onClick={() => onComplete(values())}><Icon.check /> Satz fertig</Tap>
+        <button className="btn btn-ghost" onClick={() => onApply(values())}>{tr('Übernehmen', 'Apply')}</button>
+        <Tap className="btn btn-chrome" onClick={() => onComplete(values())}><Icon.check /> {tr('Satz fertig', 'Set done')}</Tap>
       </div>
     </Sheet>
   )
@@ -549,16 +551,16 @@ export function ExercisePicker({ onClose, onPick }: { onClose: () => void; onPic
   }
   return (
     <Sheet onClose={onClose}>
-      <h3>Übung hinzufügen</h3>
-      <input className="input" placeholder="Suchen oder neu anlegen" value={q} onChange={(e) => setQ(e.target.value)} style={{ margin: '12px 0' }} />
+      <h3>{tr('Übung hinzufügen', 'Add exercise')}</h3>
+      <input className="input" placeholder={tr('Suchen oder neu anlegen', 'Search or create')} value={q} onChange={(e) => setQ(e.target.value)} style={{ margin: '12px 0' }} />
       <div className="menu">
         {list.map((e) => (
           <button key={e.id} onClick={() => onPick(e.id)}>
-            <span style={{ flex: 1 }}>{e.name}</span><span className="faint" style={{ fontSize: 13 }}>{e.muscle}</span>
+            <span style={{ flex: 1 }}>{e.name}</span><span className="faint" style={{ fontSize: 13 }}>{muscleLabel(e.muscle)}</span>
           </button>
         ))}
         {q.trim() && !list.some((e) => e.name.toLowerCase() === q.trim().toLowerCase()) && (
-          <button onClick={create}><Icon.plus /> „{q.trim()}“ anlegen</button>
+          <button onClick={create}><Icon.plus /> {tr(`„${q.trim()}“ anlegen`, `Create “${q.trim()}”`)}</button>
         )}
       </div>
     </Sheet>

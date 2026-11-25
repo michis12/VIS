@@ -36,7 +36,7 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 
 const ITEM_PROPS = {
-  name: { type: 'string', description: 'Kurzer deutscher Name, z. B. "Reis, gekocht"' },
+  name: { type: 'string', description: 'Kurzer Name in der Sprache der App, z. B. "Reis, gekocht"' },
   grams: { type: 'number', description: 'Menge in Gramm' },
   kcal: { type: 'number', description: 'kcal für diese Menge' },
   protein: { type: 'number', description: 'Eiweiß in g für diese Menge' },
@@ -276,7 +276,7 @@ const SCHEMA = {
       items: {
         type: 'object',
         properties: {
-          name: { type: 'string', description: 'Kurzer deutscher Name, z. B. "Reis, gekocht"' },
+          name: { type: 'string', description: 'Kurzer Name in der Sprache der App, z. B. "Reis, gekocht"' },
           grams: { type: 'number', description: 'Geschätzte Menge in Gramm' },
           kcal: { type: 'number', description: 'kcal für diese Menge' },
           protein: { type: 'number', description: 'Eiweiß in g für diese Menge' },
@@ -331,6 +331,7 @@ Deno.serve(async (req) => {
     candidates?: { id: string; name: string; kcal: number; p: number; c: number; f: number; typ: number; count: number; extra?: boolean }[]
     meals?: { text: string; hour: number; count: number }[]
     sample?: string[][]; names?: { name: string; count: number }[]; catalog?: { id: string; name: string }[]
+    lang?: 'de' | 'en'
   }
   try {
     body = await req.json()
@@ -413,6 +414,11 @@ Deno.serve(async (req) => {
       model: MODEL, system: SYSTEM, schema: SCHEMA,
       content: [img, { type: 'text', text: (hints ? hints + '\n\n' : '') + 'Welche Lebensmittel sind auf dem Foto und wie viel davon?' }],
     }
+  }
+  // the app's UI language: the German prompts stay, but visible text comes back in English when asked
+  // (import modes return exercise names and dates only, so they are left alone)
+  if (body.lang === 'en' && !mode.startsWith('import')) {
+    call.system += '\n\nIMPORTANT: The app is set to English. Write every user-visible text in your answer (food and dish names, titles, comments, bullets, warnings) in English, du-form becomes a friendly "you". Keep numbers and units as instructed.'
   }
   // Haiku has no server-side fallback; the larger models get the default fallback chain
   const fast = String(call.model).startsWith('claude-haiku')

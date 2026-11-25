@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { haptic } from '../lib'
@@ -58,15 +59,15 @@ export function Scanner({ onCode, onClose }: { onCode: (code: string) => void; o
   const [torchMsg, setTorchMsg] = useState<string | null>(null)
 
   const toggleTorch = async () => {
-    const t = track.current
-    if (!t || t.readyState !== 'live') return
+    const tr = track.current
+    if (!tr || tr.readyState !== 'live') return
     try {
-      await t.applyConstraints({ advanced: [{ torch: !torch } as MediaTrackConstraintSet] })
+      await tr.applyConstraints({ advanced: [{ torch: !torch } as MediaTrackConstraintSet] })
       setTorch(!torch)
       setTorchMsg(null)
     } catch {
       setTorchAvail(false)
-      setTorchMsg('Licht wird hier leider nicht unterstützt')
+      setTorchMsg(t('Licht wird hier leider nicht unterstützt', 'Sorry, the light is not supported here'))
     }
   }
 
@@ -110,8 +111,8 @@ export function Scanner({ onCode, onClose }: { onCode: (code: string) => void; o
         const name = (e as Error).name
         setErr(
           name === 'NotAllowedError'
-            ? 'Kein Kamerazugriff – in den iPhone-Einstellungen für diese App erlauben.'
-            : 'Kamera bleibt schwarz – tippe auf „Neu starten“.',
+            ? t('Kein Kamerazugriff – in den iPhone-Einstellungen für diese App erlauben.', 'No camera access – allow it for this app in iPhone Settings.')
+            : t('Kamera bleibt schwarz – tippe auf „Neu starten“.', 'Camera stays black – tap “Restart”.'),
         )
       }
     })()
@@ -134,18 +135,18 @@ export function Scanner({ onCode, onClose }: { onCode: (code: string) => void; o
       <video ref={video} playsInline muted autoPlay />
       <div className="scanner-frame" />
       <div className="scanner-top">
-        <button className="btn btn-ghost btn-sm" onClick={() => setTryNo((n) => n + 1)}>Neu starten</button>
-        <button className="btn btn-ghost btn-sm" onClick={onClose}>Abbrechen</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => setTryNo((n) => n + 1)}>{t('Neu starten', 'Restart')}</button>
+        <button className="btn btn-ghost btn-sm" onClick={onClose}>{t('Abbrechen', 'Cancel')}</button>
       </div>
       {torchAvail && !err && (
-        <Tap className={'scanner-torch' + (torch ? ' on' : '')} onClick={toggleTorch} aria-label={torch ? 'Licht aus' : 'Licht an'}>
+        <Tap className={'scanner-torch' + (torch ? ' on' : '')} onClick={toggleTorch} aria-label={torch ? t('Licht aus', 'Light off') : t('Licht an', 'Light on')}>
           <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M7 3h10v3l-2 4v10a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V10L7 6Z" />
             <path d="M7 6h10M12 13v2" />
           </svg>
         </Tap>
       )}
-      <div className="scanner-hint">{err ?? torchMsg ?? 'Barcode in den Rahmen halten'}</div>
+      <div className="scanner-hint">{err ?? torchMsg ?? t('Barcode in den Rahmen halten', 'Hold the barcode inside the frame')}</div>
     </div>,
     document.body,
   )

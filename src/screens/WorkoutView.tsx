@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useState } from 'react'
 import { WorkoutScoreButton } from '../components/WorkoutScoreSheet'
 import { Icon, ProgressBadges } from '../components/ui'
@@ -27,7 +28,7 @@ export function WorkoutView({ id }: { id: string }) {
     return (
       <div className="screen no-tabs">
         <div className="wo-head"><button className="icon-btn" onClick={nav.pop}><Icon.back /></button><div className="grow" /></div>
-        <p className="muted" style={{ marginTop: 30 }}>Workout nicht gefunden.</p>
+        <p className="muted" style={{ marginTop: 30 }}>{t('Workout nicht gefunden.', 'Workout not found.')}</p>
       </div>
     )
   }
@@ -81,29 +82,29 @@ export function WorkoutView({ id }: { id: string }) {
     return (
       <div className="screen no-tabs">
         <div className="wo-head">
-          <button className="btn btn-ghost btn-sm" onClick={() => setDraft(null)}>Abbrechen</button>
-          <div className="grow" style={{ textAlign: 'center' }}><div className="name">Bearbeiten</div></div>
-          <button className="btn btn-chrome btn-sm" onClick={save}>Sichern</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => setDraft(null)}>{t('Abbrechen', 'Cancel')}</button>
+          <div className="grow" style={{ textAlign: 'center' }}><div className="name">{t('Bearbeiten', 'Edit')}</div></div>
+          <button className="btn btn-chrome btn-sm" onClick={save}>{t('Sichern', 'Save')}</button>
         </div>
 
         <label className="lbl" style={{ marginTop: 20 }}>Name</label>
         <input className="input" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
         <div className="grid-2">
           <div>
-            <label className="lbl">Datum & Uhrzeit</label>
+            <label className="lbl">{t('Datum & Uhrzeit', 'Date & time')}</label>
             <input className="input" type="datetime-local" value={draft.startedAt.slice(0, 16)}
               onChange={(e) => e.target.value && setDraft({ ...draft, startedAt: e.target.value + ':00' })} />
           </div>
           <div>
-            <label className="lbl">Dauer (min)</label>
+            <label className="lbl">{t('Dauer (min)', 'Duration (min)')}</label>
             <input className="input num" inputMode="numeric" value={draft.durationMin} placeholder="–"
               onChange={(e) => setDraft({ ...draft, durationMin: e.target.value })} />
           </div>
         </div>
         <label className="lbl">Status</label>
         <div className="segmented">
-          <button className={draft.status === 'done' ? 'on' : ''} onClick={() => setDraft({ ...draft, status: 'done' })}>Trainiert</button>
-          <button className={draft.status === 'skipped' ? 'on' : ''} onClick={() => setDraft({ ...draft, status: 'skipped' })}>Ausgelassen</button>
+          <button className={draft.status === 'done' ? 'on' : ''} onClick={() => setDraft({ ...draft, status: 'done' })}>{t('Trainiert', 'Trained')}</button>
+          <button className={draft.status === 'skipped' ? 'on' : ''} onClick={() => setDraft({ ...draft, status: 'skipped' })}>{t('Ausgelassen', 'Skipped')}</button>
         </div>
 
         {draft.exercises.map((e, ei) => e.skipped ? (
@@ -111,35 +112,35 @@ export function WorkoutView({ id }: { id: string }) {
             <div className="ex-title">
               <div>
                 <div className="name">{store.exerciseById.get(e.exerciseId)?.name ?? e.exerciseId}</div>
-                <div className="muscle">Nicht trainiert</div>
+                <div className="muscle">{t('Nicht trainiert', 'Not trained')}</div>
               </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => mapEx(ei, (x) => ({ ...x, skipped: undefined, sets: x.sets.map(() => ({ wt: '', rt: '' })) }))}>Werte eintragen</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => mapEx(ei, (x) => ({ ...x, skipped: undefined, sets: x.sets.map(() => ({ wt: '', rt: '' })) }))}>{t('Werte eintragen', 'Enter values')}</button>
             </div>
           </div>
         ) : (
           <div className="card ex-card" key={ei}>
             <div className="ex-title">
               <div className="name">{store.exerciseById.get(e.exerciseId)?.name ?? e.exerciseId}</div>
-              <button className="remove" onClick={() => mapEx(ei, () => null)} aria-label="Übung entfernen">×</button>
+              <button className="remove" onClick={() => mapEx(ei, () => null)} aria-label={t('Übung entfernen', 'Remove exercise')}>×</button>
             </div>
-            <div className="edit-head"><span>Satz</span><span>kg</span><span>Wdh</span><span /></div>
+            <div className="edit-head"><span>{t('Satz', 'Set')}</span><span>kg</span><span>{t('Wdh', 'Reps')}</span><span /></div>
             {e.sets.map((s, si) => (
               <div className="edit-row" key={si}>
                 <span className="set-no">{si + 1}</span>
                 <input className="val" inputMode="decimal" value={s.wt} placeholder="kg"
                   onChange={(ev) => setSet(ei, si, 'wt', ev.target.value)} />
-                <input className="val" inputMode="numeric" value={s.rt} placeholder="Wdh"
+                <input className="val" inputMode="numeric" value={s.rt} placeholder={t('Wdh', 'Reps')}
                   onChange={(ev) => setSet(ei, si, 'rt', ev.target.value)} />
-                <button className="remove" onClick={() => mapEx(ei, (x) => ({ ...x, sets: x.sets.filter((_, j) => j !== si) }))} aria-label="Satz löschen">×</button>
+                <button className="remove" onClick={() => mapEx(ei, (x) => ({ ...x, sets: x.sets.filter((_, j) => j !== si) }))} aria-label={t('Satz löschen', 'Delete set')}>×</button>
               </div>
             ))}
             <button className="add-set" onClick={() => mapEx(ei, (x) => {
               const last = x.sets[x.sets.length - 1]
               return { ...x, sets: [...x.sets, { wt: last?.wt ?? '', rt: last?.rt ?? '' }] }
-            })}>+ Satz hinzufügen</button>
+            })}>{t('+ Satz hinzufügen', '+ Add set')}</button>
           </div>
         ))}
-        <button className="btn btn-ghost btn-block" style={{ marginTop: 14 }} onClick={() => setPicker(true)}><Icon.plus /> Übung hinzufügen</button>
+        <button className="btn btn-ghost btn-block" style={{ marginTop: 14 }} onClick={() => setPicker(true)}><Icon.plus /> {t('Übung hinzufügen', 'Add exercise')}</button>
         {picker && (
           <ExercisePicker onClose={() => setPicker(false)} onPick={(exId) => {
             setDraft({ ...draft, exercises: [...draft.exercises, { exerciseId: exId, sets: [{ wt: '', rt: '' }] }] })
@@ -156,29 +157,29 @@ export function WorkoutView({ id }: { id: string }) {
   return (
     <div className="screen no-tabs">
       <div className="wo-head">
-        <button className="icon-btn" onClick={nav.pop} aria-label="Zurück"><Icon.back /></button>
+        <button className="icon-btn" onClick={nav.pop} aria-label={t('Zurück', 'Back')}><Icon.back /></button>
         <div className="grow">
           <div className="name">{w.name}</div>
-          <div className="wo-timer">{dateLabel(w.startedAt)} · {w.startedAt.slice(11, 16)} Uhr</div>
+          <div className="wo-timer">{dateLabel(w.startedAt)} · {w.startedAt.slice(11, 16)}{t(' Uhr', '')}</div>
         </div>
         {w.status === 'done' && <WorkoutScoreButton id={w.id} size={36} />}
-        {w.status !== 'active' && <button className="btn btn-ghost btn-sm" onClick={startEdit}>Bearbeiten</button>}
+        {w.status !== 'active' && <button className="btn btn-ghost btn-sm" onClick={startEdit}>{t('Bearbeiten', 'Edit')}</button>}
       </div>
 
       {rating && (rating.ups > 0 || rating.prs > 0) && (
         <div className="card" style={{ marginTop: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-          <span className="muted" style={{ fontSize: 14 }}>Fortschritt in diesem Workout</span>
+          <span className="muted" style={{ fontSize: 14 }}>{t('Fortschritt in diesem Workout', 'Progress in this workout')}</span>
           <ProgressBadges ups={rating.ups} prs={rating.prs} big />
         </div>
       )}
 
       {skipped ? (
-        <div className="card muted" style={{ marginTop: 18 }}>An diesem Tag wurde nicht trainiert.</div>
+        <div className="card muted" style={{ marginTop: 18 }}>{t('An diesem Tag wurde nicht trainiert.', 'No training on this day.')}</div>
       ) : (
         <div className="grid-3" style={{ marginTop: 12 }}>
-          <div className="card kpi"><div className="label">Dauer</div><div className="value" style={{ fontSize: 20 }}>{durationLabel(w.durationSec)}</div></div>
-          <div className="card kpi"><div className="label">Sätze</div><div className="value" style={{ fontSize: 20 }}>{workoutSetCount(w)}</div></div>
-          <div className="card kpi"><div className="label">Volumen</div><div className="value" style={{ fontSize: 20 }}>{fmtInt(workoutVolume(w))}<small>kg</small></div></div>
+          <div className="card kpi"><div className="label">{t('Dauer', 'Duration')}</div><div className="value" style={{ fontSize: 20 }}>{durationLabel(w.durationSec)}</div></div>
+          <div className="card kpi"><div className="label">{t('Sätze', 'Sets')}</div><div className="value" style={{ fontSize: 20 }}>{workoutSetCount(w)}</div></div>
+          <div className="card kpi"><div className="label">{t('Volumen', 'Volume')}</div><div className="value" style={{ fontSize: 20 }}>{fmtInt(workoutVolume(w))}<small>kg</small></div></div>
         </div>
       )}
 
@@ -187,7 +188,7 @@ export function WorkoutView({ id }: { id: string }) {
           return (
             <div className="card ex-skipped" key={i} style={{ marginTop: 12 }}>
               <div style={{ fontWeight: 680, fontSize: 16 }}>{store.exerciseById.get(e.exerciseId)?.name ?? e.exerciseId}</div>
-              <div className="faint" style={{ fontSize: 13 }}>Heute nicht trainiert</div>
+              <div className="faint" style={{ fontSize: 13 }}>{t('Heute nicht trainiert', 'Not trained today')}</div>
             </div>
           )
         }
@@ -207,13 +208,13 @@ export function WorkoutView({ id }: { id: string }) {
               </span>
             </div>
             {skipped ? (
-              <div className="faint" style={{ fontSize: 13 }}>{e.sets.length} Sätze geplant</div>
+              <div className="faint" style={{ fontSize: 13 }}>{t(`${e.sets.length} Sätze geplant`, `${e.sets.length} sets planned`)}</div>
             ) : (
               sets.map(({ s, flag }, j) => (
                 <div key={j} className="pr-row num">
                   <span className="faint" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    Satz {j + 1}
-                    {flag && <span className={'pbadge ' + flag} style={{ height: 20, padding: '0 7px 0 5px', fontSize: 11 }}>{flag === 'pr' ? <><Icon.cup size={11} /> Rekord</> : <><Icon.up size={11} /> mehr</>}</span>}
+                    {t('Satz', 'Set')} {j + 1}
+                    {flag && <span className={'pbadge ' + flag} style={{ height: 20, padding: '0 7px 0 5px', fontSize: 11 }}>{flag === 'pr' ? <><Icon.cup size={11} /> {t('Rekord', 'Record')}</> : <><Icon.up size={11} /> {t('mehr', 'more')}</>}</span>}
                   </span>
                   <span><b>{fmtKg(s.weight ?? 0)}</b> kg × <b>{s.reps}</b></span>
                 </div>
@@ -225,7 +226,7 @@ export function WorkoutView({ id }: { id: string }) {
 
       <button className="btn btn-danger btn-block" style={{ marginTop: 26 }}
         onClick={() => (confirm ? (store.deleteWorkout(w.id), nav.pop()) : setConfirm(true))}>
-        {confirm ? 'Wirklich löschen?' : 'Workout löschen'}
+        {confirm ? t('Wirklich löschen?', 'Really delete?') : t('Workout löschen', 'Delete workout')}
       </button>
     </div>
   )

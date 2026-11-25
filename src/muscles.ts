@@ -1,4 +1,14 @@
+import { getLang } from './i18n'
 import type { Exercise } from './types'
+
+const MUSCLE_EN: Record<string, string> = {
+  Brust: 'Chest', Rücken: 'Back', Schultern: 'Shoulders', Beine: 'Legs', Bizeps: 'Biceps', Trizeps: 'Triceps',
+  Bauch: 'Abs', Waden: 'Calves', Unterarme: 'Forearms', Nacken: 'Neck', Po: 'Glutes', Gesäß: 'Glutes',
+  Sonstige: 'Other', Ganzkörper: 'Full body', Cardio: 'Cardio', Oberschenkel: 'Thighs', Hüfte: 'Hips',
+}
+
+/** Muscle groups are stored in German; this is the name to show. */
+export const muscleLabel = (g: string) => (getLang() === 'en' ? MUSCLE_EN[g] ?? g : g)
 
 /**
  * Which muscle groups an exercise works: the primary group is the exercise's own

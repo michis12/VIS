@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { refreshPlan } from './components/AiCredit'
 import { Celebration } from './components/Celebration'
 import { Paywall } from './components/Paywall'
 import { Icon, Tap, Toast } from './components/ui'
+import { getLang, t } from './i18n'
 import { haptic } from './lib'
 import { NavCtx, type Overlay } from './nav'
 import { Body } from './screens/Body'
@@ -21,16 +22,18 @@ import { StoreProvider, useStore } from './store'
 
 type Tab = 'train' | 'stats' | 'body' | 'food' | 'profile'
 
-const TABS: { id: Tab; label: string; icon: () => React.JSX.Element }[] = [
-  { id: 'stats', label: 'Statistik', icon: Icon.chart },
-  { id: 'body', label: 'Körper', icon: Icon.body },
-  { id: 'train', label: 'Training', icon: Icon.dumbbell },
-  { id: 'food', label: 'Ernährung', icon: Icon.food },
-  { id: 'profile', label: 'Profil', icon: Icon.trophy },
+const TABS: { id: Tab; label: () => string; icon: () => React.JSX.Element }[] = [
+  { id: 'stats', label: () => t('Statistik', 'Stats'), icon: Icon.chart },
+  { id: 'body', label: () => t('Körper', 'Body'), icon: Icon.body },
+  { id: 'train', label: () => t('Training', 'Training'), icon: Icon.dumbbell },
+  { id: 'food', label: () => t('Ernährung', 'Nutrition'), icon: Icon.food },
+  { id: 'profile', label: () => t('Profil', 'Profile'), icon: Icon.trophy },
 ]
 
 function Shell() {
   const { active } = useStore()
+  // switching the language remounts the screens (not the navigation state), so every string re-renders
+  const lang = getLang()
   const [tab, setTab] = useState<Tab>('train')
   const [showWorkout, setShowWorkout] = useState(!!active)
   const [stack, setStack] = useState<Overlay[]>([])
@@ -89,21 +92,23 @@ function Shell() {
       <div className="app">
         {!content && <div className="top-blur" />}
         <div className="app" style={content ? { visibility: 'hidden' } : undefined} aria-hidden={!!content}>
+          <Fragment key={lang}>
           {tab === 'train' && <Home onOpenWorkout={() => setShowWorkout(true)} onOpenStats={() => { haptic(); setTab('stats') }} onOpenBody={(f) => { haptic(); setBodyFocus(f ?? null); setTab('body') }} onOpenFood={() => { haptic(); setTab('food') }} toast={setToast} />}
           {tab === 'stats' && <Stats />}
           {tab === 'body' && <Body focus={bodyFocus} />}
           {tab === 'profile' && <Profile toast={setToast} />}
           {tab === 'food' && <Nutrition />}
+          </Fragment>
           <nav className="tabbar">
             {TABS.map((t) => (
               <Tap key={t.id} className={'tab' + (tab === t.id ? ' on' : '')} onClick={() => { if (t.id !== tab) haptic(); setBodyFocus(null); setTab(t.id) }}>
                 <t.icon />
-                {t.label}
+                {t.label()}
               </Tap>
             ))}
           </nav>
         </div>
-        {content && <div className="overlay" key={stack.length + (showWorkout ? 'w' : '')}>{content}</div>}
+        {content && <div className="overlay" key={stack.length + (showWorkout ? 'w' : '')}><Fragment key={lang}>{content}</Fragment></div>}
         {toast && <Toast text={toast} onDone={clearToast} />}
         {celebrate && <Celebration id={celebrate} onClose={() => setCelebrate(null)} />}
         {paywall && <Paywall onClose={() => setPaywall(false)} />}

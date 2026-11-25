@@ -1,3 +1,4 @@
+import { decStr, t } from './i18n'
 import { calorieSteps, type Food, type FoodEntry, type Phase, type Recipe, type WeightEntry } from './types'
 
 export interface Macros { kcal: number; p: number; c: number; f: number }
@@ -43,7 +44,7 @@ export function macroTargets(kcal: number | null, weights: WeightEntry[]) {
 export const dayTotals = (log: FoodEntry[], date: string) => sum(log.filter((e) => e.date === date))
 
 export const round1 = (v: number) => Math.round(v * 10) / 10
-export const fmtG = (v: number) => (v >= 10 ? String(Math.round(v)) : round1(v).toString().replace('.', ','))
+export const fmtG = (v: number) => (v >= 10 ? String(Math.round(v)) : decStr(round1(v)))
 
 // ---------------------------------------------------------------- Open Food Facts
 // Free and open product database (no key). Search via search.openfoodfacts.org
@@ -92,13 +93,13 @@ export async function offProduct(code: string, signal?: AbortSignal): Promise<Fo
   const sq = Number(p.serving_quantity)
   return {
     id: 'off-' + p.code,
-    name: String(p.product_name_de || p.product_name || 'Produkt ' + p.code).trim(),
+    name: String(p.product_name_de || p.product_name || t('Produkt ', 'Product ') + p.code).trim(),
     brand: clean(p.brands) || undefined,
     kcal: Number(kcal) || 0,
     p: Number(n.proteins_100g) || 0,
     c: Number(n.carbohydrates_100g) || 0,
     f: Number(n.fat_100g) || 0,
-    ...(sq > 0 ? { serving: { label: `1 Portion · ${Math.round(sq)} g`, g: sq } } : {}),
+    ...(sq > 0 ? { serving: { label: t(`1 Portion · ${Math.round(sq)} g`, `1 serving · ${Math.round(sq)} g`), g: sq } } : {}),
     source: 'off',
     barcode: String(p.code),
   }

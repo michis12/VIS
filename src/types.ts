@@ -1,3 +1,5 @@
+import { t, type Lang } from './i18n'
+
 export interface Exercise {
   id: string
   name: string
@@ -47,15 +49,15 @@ export interface WeightEntry {
 }
 
 export const MEASURE_FIELDS = [
-  { key: 'arm', label: 'Oberarm', unit: 'cm' },
-  { key: 'chest', label: 'Brust', unit: 'cm' },
-  { key: 'waist', label: 'Taille', unit: 'cm' },
-  { key: 'hips', label: 'Hüfte', unit: 'cm' },
-  { key: 'thigh', label: 'Oberschenkel', unit: 'cm' },
-  { key: 'calf', label: 'Wade', unit: 'cm' },
-  { key: 'neck', label: 'Nacken', unit: 'cm' },
-  { key: 'bodyFat', label: 'Körperfett', unit: '%' },
-  { key: 'muscle', label: 'Muskelmasse', unit: 'kg' },
+  { key: 'arm', get label() { return t('Oberarm', 'Upper arm') }, unit: 'cm' },
+  { key: 'chest', get label() { return t('Brust', 'Chest') }, unit: 'cm' },
+  { key: 'waist', get label() { return t('Taille', 'Waist') }, unit: 'cm' },
+  { key: 'hips', get label() { return t('Hüfte', 'Hips') }, unit: 'cm' },
+  { key: 'thigh', get label() { return t('Oberschenkel', 'Thigh') }, unit: 'cm' },
+  { key: 'calf', get label() { return t('Wade', 'Calf') }, unit: 'cm' },
+  { key: 'neck', get label() { return t('Nacken', 'Neck') }, unit: 'cm' },
+  { key: 'bodyFat', get label() { return t('Körperfett', 'Body fat') }, unit: '%' },
+  { key: 'muscle', get label() { return t('Muskelmasse', 'Muscle mass') }, unit: 'kg' },
 ] as const
 export type MeasureKey = (typeof MEASURE_FIELDS)[number]['key']
 
@@ -103,6 +105,8 @@ export interface Settings {
   heightCm?: number
   birthYear?: number
   sex?: 'm' | 'f'
+  /** UI language, German by default */
+  lang?: Lang
 }
 
 // ---- Ernährung
@@ -134,10 +138,10 @@ export interface Recipe {
 
 export type Meal = 'breakfast' | 'lunch' | 'dinner' | 'snack'
 export const MEALS: { id: Meal; label: string }[] = [
-  { id: 'breakfast', label: 'Frühstück' },
-  { id: 'lunch', label: 'Mittagessen' },
-  { id: 'dinner', label: 'Abendessen' },
-  { id: 'snack', label: 'Snacks' },
+  { id: 'breakfast', get label() { return t('Frühstück', 'Breakfast') } },
+  { id: 'lunch', get label() { return t('Mittagessen', 'Lunch') } },
+  { id: 'dinner', get label() { return t('Abendessen', 'Dinner') } },
+  { id: 'snack', get label() { return t('Snacks', 'Snacks') } },
 ]
 
 export interface FoodEntry {

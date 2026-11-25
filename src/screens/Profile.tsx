@@ -1,3 +1,4 @@
+import { getLang, t as tr } from '../i18n'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useTween } from '../anim'
 import { pastWeekScores } from '../weekly'
@@ -11,15 +12,15 @@ import { Icon, Sheet } from '../components/ui'
 import { useNav } from '../nav'
 import { shareOrDownload } from '../files'
 import { renderShareCard } from '../shareCard'
-import { dateLabel, fmtInt } from '../lib'
+import { dateLabel, fmtInt, monthShort } from '../lib'
 import { useStore } from '../store'
 
 const TIER = [
-  { name: 'Gesperrt', a: '#3a3a3c', b: '#1c1c1e' },
+  { get name() { return tr('Gesperrt', 'Locked') }, a: '#3a3a3c', b: '#1c1c1e' },
   { name: 'Bronze', a: '#e0a47a', b: '#7a4a2a' },
-  { name: 'Silber', a: '#f2f2f7', b: '#7c7c82' },
+  { get name() { return tr('Silber', 'Silver') }, a: '#f2f2f7', b: '#7c7c82' },
   { name: 'Gold', a: '#f6d48f', b: '#9a6b22' },
-  { name: 'Platin', a: '#d9f1fa', b: '#5f8fa3' },
+  { get name() { return tr('Platin', 'Platinum') }, a: '#d9f1fa', b: '#5f8fa3' },
   { name: 'Obsidian', a: '#ffffff', b: '#2a2a2e' },
 ]
 
@@ -122,7 +123,7 @@ export function Medal({ glyph, stars, size = 64, ultimate = false }: { glyph: Gl
 
 export function Stars({ n, size = 11, fresh = 0 }: { n: number; size?: number; fresh?: number }) {
   return (
-    <span className="stars" aria-label={`${n} von 5 Sternen`}>
+    <span className="stars" aria-label={tr(`${n} von 5 Sternen`, `${n} of 5 stars`)}>
       {[0, 1, 2, 3, 4].map((i) => (
         <svg key={i} width={size} height={size} viewBox="0 0 24 24" className={(i < n ? 'on' : '') + (i < n && i >= n - fresh ? ' new' : '')} style={i < n && i >= n - fresh ? { animationDelay: `${0.3 + (i - (n - fresh)) * 0.12}s` } : undefined}>
           <path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8Z" />
@@ -164,7 +165,6 @@ export function useAchievements() {
 }
 
 const MONTH_LETTER = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
-const MONTH_SHORT = ['Jän', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
 
 export function Profile({ toast }: { toast: (t: string) => void }) {
   const { workouts, settings } = useStore()
@@ -190,19 +190,19 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
       })
       const sinceDate = first ? new Date(first.startedAt) : null
       const blob = await renderShareCard({
-        name: settings.name || 'Athlet',
+        name: settings.name || tr('Athlet', 'Athlete'),
         avatar: settings.avatar,
         rank: rank.name,
         stars: total,
         maxStars: max,
-        since: sinceDate ? `${MONTH_SHORT[sinceDate.getMonth()]} ${sinceDate.getFullYear()}` : undefined,
+        since: sinceDate ? `${monthShort(sinceDate.getMonth())} ${sinceDate.getFullYear()}` : undefined,
         kpis: [
           { label: 'Workouts', value: fmtInt(metrics.workouts) },
-          { label: 'Volumen', value: fmtInt(metrics.volumeT), unit: 't' },
-          { label: 'Sätze', value: fmtInt(metrics.sets) },
-          { label: 'Trainingszeit', value: fmtInt(metrics.hours), unit: 'h' },
-          { label: 'Beste Serie', value: String(metrics.streak), unit: 'Wo.' },
-          { label: 'Rekorde', value: fmtInt(metrics.prs) },
+          { label: tr('Volumen', 'Volume'), value: fmtInt(metrics.volumeT), unit: 't' },
+          { label: tr('Sätze', 'Sets'), value: fmtInt(metrics.sets) },
+          { label: tr('Trainingszeit', 'Training time'), value: fmtInt(metrics.hours), unit: 'h' },
+          { label: tr('Beste Serie', 'Best streak'), value: String(metrics.streak), unit: tr('Wo.', 'wk') },
+          { label: tr('Rekorde', 'Records'), value: fmtInt(metrics.prs) },
         ],
         top: sorted.slice(0, 3).map((a, i) => ({ name: a.def.name, stars: a.stars, svg: medals[i] ?? '' })),
         months,
@@ -210,7 +210,7 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
       const file = new File([blob], `VIS-Profil-${new Date().toISOString().slice(0, 10)}.png`, { type: 'image/png' })
       setPreview({ url: URL.createObjectURL(blob), file })
     } catch (e) {
-      toast('Bild konnte nicht erstellt werden: ' + (e as Error).message)
+      toast(tr('Bild konnte nicht erstellt werden: ', 'Could not create the image: ') + (e as Error).message)
     } finally {
       setBusy(false)
     }
@@ -249,21 +249,21 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
 
   return (
     <div className="screen">
-      <div className="eyebrow">Profil · Ehrenhalle</div>
+      <div className="eyebrow">{tr('Profil · Ehrenhalle', 'Profile · Hall of fame')}</div>
       <div className="profile-head">
         <Avatar size={76} onClick={() => setEditing(true)} />
         <div className="who">
           <div className="nm-row">
-            <div className="nm" lang="de" style={{ fontSize: nameSize(settings.name || 'Dein Name') }}>{settings.name || 'Dein Name'}</div>
+            <div className="nm" lang={getLang()} style={{ fontSize: nameSize(settings.name || tr('Dein Name', 'Your name')) }}>{settings.name || tr('Dein Name', 'Your name')}</div>
             <PlanBadge onClick={openPaywall} />
           </div>
-          <button className="link muted" style={{ fontSize: 14 }} onClick={() => setEditing(true)}>Profil bearbeiten</button>
+          <button className="link muted" style={{ fontSize: 14 }} onClick={() => setEditing(true)}>{tr('Profil bearbeiten', 'Edit profile')}</button>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="icon-btn" onClick={buildShare} disabled={busy} aria-label="Profil teilen" style={{ width: 44, height: 44 }}>
+          <button className="icon-btn" onClick={buildShare} disabled={busy} aria-label={tr('Profil teilen', 'Share profile')} style={{ width: 44, height: 44 }}>
             <Icon.share />
           </button>
-          <button className="icon-btn" onClick={() => nav.push({ kind: 'settings' })} aria-label="Einstellungen" style={{ width: 44, height: 44 }}>
+          <button className="icon-btn" onClick={() => nav.push({ kind: 'settings' })} aria-label={tr('Einstellungen', 'Settings')} style={{ width: 44, height: 44 }}>
             <Icon.gear />
           </button>
         </div>
@@ -271,38 +271,38 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
 
       <div className="card chrome-edge rank-card">
         <div className="rank-glow" />
-        <div className="eyebrow">Rang</div>
+        <div className="eyebrow">{tr('Rang', 'Rank')}</div>
         <div className="rank-name chrome-text">{rank.name}</div>
-        <div className="muted num" style={{ marginTop: 2 }}>{total} / {max} Sterne{first ? ` · dabei seit ${dateLabel(first.startedAt)}` : ''}</div>
+        <div className="muted num" style={{ marginTop: 2 }}>{total} / {max} {tr('Sterne', 'stars')}{first ? tr(` · dabei seit ${dateLabel(first.startedAt)}`, ` · member since ${dateLabel(first.startedAt)}`) : ''}</div>
         <div className="progress" style={{ marginTop: 14 }}><div style={{ width: `${rankW}%` }} /></div>
         <div className="faint" style={{ fontSize: 12, marginTop: 6 }}>
-          {nr ? `Noch ${nr.min - total} Sterne bis ${nr.name}` : 'Höchster Rang erreicht'}
+          {nr ? tr(`Noch ${nr.min - total} Sterne bis ${nr.name}`, `${nr.min - total} more stars to ${nr.name}`) : tr('Höchster Rang erreicht', 'Highest rank reached')}
         </div>
       </div>
 
       <button className={'card ult-card' + (ultimate ? ' won' : '')} onClick={() => setUltOpen(true)}>
         <Medal glyph="crown" stars={ultimate ? 5 : 0} size={78} ultimate />
         <div style={{ flex: 1, textAlign: 'left' }}>
-          <div className="eyebrow">Ultimatives Achievement</div>
+          <div className="eyebrow">{tr('Ultimatives Achievement', 'Ultimate achievement')}</div>
           <div style={{ fontSize: 22, fontWeight: 750 }} className={ultimate ? 'chrome-text' : ''}>{ULTIMATE.name}</div>
-          <div className="muted" style={{ fontSize: 13 }}>{maxed} / {core.length} Achievements gemaxt</div>
+          <div className="muted" style={{ fontSize: 13 }}>{maxed} / {core.length} {tr('Achievements gemaxt', 'achievements maxed')}</div>
           <div className="progress" style={{ marginTop: 8 }}><div style={{ width: `${(maxed / core.length) * 100}%` }} /></div>
         </div>
       </button>
 
-      <div className="section-title"><h2>Achievements</h2><span className="faint" style={{ fontSize: 13 }}>{core.filter((a) => a.stars > 0).length} / {core.length} freigeschaltet</span></div>
+      <div className="section-title"><h2>{tr('Achievements', 'Achievements')}</h2><span className="faint" style={{ fontSize: 13 }}>{core.filter((a) => a.stars > 0).length} / {core.length} {tr('freigeschaltet', 'unlocked')}</span></div>
       <div className="ach-grid" ref={gridRef}>{sorted.map(renderAch)}</div>
 
-      <div className="section-title"><h2>Rekorde & Fortschritt</h2><span className="faint" style={{ fontSize: 13 }}>{prog.filter((a) => a.stars > 0).length} / {prog.length} freigeschaltet</span></div>
+      <div className="section-title"><h2>{tr('Rekorde & Fortschritt', 'Records & progress')}</h2><span className="faint" style={{ fontSize: 13 }}>{prog.filter((a) => a.stars > 0).length} / {prog.length} {tr('freigeschaltet', 'unlocked')}</span></div>
       <div className="ach-grid">{prog.map(renderAch)}</div>
 
-      <div className="section-title"><h2>Scores & Features</h2><span className="faint" style={{ fontSize: 13 }}>{scoreAch.filter((a) => a.stars > 0).length} / {scoreAch.length} freigeschaltet</span></div>
+      <div className="section-title"><h2>{tr('Scores & Features', 'Scores & features')}</h2><span className="faint" style={{ fontSize: 13 }}>{scoreAch.filter((a) => a.stars > 0).length} / {scoreAch.length} {tr('freigeschaltet', 'unlocked')}</span></div>
       <div className="ach-grid">{scoreAch.map(renderAch)}</div>
 
-      <div className="section-title"><h2>Kraft & Körper</h2><span className="faint" style={{ fontSize: 13 }}>{body.filter((a) => a.stars > 0).length} / {body.length} freigeschaltet</span></div>
+      <div className="section-title"><h2>{tr('Kraft & Körper', 'Strength & body')}</h2><span className="faint" style={{ fontSize: 13 }}>{body.filter((a) => a.stars > 0).length} / {body.length} {tr('freigeschaltet', 'unlocked')}</span></div>
       <div className="ach-grid">{body.map(renderAch)}</div>
 
-      <div className="section-title"><h2>Just for fun</h2><span className="faint" style={{ fontSize: 13 }}>{fun.filter((a) => a.stars > 0).length} / {fun.length} freigeschaltet</span></div>
+      <div className="section-title"><h2>{tr('Just for fun', 'Just for fun')}</h2><span className="faint" style={{ fontSize: 13 }}>{fun.filter((a) => a.stars > 0).length} / {fun.length} {tr('freigeschaltet', 'unlocked')}</span></div>
       <div className="ach-grid">{fun.map(renderAch)}</div>
 
       {open && (
@@ -324,7 +324,7 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
             {open.next != null && (
               <>
                 <div className="progress" style={{ marginTop: 10 }}><div style={{ width: `${open.progress * 100}%` }} /></div>
-                <div className="faint" style={{ fontSize: 12, marginTop: 6 }}>Noch {fmtMetric(Math.round((open.next - open.value) * 10) / 10)} bis {open.stars + 1} {open.stars + 1 === 1 ? 'Stern' : 'Sterne'}</div>
+                <div className="faint" style={{ fontSize: 12, marginTop: 6 }}>{tr(`Noch ${fmtMetric(Math.round((open.next - open.value) * 10) / 10)} bis ${open.stars + 1} ${open.stars + 1 === 1 ? 'Stern' : 'Sterne'}`, `${fmtMetric(Math.round((open.next - open.value) * 10) / 10)} more to ${open.stars + 1} ${open.stars + 1 === 1 ? 'star' : 'stars'}`)}</div>
               </>
             )}
           </div>
@@ -344,19 +344,19 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
       )}
 
       <button className="btn btn-chrome btn-block" style={{ marginTop: 22 }} onClick={buildShare} disabled={busy}>
-        <Icon.share /> {busy ? 'Erstelle Bild…' : 'Profil-Dashboard teilen'}
+        <Icon.share /> {busy ? tr('Erstelle Bild…', 'Creating image…') : tr('Profil-Dashboard teilen', 'Share profile dashboard')}
       </button>
 
       {editing && <ProfileEditor onClose={() => setEditing(false)} />}
 
       {preview && (
         <Sheet onClose={() => { URL.revokeObjectURL(preview.url); setPreview(null) }}>
-          <h3>Dein Dashboard</h3>
-          <img src={preview.url} alt="Profil-Dashboard" className="share-preview" />
+          <h3>{tr('Dein Dashboard', 'Your dashboard')}</h3>
+          <img src={preview.url} alt={tr('Profil-Dashboard', 'Profile dashboard')} className="share-preview" />
           <button className="btn btn-chrome btn-block" style={{ marginTop: 14 }} onClick={async () => {
-            const r = await shareOrDownload(preview.file, 'Mein VIS-Profil')
-            if (r === 'downloaded') toast('Bild gespeichert')
-          }}><Icon.share /> Teilen</button>
+            const r = await shareOrDownload(preview.file, tr('Mein VIS-Profil', 'My VIS profile'))
+            if (r === 'downloaded') toast(tr('Bild gespeichert', 'Image saved'))
+          }}><Icon.share /> {tr('Teilen', 'Share')}</button>
         </Sheet>
       )}
 

@@ -1,3 +1,4 @@
+import { dec, t } from '../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { haptic } from '../lib'
@@ -46,12 +47,12 @@ function Tween({ value }: { value: number }) {
 }
 
 const FEATURES: { icon: React.JSX.Element; title: string; text: string }[] = [
-  { icon: <path d="M4 8h3l2-3h6l2 3h3v11H4ZM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />, title: 'Essen per Foto', text: 'Teller fotografieren – Lebensmittel, Mengen und Makros stehen drin.' },
-  { icon: <path d="M5 6h14M5 11h14M5 16h8M16 15l3 3-3 3" />, title: 'Einfach hinschreiben', text: '„2 Semmeln mit Schinken" wird zu fertigen Einträgen.' },
-  { icon: <path d="M6 4h12v16H6ZM9 8h6M9 11h6M9 14h3" />, title: 'Nährwerttabelle scannen', text: 'Packung fotografieren statt Werte abtippen.' },
-  { icon: <path d="M12 3a9 9 0 1 0 9 9M12 7v5l3 2M17 3l1 2 2 1-2 1-1 2-1-2-2-1 2-1Z" />, title: 'Was soll ich noch essen?', text: 'Vorschläge aus deinen echten Mahlzeiten für die restlichen Makros.' },
-  { icon: <path d="M3 18c3 0 4-9 7-9s3 6 5 6 3-9 6-9M3 21h18" />, title: 'Phasenplaner', text: 'Kalorien und Dauer für Bulk oder Cut aus deinen eigenen Daten.' },
-  { icon: <path d="M12 3v12M7 10l5 5 5-5M4 19h16" />, title: 'Trainings importieren', text: 'Strong, Hevy, FitNotes oder Notizen – deine Historie kommt mit.' },
+  { icon: <path d="M4 8h3l2-3h6l2 3h3v11H4ZM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />, get title() { return t('Essen per Foto', 'Food by photo') }, get text() { return t('Teller fotografieren – Lebensmittel, Mengen und Makros stehen drin.', 'Snap your plate – foods, amounts and macros are filled in.') } },
+  { icon: <path d="M5 6h14M5 11h14M5 16h8M16 15l3 3-3 3" />, get title() { return t('Einfach hinschreiben', 'Just write it down') }, get text() { return t('„2 Semmeln mit Schinken" wird zu fertigen Einträgen.', '“2 rolls with ham” turns into ready entries.') } },
+  { icon: <path d="M6 4h12v16H6ZM9 8h6M9 11h6M9 14h3" />, get title() { return t('Nährwerttabelle scannen', 'Scan nutrition labels') }, get text() { return t('Packung fotografieren statt Werte abtippen.', 'Photograph the pack instead of typing values.') } },
+  { icon: <path d="M12 3a9 9 0 1 0 9 9M12 7v5l3 2M17 3l1 2 2 1-2 1-1 2-1-2-2-1 2-1Z" />, get title() { return t('Was soll ich noch essen?', 'What should I still eat?') }, get text() { return t('Vorschläge aus deinen echten Mahlzeiten für die restlichen Makros.', 'Ideas from your real meals for the remaining macros.') } },
+  { icon: <path d="M3 18c3 0 4-9 7-9s3 6 5 6 3-9 6-9M3 21h18" />, get title() { return t('Phasenplaner', 'Phase planner') }, get text() { return t('Kalorien und Dauer für Bulk oder Cut aus deinen eigenen Daten.', 'Calories and duration for a bulk or cut from your own data.') } },
+  { icon: <path d="M12 3v12M7 10l5 5 5-5M4 19h16" />, get title() { return t('Trainings importieren', 'Import workouts') }, get text() { return t('Strong, Hevy, FitNotes oder Notizen – deine Historie kommt mit.', 'Strong, Hevy, FitNotes or notes – your history comes along.') } },
 ]
 
 /** The plans page: opens from the Free badge in the profile or when someone without a plan taps an AI feature. */
@@ -63,7 +64,7 @@ export function Paywall({ onClose }: { onClose: () => void }) {
   const expired = !!s?.plan && !s.active
 
   const card = (k: 'free' | 'solo' | 'ultra') => {
-    const t = PLAN_TIER[k]
+    const tier = PLAN_TIER[k]
     const p = k === 'free' ? null : PLANS[k]
     const price = p ? (yearly ? p.year : p.month) : 0
     const on = k !== 'free' && pick === k
@@ -73,22 +74,22 @@ export function Paywall({ onClose }: { onClose: () => void }) {
         disabled={k === 'free'} onClick={() => { if (k !== 'free') { haptic(); setPick(k) } }}
       >
         <div className="pw-plan-top">
-          <span className={'pw-tier ' + tierClass(k)}>{t.label}</span>
-          {current === k && <span className="pw-current">Dein Plan</span>}
-          {k === 'ultra' && current !== 'ultra' && <span className="pw-current">Für Vielnutzer</span>}
+          <span className={'pw-tier ' + tierClass(k)}>{tier.label}</span>
+          {current === k && <span className="pw-current">{t('Dein Plan', 'Your plan')}</span>}
+          {k === 'ultra' && current !== 'ultra' && <span className="pw-current">{t('Für Vielnutzer', 'For heavy users')}</span>}
         </div>
         <div className="pw-price num">
-          <Tween value={price} /> €{p && <span key={yearly ? 'y' : 'm'} className="pw-unit">/{yearly ? 'Jahr' : 'Monat'}</span>}
+          <Tween value={price} /> €{p && <span key={yearly ? 'y' : 'm'} className="pw-unit">/{yearly ? t('Jahr', 'year') : t('Monat', 'month')}</span>}
         </div>
         {p && (
           <div className={'pw-save' + (yearly ? ' open' : '')}>
-            <div><div className="plan-offer-save num">{(p.year / 12).toFixed(2).replace('.', ',')} € im Monat · 2 Monate gratis</div></div>
+            <div><div className="plan-offer-save num">{dec(p.year / 12, 2)} € {t('im Monat · 2 Monate gratis', 'a month · 2 months free')}</div></div>
           </div>
         )}
         <div className="pw-desc">
-          {k === 'free' && 'Training, Statistiken, Körper und Ernährung – alles ohne KI.'}
-          {k === 'solo' && `Alle KI-Funktionen. Reicht für ca. ${PLANS.solo.photos} Essensfotos im Monat.`}
-          {k === 'ultra' && `Doppeltes Kontingent – ca. ${PLANS.ultra.photos} Essensfotos im Monat.`}
+          {k === 'free' && t('Training, Statistiken, Körper und Ernährung – alles ohne KI.', 'Training, stats, body and nutrition – everything without AI.')}
+          {k === 'solo' && t(`Alle KI-Funktionen. Reicht für ca. ${PLANS.solo.photos} Essensfotos im Monat.`, `All AI features. Enough for about ${PLANS.solo.photos} food photos a month.`)}
+          {k === 'ultra' && t(`Doppeltes Kontingent – ca. ${PLANS.ultra.photos} Essensfotos im Monat.`, `Double quota – about ${PLANS.ultra.photos} food photos a month.`)}
         </div>
       </button>
     )
@@ -97,16 +98,16 @@ export function Paywall({ onClose }: { onClose: () => void }) {
   return createPortal(
     <div className="fullsheet paywall">
       <div className="fullsheet-head">
-        <button className="icon-btn" onClick={onClose} aria-label="Schließen"><Icon.back /></button>
+        <button className="icon-btn" onClick={onClose} aria-label={t('Schließen', 'Close')}><Icon.back /></button>
         <div className="grow" />
       </div>
       <div className="fullsheet-body">
         <div className="pw-hero">
           <div className="pw-spark" aria-hidden="true">✦</div>
           <h1>VIS Pro</h1>
-          <p>Weniger tippen, mehr trainieren. Die KI erledigt das Eintragen und plant mit deinen Daten.</p>
+          <p>{t('Weniger tippen, mehr trainieren. Die KI erledigt das Eintragen und plant mit deinen Daten.', 'Less typing, more training. The AI does the logging and plans with your data.')}</p>
         </div>
-        {expired && <div className="hint" style={{ justifyContent: 'center' }}><span>Dein Abo ist abgelaufen – verlängere es, um die KI weiter zu nutzen.</span></div>}
+        {expired && <div className="hint" style={{ justifyContent: 'center' }}><span>{t('Dein Abo ist abgelaufen – verlängere es, um die KI weiter zu nutzen.', 'Your subscription has expired – renew it to keep using the AI.')}</span></div>}
 
         <div className="pw-features">
           {FEATURES.map((f) => (
@@ -119,8 +120,8 @@ export function Paywall({ onClose }: { onClose: () => void }) {
 
         <div className={'pw-switch' + (yearly ? ' right' : '')} style={{ marginTop: 22 }}>
           <i aria-hidden="true" />
-          <button className={!yearly ? 'on' : ''} onClick={() => { haptic(); setYearly(false) }}>Monatlich</button>
-          <button className={yearly ? 'on' : ''} onClick={() => { haptic(); setYearly(true) }}>Jährlich <span className="pw-switch-save">−17 %</span></button>
+          <button className={!yearly ? 'on' : ''} onClick={() => { haptic(); setYearly(false) }}>{t('Monatlich', 'Monthly')}</button>
+          <button className={yearly ? 'on' : ''} onClick={() => { haptic(); setYearly(true) }}>{t('Jährlich', 'Yearly')} <span className="pw-switch-save">−17 %</span></button>
         </div>
         <div className="pw-plans">
           {card('ultra')}
@@ -129,12 +130,12 @@ export function Paywall({ onClose }: { onClose: () => void }) {
         </div>
 
         <button className="btn btn-chrome btn-block" style={{ marginTop: 18 }} disabled>
-          {current === pick ? 'Dein aktueller Plan' : `${PLAN_TIER[pick].label} – kommt mit dem App-Store-Start`}
+          {current === pick ? t('Dein aktueller Plan', 'Your current plan') : t(`${PLAN_TIER[pick].label} – kommt mit dem App-Store-Start`, `${PLAN_TIER[pick].label} – coming with the App Store launch`)}
         </button>
         <div className="pw-fine">
           {s && !s.signedIn
-            ? 'Für VIS Pro brauchst du einen Account: Profil › Einstellungen › Cloud.'
-            : 'Kündbar jederzeit. Das Kontingent startet jeden Monatsersten neu.'}
+            ? t('Für VIS Pro brauchst du einen Account: Profil › Einstellungen › Cloud.', 'VIS Pro needs an account: Profile › Settings › Cloud.')
+            : t('Kündbar jederzeit. Das Kontingent startet jeden Monatsersten neu.', 'Cancel anytime. The quota resets on the 1st of every month.')}
         </div>
       </div>
     </div>,

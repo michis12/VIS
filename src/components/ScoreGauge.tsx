@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useId, type ReactNode } from 'react'
 import { useTween } from '../anim'
 
@@ -24,7 +25,7 @@ export function ScoreGauge({ score, size = 180, label }: { score: number; size?:
   const end = START + SWEEP * frac
   const [kx, ky] = pt(end)
   return (
-    <svg width={size} height={size * 0.74} viewBox="0 6 200 148" className="gauge" role="img" aria-label={`Wochenscore ${score} von 99`}>
+    <svg width={size} height={size * 0.74} viewBox="0 6 200 148" className="gauge" role="img" aria-label={t(`Wochenscore ${score} von 99`, `Week score ${score} of 99`)}>
       <defs>
         <linearGradient id={`g${id}`} x1="0" y1="1" x2="1" y2="0">
           <stop offset="0" stopColor="#8e8e93" />
@@ -51,7 +52,7 @@ export function ScorePill({ score: target, size = 34, animate = false }: { score
   const r = 13
   const c = 2 * Math.PI * r
   return (
-    <span className="score-pill" style={{ width: size, height: size }} title={`Workout-Score ${score}/99`}>
+    <span className="score-pill" style={{ width: size, height: size }} title={t(`Workout-Score ${score}/99`, `Workout score ${score}/99`)}>
       <svg viewBox="0 0 32 32" width={size} height={size} aria-hidden="true">
         <circle cx="16" cy="16" r={r} fill="none" stroke="rgba(255,255,255,.1)" strokeWidth="2.6" />
         <circle cx="16" cy="16" r={r} fill="none" stroke="#e5e5ea" strokeWidth="2.6" strokeLinecap="round"

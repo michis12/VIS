@@ -1,3 +1,4 @@
+import { t } from './i18n'
 import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js'
 import type { Snapshot } from './db'
 
@@ -87,9 +88,9 @@ export async function upload(snap: Snapshot, force = false): Promise<boolean> {
 }
 
 function translate(msg: string) {
-  if (/invalid login credentials/i.test(msg)) return 'E-Mail oder Passwort falsch'
-  if (/email not confirmed/i.test(msg)) return 'Bitte zuerst den Link in der Bestätigungs-Mail öffnen'
-  if (/already registered/i.test(msg)) return 'Diese E-Mail ist schon registriert – bitte anmelden'
-  if (/password/i.test(msg) && /6/.test(msg)) return 'Passwort braucht mindestens 6 Zeichen'
+  if (/invalid login credentials/i.test(msg)) return t('E-Mail oder Passwort falsch', 'Wrong email or password')
+  if (/email not confirmed/i.test(msg)) return t('Bitte zuerst den Link in der Bestätigungs-Mail öffnen', 'Please open the link in the confirmation email first')
+  if (/already registered/i.test(msg)) return t('Diese E-Mail ist schon registriert – bitte anmelden', 'This email is already registered – please sign in')
+  if (/password/i.test(msg) && /6/.test(msg)) return t('Passwort braucht mindestens 6 Zeichen', 'Password needs at least 6 characters')
   return msg
 }

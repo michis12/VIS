@@ -1,5 +1,6 @@
+import { t } from '../i18n'
 import { useMemo } from 'react'
-import { fmtInt, today } from '../lib'
+import { dayShort, fmtInt, today } from '../lib'
 import { dayTotals, kcalTarget } from '../nutrition'
 import { useStore } from '../store'
 
@@ -8,7 +9,6 @@ const addDays = (iso: string, d: number) => {
   t.setDate(t.getDate() + d)
   return t.toISOString().slice(0, 10)
 }
-const WD = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
 
 /** Calories of the last 7 days against the phase target (Statistik). */
 export function CaloriesWeek() {
@@ -23,7 +23,7 @@ export function CaloriesWeek() {
   const maxK = Math.max(1, ...week.map((x) => Math.max(x.kcal, x.target ?? 0)))
   return (
     <>
-      <div className="section-title"><h2>Kalorien · 7 Tage</h2>{avg > 0 && <span className="faint" style={{ fontSize: 13 }}>Ø {fmtInt(avg)} kcal</span>}</div>
+      <div className="section-title"><h2>{t('Kalorien · 7 Tage', 'Calories · 7 days')}</h2>{avg > 0 && <span className="faint" style={{ fontSize: 13 }}>{t('Ø', 'avg')} {fmtInt(avg)} kcal</span>}</div>
       <div className="card">
         <div className="nut-week">
           {week.map((x) => (
@@ -33,11 +33,11 @@ export function CaloriesWeek() {
                 {x.target != null && <i className="tgt" style={{ bottom: `${(x.target / maxK) * 100}%` }} />}
                 <b style={{ height: `${(x.kcal / maxK) * 100}%` }} />
               </div>
-              <span>{WD[new Date(x.d + 'T12:00:00').getDay()]}</span>
+              <span>{dayShort(new Date(x.d + 'T12:00:00').getDay())}</span>
             </div>
           ))}
         </div>
-        <div className="faint" style={{ fontSize: 11, textAlign: 'center', marginTop: 6 }}>Strich = Kalorienziel der Phase</div>
+        <div className="faint" style={{ fontSize: 11, textAlign: 'center', marginTop: 6 }}>{t('Strich = Kalorienziel der Phase', 'Line = phase calorie target')}</div>
       </div>
     </>
   )

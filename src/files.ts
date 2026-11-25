@@ -1,3 +1,4 @@
+import { t } from './i18n'
 import { localIso, uid } from './lib'
 import type { Exercise, Template } from './types'
 
@@ -63,10 +64,10 @@ export async function parseTemplatesFile(file: File, existing: Exercise[]) {
   try {
     data = JSON.parse(await file.text())
   } catch {
-    throw new Error('Datei ist kein gültiges JSON')
+    throw new Error(t('Datei ist kein gültiges JSON', 'File is not valid JSON'))
   }
   if (data?.app !== 'vis' || data.kind !== 'templates' || !Array.isArray(data.templates)) {
-    throw new Error('Keine VIS-Template-Datei')
+    throw new Error(t('Keine VIS-Template-Datei', 'Not a VIS template file'))
   }
   const byId = new Map(existing.map((e) => [e.id, e]))
   const byName = new Map(existing.map((e) => [e.name.toLowerCase(), e]))

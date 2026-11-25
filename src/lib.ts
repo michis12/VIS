@@ -1,3 +1,4 @@
+import { dec, locale, t } from './i18n'
 import type { SetEntry, Workout } from './types'
 
 export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36)
@@ -25,23 +26,37 @@ export function durationLabel(sec: number | null) {
   return h ? `${h} h ${m} min` : `${m} min`
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
-const DAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
+const MONTHS_DE = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez']
+const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const DAYS_DE = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
+const DAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const MONTHS_LONG_DE = ['Jänner', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember']
+const MONTHS_LONG_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+/** Short month name (0-based month) in the current language. */
+export const monthShort = (m: number) => t(MONTHS_DE[m], MONTHS_EN[m])
+/** Full month name (0-based month) in the current language. */
+export const monthLong = (m: number) => t(MONTHS_LONG_DE[m], MONTHS_LONG_EN[m])
+/** Short weekday name (0 = Sunday) in the current language. */
+export const dayShort = (d: number) => t(DAYS_DE[d], DAYS_EN[d])
+
+const asDate = (iso: string) => new Date(iso.length === 10 ? iso + 'T12:00:00' : iso)
 
 export function dateLabel(iso: string, withYear = true) {
-  const d = new Date(iso.length === 10 ? iso + 'T12:00:00' : iso)
-  return `${DAYS[d.getDay()]}, ${d.getDate()}. ${MONTHS[d.getMonth()]}${withYear ? ' ' + d.getFullYear() : ''}`
+  const d = asDate(iso)
+  const y = withYear ? ' ' + d.getFullYear() : ''
+  return t(`${dayShort(d.getDay())}, ${d.getDate()}. ${monthShort(d.getMonth())}${y}`, `${dayShort(d.getDay())}, ${d.getDate()} ${monthShort(d.getMonth())}${y}`)
 }
 
 export const shortDate = (iso: string) => {
-  const d = new Date(iso.length === 10 ? iso + 'T12:00:00' : iso)
-  return `${d.getDate()}. ${MONTHS[d.getMonth()]}`
+  const d = asDate(iso)
+  return t(`${d.getDate()}. ${monthShort(d.getMonth())}`, `${d.getDate()} ${monthShort(d.getMonth())}`)
 }
 
-export const monthLabel = (d: Date) => `${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`
+export const monthLabel = (d: Date) => `${monthShort(d.getMonth())} ${String(d.getFullYear()).slice(2)}`
 
-export const fmtKg = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1).replace('.', ','))
-export const fmtInt = (n: number) => Math.round(n).toLocaleString('de-AT')
+export const fmtKg = (n: number) => (Number.isInteger(n) ? String(n) : dec(n, 1))
+export const fmtInt = (n: number) => Math.round(n).toLocaleString(locale())
 
 /** Epley estimated one-rep max. */
 export const e1rm = (w: number, r: number) => (r <= 0 ? 0 : r === 1 ? w : w * (1 + r / 30))

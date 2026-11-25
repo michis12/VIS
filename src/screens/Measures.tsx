@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useState } from 'react'
 import { Icon, Sheet } from '../components/ui'
 import { dateLabel, fmtKg, haptic, shortDate, today } from '../lib'
@@ -30,16 +31,16 @@ export function Measures() {
   return (
     <div className="screen no-tabs">
       <div className="wo-head">
-        <button className="icon-btn" onClick={nav.pop} aria-label="Zurück"><Icon.back /></button>
+        <button className="icon-btn" onClick={nav.pop} aria-label={t('Zurück', 'Back')}><Icon.back /></button>
         <div className="grow">
-          <div className="name">Körpermaße</div>
-          <div className="wo-timer">{latest ? `Zuletzt ${dateLabel(latest.date)}` : 'Noch nichts gemessen'}</div>
+          <div className="name">{t('Körpermaße', 'Measurements')}</div>
+          <div className="wo-timer">{latest ? t(`Zuletzt ${dateLabel(latest.date)}`, `Last ${dateLabel(latest.date)}`) : t('Noch nichts gemessen', 'Nothing measured yet')}</div>
         </div>
-        <button className="btn btn-chrome btn-sm" onClick={() => setEditing({ date: today(), ...stripDate(latest) })}>Messen</button>
+        <button className="btn btn-chrome btn-sm" onClick={() => setEditing({ date: today(), ...stripDate(latest) })}>{t('Messen', 'Measure')}</button>
       </div>
 
       <div className="card" style={{ marginTop: 18 }}>
-        <div className="eyebrow" style={{ marginBottom: 8 }}>Körperdaten</div>
+        <div className="eyebrow" style={{ marginBottom: 8 }}>{t('Körperdaten', 'Body data')}</div>
         <BodyDataFields />
       </div>
 
@@ -59,16 +60,16 @@ export function Measures() {
           )
         })}
       </div>
-      <p className="faint" style={{ fontSize: 12, margin: '8px 4px 0' }}>Veränderung jeweils seit der ersten Messung. Am besten morgens, entspannt, immer an derselben Stelle messen.</p>
+      <p className="faint" style={{ fontSize: 12, margin: '8px 4px 0' }}>{t('Veränderung jeweils seit der ersten Messung. Am besten morgens, entspannt, immer an derselben Stelle messen.', 'Change since the first measurement. Best measured in the morning, relaxed, always at the same spot.')}</p>
 
       {measurements.length > 0 && (
         <>
-          <div className="section-title"><h2>Verlauf</h2></div>
+          <div className="section-title"><h2>{t('Verlauf', 'History')}</h2></div>
           <div className="card" style={{ padding: '4px 14px' }}>
             {[...measurements].reverse().map((m) => (
               <button key={m.date} className="list-row" style={{ width: '100%', textAlign: 'left' }} onClick={() => setEditing(m)}>
                 <div className="grow">{dateLabel(m.date)}</div>
-                <span className="faint" style={{ fontSize: 13 }}>{MEASURE_FIELDS.filter((f) => m[f.key] != null).length} Werte</span>
+                <span className="faint" style={{ fontSize: 13 }}>{MEASURE_FIELDS.filter((f) => m[f.key] != null).length} {t('Werte', 'values')}</span>
                 <span className="chev"><Icon.chevron /></span>
               </button>
             ))}
@@ -117,9 +118,9 @@ function MeasureSheet({ initial, exists, onClose, onSave, onDelete }: {
 
   return (
     <Sheet onClose={onClose}>
-      <h3>{exists ? `Messung vom ${shortDate(initial.date)}` : 'Neue Messung'}</h3>
-      <p className="faint" style={{ fontSize: 13 }}>Vorausgefüllt mit deinen letzten Werten – nur ändern, was du neu gemessen hast.</p>
-      <label className="lbl">Datum</label>
+      <h3>{exists ? t(`Messung vom ${shortDate(initial.date)}`, `Measurement of ${shortDate(initial.date)}`) : t('Neue Messung', 'New measurement')}</h3>
+      <p className="faint" style={{ fontSize: 13 }}>{t('Vorausgefüllt mit deinen letzten Werten – nur ändern, was du neu gemessen hast.', 'Pre-filled with your last values – only change what you measured again.')}</p>
+      <label className="lbl">{t('Datum', 'Date')}</label>
       <input className="input" type="date" value={date} max={today()} onChange={(e) => setDate(e.target.value)} />
       <div className="measure-grid">
         {MEASURE_FIELDS.map((f) => (
@@ -133,8 +134,8 @@ function MeasureSheet({ initial, exists, onClose, onSave, onDelete }: {
           </label>
         ))}
       </div>
-      <button className="btn btn-chrome btn-block" style={{ marginTop: 16 }} onClick={save}>Speichern</button>
-      {exists && <button className="btn btn-danger btn-block" style={{ marginTop: 10 }} onClick={() => onDelete(initial.date)}>Messung löschen</button>}
+      <button className="btn btn-chrome btn-block" style={{ marginTop: 16 }} onClick={save}>{t('Speichern', 'Save')}</button>
+      {exists && <button className="btn btn-danger btn-block" style={{ marginTop: 10 }} onClick={() => onDelete(initial.date)}>{t('Messung löschen', 'Delete measurement')}</button>}
     </Sheet>
   )
 }

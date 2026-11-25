@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import * as cloud from './cloud'
 import * as db from './db'
+import { setLang, t } from './i18n'
 import type { Snapshot } from './db'
 import { buildProgress } from './progress'
 import { buildWorkoutScoreDetails, type WorkoutScoreDetail } from './workoutScore'
@@ -87,6 +88,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const progress = useMemo(() => buildProgress(workouts ?? []), [workouts])
   const workoutScoreDetails = useMemo(() => buildWorkoutScoreDetails(workouts ?? [], progress.byId), [workouts, progress])
   const workoutScores = useMemo(() => new Map([...workoutScoreDetails].map(([id, d]) => [id, d.score])), [workoutScoreDetails])
+
+  // the language has to be set before anything below renders
+  if (snap) setLang(snap.settings.lang)
 
   const store = useMemo<Store | null>(() => {
     if (!snap) return null
@@ -176,7 +180,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [snap, mutate, progress, workoutScores, workoutScoreDetails])
 
-  if (error) return <div className="boot">Daten konnten nicht geladen werden: {error}</div>
+  if (error) return <div className="boot">{t('Daten konnten nicht geladen werden', 'Could not load data')}: {error}</div>
   if (!store) return <div className="boot"><div className="boot-mark">VIS</div></div>
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>
 }

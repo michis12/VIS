@@ -1,3 +1,4 @@
+import { t } from './i18n'
 import { getSession, supabase } from './cloud'
 
 /**
@@ -61,8 +62,8 @@ export function scheduleRestPush(endAt: number, nextExercise?: string) {
     if (!(await pushActive()) || !(await getSession())) return
     await supabase!.from('rest_pushes').insert({
       send_at: new Date(endAt).toISOString(),
-      title: 'Pause vorbei',
-      body: nextExercise ? `Weiter mit ${nextExercise}` : 'Zeit für den nächsten Satz',
+      title: t('Pause vorbei', 'Rest over'),
+      body: nextExercise ? t(`Weiter mit ${nextExercise}`, `Next up: ${nextExercise}`) : t('Zeit für den nächsten Satz', 'Time for the next set'),
     })
   })
 }

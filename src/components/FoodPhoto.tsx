@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { foodAi, shrink } from '../foodAi'
@@ -70,7 +71,7 @@ export function FoodPhoto({ source, onClose, onAdd }: { source: Source; onClose:
         data = await foodAi({ mode: 'photo', image, mediaType: 'image/jpeg', note, grams })
       }
       const list = toRows(data?.items ?? [])
-      if (!list.length) throw new Error(data?.comment || 'Kein Essen erkannt.')
+      if (!list.length) throw new Error(data?.comment || t('Kein Essen erkannt.', 'No food recognised.'))
       setRows(list)
       setComment(data?.comment ?? '')
       setState('result')
@@ -106,8 +107,8 @@ export function FoodPhoto({ source, onClose, onAdd }: { source: Source; onClose:
   return createPortal(
     <div className="fullsheet">
       <div className="fullsheet-head">
-        <button className="icon-btn" onClick={onClose} aria-label="Schließen"><Icon.back /></button>
-        <div className="grow" style={{ fontWeight: 700, fontSize: 18 }}>{source.kind === 'photo' ? 'Foto erkennen' : 'Mit KI eintragen'}</div>
+        <button className="icon-btn" onClick={onClose} aria-label={t('Schließen', 'Close')}><Icon.back /></button>
+        <div className="grow" style={{ fontWeight: 700, fontSize: 18 }}>{source.kind === 'photo' ? t('Foto erkennen', 'Recognise photo') : t('Mit KI eintragen', 'Log with AI')}</div>
         <CreditPill credit={credit} />
       </div>
       <div className="fullsheet-body">
@@ -116,25 +117,25 @@ export function FoodPhoto({ source, onClose, onAdd }: { source: Source; onClose:
 
         {source.kind === 'photo' && state !== 'result' ? (
           <>
-            <label className="lbl">Was ist drin? (optional)</label>
-            <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="z. B. Reis mit Hühnerbrust, 1 EL Öl" disabled={state === 'loading'} />
-            <label className="lbl">Gewicht des ganzen Gerichts (optional)</label>
+            <label className="lbl">{t('Was ist drin? (optional)', 'What is in it? (optional)')}</label>
+            <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('z. B. Reis mit Hühnerbrust, 1 EL Öl', 'e.g. rice with chicken breast, 1 tbsp oil')} disabled={state === 'loading'} />
+            <label className="lbl">{t('Gewicht des ganzen Gerichts (optional)', 'Weight of the whole dish (optional)')}</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <input className="input num" inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="–" disabled={state === 'loading'} />
               <span className="muted">g</span>
             </div>
-            <div className="hint"><span>Mit Gewicht und ein paar Worten (vor allem Öl, Butter, Sauce) wird es deutlich genauer.</span></div>
+            <div className="hint"><span>{t('Mit Gewicht und ein paar Worten (vor allem Öl, Butter, Sauce) wird es deutlich genauer.', 'With the weight and a few words (especially oil, butter, sauce) it gets much more accurate.')}</span></div>
             {err && <div className="hint" style={{ color: 'var(--danger)' }}><span>{err}</span></div>}
             <Tap className="btn btn-chrome btn-block" style={{ marginTop: 16 }} onClick={() => state === 'input' && analyse()}>
-              {state === 'loading' ? 'Wird erkannt…' : 'Erkennen'}
+              {state === 'loading' ? t('Wird erkannt…', 'Recognising…') : t('Erkennen', 'Recognise')}
             </Tap>
           </>
         ) : state === 'loading' ? (
-          <AiWait text="Wird zerlegt…" />
+          <AiWait text={t('Wird zerlegt…', 'Breaking it down…')} />
         ) : err ? (
           <>
             <div className="hint" style={{ color: 'var(--danger)' }}><span>{err}</span></div>
-            <button className="btn btn-ghost btn-block" style={{ marginTop: 14 }} onClick={analyse}>Nochmal versuchen</button>
+            <button className="btn btn-ghost btn-block" style={{ marginTop: 14 }} onClick={analyse}>{t('Nochmal versuchen', 'Try again')}</button>
           </>
         ) : (
           <>
@@ -145,25 +146,25 @@ export function FoodPhoto({ source, onClose, onAdd }: { source: Source; onClose:
                   <div key={i} className="nut-entry photo-row">
                     <div className="grow">
                       <div className="nut-entry-name">{r.name}</div>
-                      <div className="faint num" style={{ fontSize: 12 }}>{r.food ? (r.recipeId ? 'Rezept · ' : 'bekannt · ') : ''}{fmtInt(m.kcal)} kcal · {fmtG(m.p)} E · {fmtG(m.c)} K · {fmtG(m.f)} F</div>
+                      <div className="faint num" style={{ fontSize: 12 }}>{r.food ? (r.recipeId ? t('Rezept · ', 'recipe · ') : t('bekannt · ', 'known · ')) : ''}{fmtInt(m.kcal)} kcal · {fmtG(m.p)} {t('E', 'P')} · {fmtG(m.c)} {t('K', 'C')} · {fmtG(m.f)} F</div>
                     </div>
                     <input className="input num photo-g" inputMode="decimal" value={r.grams} onFocus={(e) => e.target.select()}
                       onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, grams: e.target.value } : x)))} />
                     <span className="faint" style={{ fontSize: 13 }}>g</span>
-                    <button className="photo-x" onClick={() => setRows(rows.filter((_, j) => j !== i))} aria-label={`${r.name} entfernen`}>×</button>
+                    <button className="photo-x" onClick={() => setRows(rows.filter((_, j) => j !== i))} aria-label={t(`${r.name} entfernen`, `Remove ${r.name}`)}>×</button>
                   </div>
                 )
               })}
             </div>
             <div className="grid-3 nut-sum">
               <div><b className="num">{fmtInt(total.kcal)}</b><span>kcal</span></div>
-              <div><b className="num">{fmtG(total.p)}</b><span>Eiweiß</span></div>
-              <div><b className="num">{fmtG(total.c)} / {fmtG(total.f)}</b><span>KH / Fett</span></div>
+              <div><b className="num">{fmtG(total.p)}</b><span>{t('Eiweiß', 'Protein')}</span></div>
+              <div><b className="num">{fmtG(total.c)} / {fmtG(total.f)}</b><span>{t('KH / Fett', 'Carbs / fat')}</span></div>
             </div>
             {comment && <div className="hint"><span>{comment}</span></div>}
-            <div className="hint"><span>{source.kind === 'photo' ? 'Schätzung – Mengen bei Bedarf anpassen.' : 'Mengen bei Bedarf anpassen.'}</span></div>
-            <Tap className="btn btn-chrome btn-block" style={{ marginTop: 16 }} onClick={() => rows.length && add()}>Alles hinzufügen</Tap>
-            {source.kind === 'photo' && <button className="btn btn-ghost btn-block" style={{ marginTop: 10 }} onClick={() => setState('input')}>Nochmal erkennen</button>}
+            <div className="hint"><span>{source.kind === 'photo' ? t('Schätzung – Mengen bei Bedarf anpassen.', 'Estimate – adjust amounts if needed.') : t('Mengen bei Bedarf anpassen.', 'Adjust amounts if needed.')}</span></div>
+            <Tap className="btn btn-chrome btn-block" style={{ marginTop: 16 }} onClick={() => rows.length && add()}>{t('Alles hinzufügen', 'Add all')}</Tap>
+            {source.kind === 'photo' && <button className="btn btn-ghost btn-block" style={{ marginTop: 10 }} onClick={() => setState('input')}>{t('Nochmal erkennen', 'Recognise again')}</button>}
           </>
         )}
       </div>

@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { durationLabel, fmtInt, haptic, workoutSetCount, workoutVolume } from '../lib'
@@ -102,29 +103,29 @@ export function Celebration({ id, onClose }: { id: string; onClose: () => void }
       <ChromeConfetti />
       <div className="celebrate-card stagger">
         <div className="celebrate-check"><Icon.check /></div>
-        <div className="eyebrow" style={{ textAlign: 'center', marginTop: 14 }}>Workout abgeschlossen</div>
+        <div className="eyebrow" style={{ textAlign: 'center', marginTop: 14 }}>{t('Workout abgeschlossen', 'Workout complete')}</div>
         <h2 className="chrome-text celebrate-title">{w.name}</h2>
         {workoutScores.has(id) && (
           <div className="celebrate-score">
             <ScorePill score={workoutScores.get(id)!} size={44} animate />
-            <span>Workout-Score</span>
+            <span>{t('Workout-Score', 'Workout score')}</span>
           </div>
         )}
 
         <div className="grid-3" style={{ marginTop: 18 }}>
-          <div className="card kpi"><div className="label">Dauer</div><div className="value" style={{ fontSize: 19 }}>{durationLabel(w.durationSec)}</div></div>
-          <div className="card kpi"><div className="label">Sätze</div><div className="value" style={{ fontSize: 19 }}><Num value={workoutSetCount(w)} from={0} ms={900} /></div></div>
-          <div className="card kpi"><div className="label">Volumen</div><div className="value" style={{ fontSize: 19 }}><Num value={workoutVolume(w)} format={fmtInt} from={0} ms={900} /><small>kg</small></div></div>
+          <div className="card kpi"><div className="label">{t('Dauer', 'Duration')}</div><div className="value" style={{ fontSize: 19 }}>{durationLabel(w.durationSec)}</div></div>
+          <div className="card kpi"><div className="label">{t('Sätze', 'Sets')}</div><div className="value" style={{ fontSize: 19 }}><Num value={workoutSetCount(w)} from={0} ms={900} /></div></div>
+          <div className="card kpi"><div className="label">{t('Volumen', 'Volume')}</div><div className="value" style={{ fontSize: 19 }}><Num value={workoutVolume(w)} format={fmtInt} from={0} ms={900} /><small>kg</small></div></div>
         </div>
 
         <div className="grid-2" style={{ marginTop: 10 }}>
           <div className={'card celebrate-stat' + (rating?.prs ? ' hot' : '')}>
             <Icon.cup size={22} />
-            <div><div className="n"><Num value={rating?.prs ?? 0} from={0} ms={900} /></div><div className="l">Rekorde</div></div>
+            <div><div className="n"><Num value={rating?.prs ?? 0} from={0} ms={900} /></div><div className="l">{t('Rekorde', 'Records')}</div></div>
           </div>
           <div className={'card celebrate-stat' + (rating?.ups ? ' good' : '')}>
             <Icon.up size={22} />
-            <div><div className="n"><Num value={rating?.ups ?? 0} from={0} ms={900} /></div><div className="l">Fortschritte</div></div>
+            <div><div className="n"><Num value={rating?.ups ?? 0} from={0} ms={900} /></div><div className="l">{t('Fortschritte', 'Progress')}</div></div>
           </div>
         </div>
 
@@ -139,10 +140,10 @@ export function Celebration({ id, onClose }: { id: string; onClose: () => void }
           </div>
         )}
         {!highlights.length && (
-          <p className="faint" style={{ textAlign: 'center', fontSize: 13, marginTop: 12 }}>Heute keine neuen Bestwerte – Konstanz zählt genauso. 💪</p>
+          <p className="faint" style={{ textAlign: 'center', fontSize: 13, marginTop: 12 }}>{t('Heute keine neuen Bestwerte – Konstanz zählt genauso. 💪', 'No new bests today – consistency counts just as much. 💪')}</p>
         )}
 
-        <button className="btn btn-chrome btn-block" style={{ marginTop: 18 }} onClick={onClose}>Fertig</button>
+        <button className="btn btn-chrome btn-block" style={{ marginTop: 18 }} onClick={onClose}>{t('Fertig', 'Done')}</button>
       </div>
     </div>,
     document.body,

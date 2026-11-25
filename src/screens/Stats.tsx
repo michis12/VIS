@@ -1,3 +1,4 @@
+import { dec, t as tr } from '../i18n'
 import { useMemo, useState } from 'react'
 import { BarChart, LineChart } from '../components/charts'
 import { MuscleMap } from '../components/MuscleMap'
@@ -8,18 +9,17 @@ import { Icon, ProgressBadges } from '../components/ui'
 import { WeeklyReport } from '../components/WeeklyReport'
 import { useNav } from '../nav'
 import { Num } from '../anim'
-import { dateLabel, durationLabel, e1rm, fmtInt, fmtKg, isRealSet, monthLabel, shortDate, weekKey, workoutSetCount, workoutVolume } from '../lib'
+import { dateLabel, dayShort, durationLabel, e1rm, fmtInt, fmtKg, isRealSet, monthLabel, shortDate, weekKey, workoutSetCount, workoutVolume } from '../lib'
+import { muscleLabel } from '../muscles'
 import { kcalTarget } from '../nutrition'
 import { useStore } from '../store'
 
 const RANGES = [
-  { id: '3m', label: '3 Monate', short: '3 Monate', days: 91 },
-  { id: '6m', label: '6 Monate', short: '6 Monate', days: 182 },
-  { id: '1y', label: '1 Jahr', short: '1 Jahr', days: 365 },
-  { id: 'all', label: 'Alles', short: 'Gesamt', days: 99999 },
+  { id: '3m', get label() { return tr('3 Monate', '3 months') }, get short() { return tr('3 Monate', '3 months') }, days: 91 },
+  { id: '6m', get label() { return tr('6 Monate', '6 months') }, get short() { return tr('6 Monate', '6 months') }, days: 182 },
+  { id: '1y', get label() { return tr('1 Jahr', '1 year') }, get short() { return tr('1 Jahr', '1 year') }, days: 365 },
+  { id: 'all', get label() { return tr('Alles', 'All') }, get short() { return tr('Gesamt', 'All time') }, days: 99999 },
 ] as const
-
-const WD = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 
 export function Stats() {
   const { workouts, exerciseById, exercises, progress, weights, phases, workoutScores, foodLog } = useStore()
@@ -40,7 +40,7 @@ export function Stats() {
     return first > since ? first : since
   }, [done, foodLog, since])
   const monthly = (Date.now() - new Date(start + 'T12:00:00').getTime()) / 864e5 > 200
-  const per = monthly ? 'Monat' : 'Woche'
+  const per = monthly ? tr('Monat', 'month') : tr('Woche', 'week')
   const bucketOf = useMemo(() => (iso: string) => (monthly ? iso.slice(0, 7) : weekKey(iso)), [monthly])
   const buckets = useMemo(() => {
     const out: { key: string; label: string }[] = []
@@ -122,8 +122,8 @@ export function Stats() {
       sum += v
       const a = acc.get(bucketOf(d)) ?? { sum: 0, n: 0, tgt: 0, tn: 0 }
       a.sum += v; a.n++
-      const t = kcalTarget(phases, d)
-      if (t) { a.tgt += t; a.tn++; tgt += t; tn++ }
+      const tg = kcalTarget(phases, d)
+      if (tg) { a.tgt += tg; a.tn++; tgt += tg; tn++ }
       acc.set(bucketOf(d), a)
     }
     const total = Math.max(1, Math.round((Date.now() - new Date(start + 'T12:00:00').getTime()) / 864e5) + 1)
@@ -131,7 +131,7 @@ export function Stats() {
       logged, total, avg: logged ? sum / logged : 0, target: tn ? tgt / tn : null,
       bars: buckets.map((b) => {
         const a = acc.get(b.key)
-        return { label: b.label, value: a ? a.sum / a.n : 0, tip: a ? `${b.label}: Ø ${fmtInt(a.sum / a.n)} kcal${a.tn ? ` · Ziel ${fmtInt(a.tgt / a.tn)}` : ''} · ${a.n} Tage` : `${b.label}: nichts erfasst` }
+        return { label: b.label, value: a ? a.sum / a.n : 0, tip: a ? `${b.label}: ${tr('Ø', 'avg')} ${fmtInt(a.sum / a.n)} kcal${a.tn ? ` · ${tr('Ziel', 'target')} ${fmtInt(a.tgt / a.tn)}` : ''} · ${a.n} ${tr('Tage', 'days')}` : `${b.label}: ${tr('nichts erfasst', 'nothing logged')}` }
       }),
     }
   }, [foodLog, phases, start, buckets, bucketOf])
@@ -154,7 +154,7 @@ export function Stats() {
   const weekday = useMemo(() => {
     const c = [0, 0, 0, 0, 0, 0, 0]
     for (const w of inRange) c[(new Date(w.startedAt).getDay() + 6) % 7]++
-    return c.map((v, i) => ({ label: WD[i], value: v }))
+    return c.map((v, i) => ({ label: dayShort((i + 1) % 7), value: v }))
   }, [inRange])
 
   const heat = useMemo(() => {
@@ -248,12 +248,12 @@ export function Stats() {
 
   return (
     <div className="screen">
-      <div className="eyebrow">Fortschritt</div>
-      <h1 className="title">Statistik</h1>
+      <div className="eyebrow">{tr('Fortschritt', 'Progress')}</div>
+      <h1 className="title">{tr('Statistik', 'Stats')}</h1>
 
       <WeeklyReport />
 
-      <div className="section-title"><h2>Muskeln diese Woche</h2></div>
+      <div className="section-title"><h2>{tr('Muskeln diese Woche', 'Muscles this week')}</h2></div>
       <MuscleMap />
       <div style={{ height: 22 }} />
 
@@ -262,8 +262,8 @@ export function Stats() {
         <div className="range-bar">
           <div className="range-bar-head">
             <span className="range-dot" />
-            <span>Zeitraum</span>
-            <span className="faint">· gilt für diesen Bereich</span>
+            <span>{tr('Zeitraum', 'Range')}</span>
+            <span className="faint">{tr('· gilt für diesen Bereich', '· applies to this section')}</span>
           </div>
           <div className="chips">
             {RANGES.map((r) => <button key={r.id} className={'chip' + (r.id === range ? ' on' : '')} onClick={() => setRange(r.id)}>{r.label}</button>)}
@@ -272,76 +272,76 @@ export function Stats() {
 
         {avg.weeks > 0 && (
           <div className="card avg-score" style={{ marginTop: 14 }}>
-            <ScoreGauge score={avg.week} size={112} label="Ø Woche" />
+            <ScoreGauge score={avg.week} size={112} label={tr('Ø Woche', 'Avg week')} />
             <div className="avg-score-side">
-              <div><span className="faint">Ø Workout-Score</span><b className="num">{avg.workout}</b></div>
-              <div><span className="faint">Beste Woche</span><b className="num">{avg.best}</b></div>
-              <div className="faint" style={{ fontSize: 11 }}>{avg.bestStart ? `ab ${shortDate(avg.bestStart)} · ` : ''}{avg.weeks} Wochen ausgewertet</div>
+              <div><span className="faint">{tr('Ø Workout-Score', 'Avg workout score')}</span><b className="num">{avg.workout}</b></div>
+              <div><span className="faint">{tr('Beste Woche', 'Best week')}</span><b className="num">{avg.best}</b></div>
+              <div className="faint" style={{ fontSize: 11 }}>{avg.bestStart ? `${tr('ab', 'from')} ${shortDate(avg.bestStart)} · ` : ''}{avg.weeks} {tr('Wochen ausgewertet', 'weeks rated')}</div>
             </div>
           </div>
         )}
 
         <div className="grid-2" style={{ marginTop: 14 }}>
-          <Kpi label="Workouts" value={k.n} sub={`${k.perWeek.toFixed(1).replace('.', ',')} pro Woche`} />
-          <Kpi label="Trainingstage" value={k.dayCount} sub={`längste Serie ${k.streak} Wo.`} />
-          <Kpi label="Volumen" value={k.vol / 1000} unit="t" sub={`${fmtInt(k.sets)} Sätze`} />
-          <Kpi label="Ø Dauer" value={k.avgDur ? k.avgDur / 60 : '–'} unit="min" sub={k.skipped ? `${k.skipped}× ausgelassen` : 'pro Workout'} />
+          <Kpi label="Workouts" value={k.n} sub={`${dec(k.perWeek, 1)} ${tr('pro Woche', 'per week')}`} />
+          <Kpi label={tr('Trainingstage', 'Training days')} value={k.dayCount} sub={tr(`längste Serie ${k.streak} Wo.`, `longest streak ${k.streak} wk`)} />
+          <Kpi label={tr('Volumen', 'Volume')} value={k.vol / 1000} unit="t" sub={`${fmtInt(k.sets)} ${tr('Sätze', 'sets')}`} />
+          <Kpi label={tr('Ø Dauer', 'Avg duration')} value={k.avgDur ? k.avgDur / 60 : '–'} unit="min" sub={k.skipped ? `${k.skipped}× ${tr('ausgelassen', 'skipped')}` : tr('pro Workout', 'per workout')} />
         </div>
 
-        <RangeTitle title="Trainingstage" range={R.short} />
+        <RangeTitle title={tr('Trainingstage', 'Training days')} range={R.short} />
         <div className="card">
           {/* keyed by range: a new range starts scrolled to the newest week again */}
           <div className="heat" key={range}>
             {[...heat].reverse().map((c) => <div key={c.date} className={c.lvl ? 'l' + c.lvl : ''} title={`${dateLabel(c.date)}`} />)}
           </div>
           <div className="legend" style={{ justifyContent: 'flex-end' }}>
-            <span>weniger</span>
+            <span>{tr('weniger', 'less')}</span>
             <span className="heat" style={{ display: 'flex', gap: 3, direction: 'ltr' }}><div /><div className="l1" /><div className="l2" /><div className="l3" /></span>
-            <span>mehr Sätze</span>
+            <span>{tr('mehr Sätze', 'more sets')}</span>
           </div>
         </div>
 
-        <RangeTitle title={`Workouts pro ${per}`} range={R.short} />
-        <div className="card"><BarChart bars={weekly.map((w) => ({ label: w.label, value: w.count, tip: monthly ? w.label : `Woche ab ${w.label}` }))} unit="Workouts" /></div>
+        <RangeTitle title={tr(`Workouts pro ${per}`, `Workouts per ${per}`)} range={R.short} />
+        <div className="card"><BarChart bars={weekly.map((w) => ({ label: w.label, value: w.count, tip: monthly ? w.label : tr(`Woche ab ${w.label}`, `Week of ${w.label}`) }))} unit="Workouts" /></div>
 
-        <RangeTitle title={`Volumen pro ${per}`} range={R.short} />
-        <div className="card"><BarChart bars={weekly.map((w) => ({ label: w.label, value: w.vol / 1000, tip: monthly ? w.label : `Woche ab ${w.label}` }))} yFmt={(v) => (v < 10 ? v.toFixed(1).replace('.', ',') : String(Math.round(v)))} unit="t" /></div>
+        <RangeTitle title={tr(`Volumen pro ${per}`, `Volume per ${per}`)} range={R.short} />
+        <div className="card"><BarChart bars={weekly.map((w) => ({ label: w.label, value: w.vol / 1000, tip: monthly ? w.label : tr(`Woche ab ${w.label}`, `Week of ${w.label}`) }))} yFmt={(v) => (v < 10 ? dec(v, 1) : String(Math.round(v)))} unit="t" /></div>
 
         {kcal.logged > 0 && (
           <>
-            <RangeTitle title={`Kalorien pro ${per}`} range={R.short} />
+            <RangeTitle title={tr(`Kalorien pro ${per}`, `Calories per ${per}`)} range={R.short} />
             <div className="card">
-              <BarChart bars={kcal.bars} yFmt={(v) => fmtInt(v)} unit="kcal / Tag" />
-              <div className="pr-row num"><span className="muted">Ø pro erfasstem Tag</span><b>{fmtInt(kcal.avg)} kcal</b></div>
-              {kcal.target != null && <div className="pr-row num"><span className="muted">Ø Ziel der Phase</span><b>{fmtInt(kcal.target)} kcal</b></div>}
-              <div className="pr-row num"><span className="muted">Erfasste Tage</span><b>{kcal.logged} von {kcal.total}</b></div>
+              <BarChart bars={kcal.bars} yFmt={(v) => fmtInt(v)} unit={tr('kcal / Tag', 'kcal / day')} />
+              <div className="pr-row num"><span className="muted">{tr('Ø pro erfasstem Tag', 'Avg per logged day')}</span><b>{fmtInt(kcal.avg)} kcal</b></div>
+              {kcal.target != null && <div className="pr-row num"><span className="muted">{tr('Ø Ziel der Phase', 'Avg phase target')}</span><b>{fmtInt(kcal.target)} kcal</b></div>}
+              <div className="pr-row num"><span className="muted">{tr('Erfasste Tage', 'Logged days')}</span><b>{kcal.logged} {tr('von', 'of')} {kcal.total}</b></div>
             </div>
           </>
         )}
 
-        <RangeTitle title="Fortschritt & Rekorde" range={R.short} />
+        <RangeTitle title={tr('Fortschritt & Rekorde', 'Progress & records')} range={R.short} />
         <div className="grid-3">
-          <Kpi label="Rekorde" value={prog.prs} small />
-          <Kpi label="Fortschritte" value={prog.ups} small />
-          <Kpi label="Pro Workout" value={prog.per} fmt={(v) => v.toFixed(1).replace('.', ',')} sub="Rek. + Fort." small />
+          <Kpi label={tr('Rekorde', 'Records')} value={prog.prs} small />
+          <Kpi label={tr('Fortschritte', 'Progress')} value={prog.ups} small />
+          <Kpi label={tr('Pro Workout', 'Per workout')} value={prog.per} fmt={(v) => dec(v, 1)} sub={tr('Rek. + Fort.', 'Rec. + prog.')} small />
         </div>
         <div className="card" style={{ marginTop: 12 }}>
           <div className="segmented" style={{ marginBottom: 10 }}>
-            <button className={pmode === 'both' ? 'on' : ''} onClick={() => setPmode('both')}>Beides</button>
-            <button className={pmode === 'pr' ? 'on' : ''} onClick={() => setPmode('pr')}>Rekorde</button>
-            <button className={pmode === 'up' ? 'on' : ''} onClick={() => setPmode('up')}>Fortschritte</button>
+            <button className={pmode === 'both' ? 'on' : ''} onClick={() => setPmode('both')}>{tr('Beides', 'Both')}</button>
+            <button className={pmode === 'pr' ? 'on' : ''} onClick={() => setPmode('pr')}>{tr('Rekorde', 'Records')}</button>
+            <button className={pmode === 'up' ? 'on' : ''} onClick={() => setPmode('up')}>{tr('Fortschritte', 'Progress')}</button>
           </div>
           <BarChart
             bars={weekly.map((w) => {
               const p = prog.perWeek.get(w.key) ?? { prs: 0, ups: 0 }
-              return { label: w.label, value: pmode === 'pr' ? p.prs : pmode === 'up' ? p.ups : p.prs + p.ups, tip: monthly ? w.label : `Woche ab ${w.label}` }
+              return { label: w.label, value: pmode === 'pr' ? p.prs : pmode === 'up' ? p.ups : p.prs + p.ups, tip: monthly ? w.label : tr(`Woche ab ${w.label}`, `Week of ${w.label}`) }
             })}
-            unit={pmode === 'pr' ? 'Rekorde' : pmode === 'up' ? 'Fortschritte' : 'Rek. + Fort.'}
+            unit={pmode === 'pr' ? tr('Rekorde', 'Records') : pmode === 'up' ? tr('Fortschritte', 'Progress') : tr('Rek. + Fort.', 'Rec. + prog.')}
           />
         </div>
         {prog.top.length > 0 && (
           <div className="card" style={{ marginTop: 12, padding: '4px 14px' }}>
-            <div className="eyebrow" style={{ padding: '10px 0 2px' }}>Am meisten verbessert</div>
+            <div className="eyebrow" style={{ padding: '10px 0 2px' }}>{tr('Am meisten verbessert', 'Most improved')}</div>
             {prog.top.map(([id, p]) => (
               <button key={id} className="list-row" style={{ width: '100%', textAlign: 'left' }} onClick={() => nav.push({ kind: 'exercise', id })}>
                 <div className="grow" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exerciseById.get(id)?.name ?? id}</div>
@@ -354,7 +354,7 @@ export function Stats() {
         {prog.best && (
           <button className="card list-row" style={{ width: '100%', textAlign: 'left', marginTop: 12, padding: '12px 14px' }} onClick={() => nav.push({ kind: 'workout', id: prog.best!.w.id })}>
             <div className="grow">
-              <div className="faint" style={{ fontSize: 12 }}>Stärkstes Workout</div>
+              <div className="faint" style={{ fontSize: 12 }}>{tr('Stärkstes Workout', 'Strongest workout')}</div>
               <div style={{ fontWeight: 600 }}>{prog.best.w.name} <span className="faint" style={{ fontWeight: 400, fontSize: 13 }}>· {dateLabel(prog.best.w.startedAt)}</span></div>
             </div>
             <ProgressBadges ups={progress.byId.get(prog.best.w.id)?.ups ?? 0} prs={progress.byId.get(prog.best.w.id)?.prs ?? 0} />
@@ -362,10 +362,10 @@ export function Stats() {
           </button>
         )}
 
-        <RangeTitle title="Sätze pro Muskelgruppe" range={R.short} />
+        <RangeTitle title={tr('Sätze pro Muskelgruppe', 'Sets per muscle group')} range={R.short} />
         <div className="card">
           {muscles.map(([m, n]) => (
-            <div className="bar-row" key={m}><span>{m}</span><div className="track"><div className="fill" style={{ width: `${(n / maxMuscle) * 100}%` }} /></div><span className="n">{n}</span></div>
+            <div className="bar-row" key={m}><span>{muscleLabel(m)}</span><div className="track"><div className="fill" style={{ width: `${(n / maxMuscle) * 100}%` }} /></div><span className="n">{n}</span></div>
           ))}
         </div>
 
@@ -376,10 +376,10 @@ export function Stats() {
           ))}
         </div>
 
-        <RangeTitle title="Wochentage" range={R.short} />
+        <RangeTitle title={tr('Wochentage', 'Weekdays')} range={R.short} />
         <div className="card"><BarChart bars={weekday} unit="Workouts" height={140} /></div>
 
-        <RangeTitle title="Längste Workouts" range={R.short} />
+        <RangeTitle title={tr('Längste Workouts', 'Longest workouts')} range={R.short} />
         <div className="card" style={{ padding: '4px 14px' }}>
           {[...inRange].filter((w) => w.durationSec).sort((a, b) => (b.durationSec ?? 0) - (a.durationSec ?? 0)).slice(0, 5).map((w) => (
             <button className="list-row" style={{ width: '100%', textAlign: 'left' }} key={w.id} onClick={() => nav.push({ kind: 'workout', id: w.id })}>
@@ -390,7 +390,7 @@ export function Stats() {
           ))}
         </div>
 
-        <RangeTitle title="Größtes Volumen" range={R.short} />
+        <RangeTitle title={tr('Größtes Volumen', 'Biggest volume')} range={R.short} />
         <div className="card" style={{ padding: '4px 14px' }}>
           {[...inRange].sort((a, b) => workoutVolume(b) - workoutVolume(a)).slice(0, 5).map((w) => (
             <button className="list-row" style={{ width: '100%', textAlign: 'left' }} key={w.id} onClick={() => nav.push({ kind: 'workout', id: w.id })}>
@@ -403,11 +403,11 @@ export function Stats() {
       </section>
 
       {/* not affected by the range */}
-      <div className="range-end"><span>Unabhängig vom Zeitraum</span></div>
+      <div className="range-end"><span>{tr('Unabhängig vom Zeitraum', 'Independent of the range')}</span></div>
 
       <PhaseList />
 
-      <div className="section-title"><h2>Übung im Detail</h2><span className="faint" style={{ fontSize: 13 }}>gesamter Verlauf</span></div>
+      <div className="section-title"><h2>{tr('Übung im Detail', 'Exercise in detail')}</h2><span className="faint" style={{ fontSize: 13 }}>{tr('gesamter Verlauf', 'whole history')}</span></div>
       <div className="chips">
         {ranked.slice(0, 40).map((e) => <button key={e.id} className={'chip' + (e.id === ex ? ' on' : '')} onClick={() => setExId(e.id)}>{e.name}</button>)}
       </div>
@@ -416,39 +416,39 @@ export function Stats() {
           <div className="card" style={{ marginTop: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
               <div>
-                <div className="faint" style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase' }}>Geschätztes 1RM</div>
-                <div style={{ fontSize: 26, fontWeight: 700 }} className="num">{fmtKg(Math.round(exStats.best.e * 10) / 10)} <span className="muted" style={{ fontSize: 14 }}>kg Bestwert</span></div>
+                <div className="faint" style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase' }}>{tr('Geschätztes 1RM', 'Estimated 1RM')}</div>
+                <div style={{ fontSize: 26, fontWeight: 700 }} className="num">{fmtKg(Math.round(exStats.best.e * 10) / 10)} <span className="muted" style={{ fontSize: 14 }}>{tr('kg Bestwert', 'kg best')}</span></div>
               </div>
               {exStats.change != null && (
                 <div className="num" style={{ fontWeight: 650, color: exStats.change >= 0 ? 'var(--good)' : 'var(--danger)' }}>
-                  {exStats.change >= 0 ? '▲' : '▼'} {Math.abs(exStats.change).toFixed(1).replace('.', ',')} %
+                  {exStats.change >= 0 ? '▲' : '▼'} {dec(Math.abs(exStats.change), 1)} %
                 </div>
               )}
             </div>
             <LineChart points={exStats.series} yFmt={(v) => String(Math.round(v))} unit="kg e1RM" dots />
           </div>
           <button className="btn btn-ghost btn-block" style={{ marginTop: 12 }} onClick={() => ex && nav.push({ kind: 'exercise', id: ex })}>
-            Komplette Übersicht & Verlauf <Icon.chevron />
+            {tr('Komplette Übersicht & Verlauf', 'Full overview & history')} <Icon.chevron />
           </button>
           <div className="grid-3" style={{ marginTop: 12 }}>
-            <Kpi label="Schwerster" value={fmtKg(exStats.heaviest.w)} unit="kg" sub={`× ${exStats.heaviest.r} Wdh`} small />
-            <Kpi label="Meiste Wdh" value={String(exStats.mostReps.r)} sub={`bei ${fmtKg(exStats.mostReps.w)} kg`} small />
-            <Kpi label="Sätze" value={fmtInt(exStats.sets)} sub={`${exStats.sessions} Einheiten`} small />
+            <Kpi label={tr('Schwerster', 'Heaviest')} value={fmtKg(exStats.heaviest.w)} unit="kg" sub={`× ${exStats.heaviest.r} ${tr('Wdh', 'reps')}`} small />
+            <Kpi label={tr('Meiste Wdh', 'Most reps')} value={String(exStats.mostReps.r)} sub={`${tr('bei', 'at')} ${fmtKg(exStats.mostReps.w)} kg`} small />
+            <Kpi label={tr('Sätze', 'Sets')} value={fmtInt(exStats.sets)} sub={`${exStats.sessions} ${tr('Einheiten', 'sessions')}`} small />
           </div>
           <div className="card" style={{ marginTop: 12 }}>
-            <div className="faint" style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 6 }}>Volumen pro Einheit</div>
+            <div className="faint" style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 6 }}>{tr('Volumen pro Einheit', 'Volume per session')}</div>
             <LineChart points={exStats.volSeries} yFmt={(v) => fmtInt(v)} unit="kg" />
           </div>
           <div className="card" style={{ marginTop: 12 }}>
-            <div className="faint" style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 4 }}>Rekorde nach Wiederholungen</div>
+            <div className="faint" style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 4 }}>{tr('Rekorde nach Wiederholungen', 'Records by reps')}</div>
             {exStats.repPR.map(([r, p]) => (
-              <div className="pr-row num" key={r}><span className="muted">{r} Wdh</span><span><b>{fmtKg(p.w)} kg</b> <span className="faint">· {shortDate(p.date)} {p.date.slice(2, 4)}</span></span></div>
+              <div className="pr-row num" key={r}><span className="muted">{r} {tr('Wdh', 'reps')}</span><span><b>{fmtKg(p.w)} kg</b> <span className="faint">· {shortDate(p.date)} {p.date.slice(2, 4)}</span></span></div>
             ))}
           </div>
         </>
       )}
 
-      <button className="btn btn-ghost btn-block" style={{ marginTop: 22 }} onClick={() => nav.push({ kind: 'history' })}>Gesamten Verlauf ansehen</button>
+      <button className="btn btn-ghost btn-block" style={{ marginTop: 22 }} onClick={() => nav.push({ kind: 'history' })}>{tr('Gesamten Verlauf ansehen', 'See full history')}</button>
     </div>
   )
 }
