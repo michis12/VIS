@@ -5,7 +5,7 @@
 import webpush from 'npm:web-push@3.6.7'
 
 const VAPID_PUBLIC = 'BEXv7o1J_39duBh3xMO1ZJqvwuFJV8vbUyFKhio0pcBfheE6pFEowZFPqthFVt_JHxFXLZn2oYzgDGM38Nia3Hk'
-const SUBJECT = 'https://michis12.github.io/VIS/'
+const SUBJECT = 'https://pgorg-git.github.io/VIS/'
 
 interface Message {
   endpoint: string
