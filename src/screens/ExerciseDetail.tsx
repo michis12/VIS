@@ -106,7 +106,7 @@ export function ExerciseDetail({ id }: { id: string }) {
 
   const m = musclesFor(ex)
   const fill = (g: string) =>
-    g === m.primary ? 'rgba(238,238,242,.92)' : m.secondary.includes(g) ? 'rgba(238,238,242,.38)' : 'rgba(255,255,255,0.06)'
+    g === m.primary ? 'rgba(34,199,132,.95)' : m.secondary.includes(g) ? 'rgba(34,199,132,.42)' : 'transparent'
 
   const recent = [...sessions].reverse()
 
