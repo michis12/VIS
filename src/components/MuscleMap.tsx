@@ -117,6 +117,36 @@ export function MuscleFigures({ fill, sel = null, onSel }: { fill: (group: strin
   )
 }
 
+/**
+ * Exercise icon: one small figure (front or back, whichever shows the main
+ * muscle) with the primary group in chrome and the secondary ones dimmer.
+ */
+const BACK_FIRST = ['Rücken', 'Trizeps', 'Nacken']
+export function MuscleIcon({ primary, secondary = [], name = '', size = 44 }: { primary: string; secondary?: string[]; name?: string; size?: number }) {
+  const n = name.toLowerCase()
+  const back = BACK_FIRST.includes(primary) || (primary === 'Beine' && /deadlift|hamstring|leg curl|hip thrust|glute|good morning|nordic|kickback|pull through/.test(n))
+  const regions = back ? BACK : FRONT
+  const fill = (g: string) => (g === primary ? 'url(#mi-chrome)' : secondary.includes(g) ? '#6a6a70' : '#2b2b30')
+  // zoom into the part of the body that matters, so the muscle is big enough to read
+  const view = primary === 'Beine' || primary === 'Waden' ? '6 104 108 130' : primary === 'Bauch' ? '10 34 100 82' : '8 10 104 108'
+  const half = regions.map((r, i) => <path key={i} d={r.d} fill={fill(r.group)} stroke="#050505" strokeWidth="0.8" strokeLinejoin="round" />)
+  return (
+    <span className="muscle-icon" style={{ width: size, height: size }} aria-hidden="true">
+      <svg viewBox={view} width={size - 6} height={size - 6} preserveAspectRatio="xMidYMid meet" shapeRendering="geometricPrecision">
+        <defs>
+          <linearGradient id="mi-chrome" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#ffffff" /><stop offset=".55" stopColor="#d1d1d6" /><stop offset="1" stopColor="#8e8e93" />
+          </linearGradient>
+        </defs>
+        <path d={SILHOUETTE} fill="#1f1f23" />
+        <path d={SILHOUETTE} fill="#1f1f23" transform={MIRROR} />
+        {half}
+        <g transform={MIRROR}>{half}</g>
+      </svg>
+    </span>
+  )
+}
+
 export function MuscleMap() {
   const { workouts, exerciseById } = useStore()
   const [p, setP] = useState(0)

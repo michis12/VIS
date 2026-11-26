@@ -11,6 +11,7 @@ const ERR_DE: Record<string, string> = {
   nokey: 'Die KI ist noch nicht eingerichtet (API-Key fehlt oder Guthaben leer).',
   busy: 'Gerade zu viele Anfragen – gleich nochmal probieren.',
   refusal: 'Das konnte nicht ausgewertet werden.',
+  ultra: 'Den Coach-Chat gibt es mit VIS Pro Ultra.',
 }
 const ERR_EN: Record<string, string> = {
   access: 'AI features come with VIS Pro (Profile › Settings › AI & subscription).',
@@ -20,19 +21,20 @@ const ERR_EN: Record<string, string> = {
   nokey: 'The AI is not set up yet (API key missing or balance empty).',
   busy: 'Too many requests right now – try again in a moment.',
   refusal: 'This could not be analysed.',
+  ultra: 'The coach chat comes with VIS Pro Ultra.',
 }
 const err = (code: string) => (getLang() === 'en' ? ERR_EN : ERR_DE)[code]
 
 // each mode returns its own fields plus usd (dev, friend) or pct (paid plans)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function foodAi(body: Record<string, unknown>): Promise<any> {
+export async function foodAi(body: Record<string, unknown>, fn: 'food-photo' | 'coach' = 'food-photo'): Promise<any> {
   if (!supabase || !(await getSession())) throw new Error(err('auth'))
-  const { data, error } = await supabase.functions.invoke('food-photo', { body: { ...body, lang: getLang() } })
+  const { data, error } = await supabase.functions.invoke(fn, { body: { ...body, lang: getLang() } })
   if (error) {
     let code = ''
     try { code = (await (error as { context?: Response }).context?.json())?.error ?? '' } catch { /* not json */ }
     // no plan (or it ran out): show the plans page instead of only an error
-    if (code === 'access' || code === 'expired') { refreshPlan(); openPaywall() }
+    if (code === 'access' || code === 'expired' || code === 'ultra') { refreshPlan(); openPaywall() }
     throw new Error(err(code) ?? t('Hat nicht geklappt – Internet prüfen und nochmal versuchen.', 'That did not work – check your connection and try again.'))
   }
   if (typeof data?.usd === 'number' || typeof data?.pct === 'number') {

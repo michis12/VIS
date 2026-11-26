@@ -8,6 +8,7 @@ export type Overlay =
   | { kind: 'measures' }
   | { kind: 'exercise'; id: string }
   | { kind: 'settings' }
+  | { kind: 'exercises' }
 
 export interface Nav {
   push: (o: Overlay) => void

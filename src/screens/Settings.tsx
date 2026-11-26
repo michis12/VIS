@@ -84,6 +84,15 @@ export function Settings({ toast }: { toast: (t: string) => void }) {
         </div>
       </div>
 
+      <div className="section-title"><h2>{t('Ernährung', 'Nutrition')}</h2></div>
+      <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ flex: 1 }}>{t('Mahlzeiten aufteilen', 'Split into meals')}<div className="faint" style={{ fontSize: 13 }}>{t('Frühstück, Mittag, Abend und Snacks getrennt', 'Breakfast, lunch, dinner and snacks separately')}</div></div>
+        <div className="segmented" style={{ width: 120 }}>
+          <button className={!store.settings.mealSections ? 'on' : ''} onClick={() => store.saveSettings({ ...store.settings, mealSections: false })}>{t('Aus', 'Off')}</button>
+          <button className={store.settings.mealSections ? 'on' : ''} onClick={() => store.saveSettings({ ...store.settings, mealSections: true })}>{t('An', 'On')}</button>
+        </div>
+      </div>
+
       <div className="section-title"><h2>Training</h2></div>
       <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ flex: 1 }}>{t('Pausenzeit', 'Rest time')}<div className="faint" style={{ fontSize: 13 }}>{t('startet nach jedem bestätigten Satz', 'starts after every confirmed set')}</div></div>

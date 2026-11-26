@@ -11,11 +11,11 @@ import { BASICS } from '../data/foods'
 import { foodAi, shrink } from '../foodAi'
 import { dateLabel, fmtInt, haptic, localIso, today, uid } from '../lib'
 import {
-  dayTotals, fmtG, forGrams, kcalTarget, macroTargets, offProduct, offSearch, recipeAsFood, recipeWeight,
+  dayTotals, fmtG, forGrams, kcalTarget, macroTargets, offProduct, offSearch, recipeAsFood, recipeTotal, recipeWeight,
   type Macros, type OffHit,
 } from '../nutrition'
 import { useStore } from '../store'
-import type { Food, FoodEntry, Meal, Recipe } from '../types'
+import { MEALS, type Food, type FoodEntry, type Meal, type Recipe } from '../types'
 import { RecipeEditor } from './RecipeEditor'
 
 const addDays = (iso: string, d: number) => {
@@ -58,6 +58,9 @@ export function Nutrition() {
   const [editing, setEditing] = useState<FoodEntry | null>(null)
   const [photo, setPhoto] = useState<File | null>(null)
   const [suggest, setSuggest] = useState(false)
+  // with meal sections on, "+" on a section adds into that meal
+  const [addMeal, setAddMeal] = useState<Meal | null>(null)
+  const mealOf = () => addMeal ?? mealAt()
   const photoInput = useRef<HTMLInputElement>(null)
 
   // newest first
@@ -69,7 +72,7 @@ export function Nutrition() {
     const at = localIso()
     for (const it of items) {
       store.saveFoodEntry({
-        id: uid(), date, meal: mealAt(), name: it.food.name, grams: it.grams, ...forGrams(it.food, it.grams), at,
+        id: uid(), date, meal: mealOf(), name: it.food.name, grams: it.grams, ...forGrams(it.food, it.grams), at,
         ref: it.recipeId ? { kind: 'recipe', id: it.recipeId } : { kind: 'food', food: it.food },
       })
     }
@@ -108,17 +111,24 @@ export function Nutrition() {
         <input ref={photoInput} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) setPhoto(f); e.target.value = '' }} />
       </div>
 
-      {day.length > 0 && (
-        <div className="card" style={{ padding: '2px 14px', marginTop: 12 }}>
-          {day.map((e) => (
-            <button key={e.id} className="nut-entry" onClick={() => setEditing(e)}>
-              <div className="grow">
-                <div className="nut-entry-name">{e.name}</div>
-                <div className="faint num" style={{ fontSize: 12 }}>{e.at.slice(11, 16)} · {fmtG(e.grams)} g · {fmtG(e.p)} {tr('E', 'P')} · {fmtG(e.c)} {tr('K', 'C')} · {fmtG(e.f)} F</div>
+      {store.settings.mealSections ? (
+        MEALS.map((m) => {
+          const items = day.filter((e) => e.meal === m.id)
+          const kcal = items.reduce((n, e) => n + e.kcal, 0)
+          return (
+            <div key={m.id} className="card nut-meal" style={{ padding: '2px 14px', marginTop: 12 }}>
+              <div className="nut-meal-head">
+                <b>{m.label}</b>
+                <span className="faint num">{items.length ? `${fmtInt(kcal)} kcal` : ''}</span>
+                <button className="nut-meal-add" onClick={() => { haptic(); setAddMeal(m.id); setAdding('search') }} aria-label={tr(`${m.label} hinzufügen`, `Add to ${m.label}`)}><Icon.plus /></button>
               </div>
-              <span className="num">{fmtInt(e.kcal)}</span>
-            </button>
-          ))}
+              {items.map((e) => <EntryRow key={e.id} e={e} onOpen={() => setEditing(e)} />)}
+            </div>
+          )
+        })
+      ) : day.length > 0 && (
+        <div className="card" style={{ padding: '2px 14px', marginTop: 12 }}>
+          {day.map((e) => <EntryRow key={e.id} e={e} onOpen={() => setEditing(e)} />)}
         </div>
       )}
 
@@ -126,17 +136,18 @@ export function Nutrition() {
         <FoodPicker
           title={tr('Hinzufügen', 'Add')}
           startScan={adding === 'scan'}
-          onClose={() => setAdding(null)}
-          onPickMany={(items) => { saveItems(items); setAdding(null) }}
+          onClose={() => { setAdding(null); setAddMeal(null) }}
+          onPickMany={(items) => { saveItems(items); setAdding(null); setAddMeal(null) }}
           onPick={(p, grams) => {
             const m = forGrams(pickFood(p), grams)
             store.saveFoodEntry({
-              id: uid(), date, meal: mealAt(), name: pickName(p), grams, ...m, at: localIso(),
+              id: uid(), date, meal: mealOf(), name: pickName(p), grams, ...m, at: localIso(),
               ref: p.kind === 'food' ? { kind: 'food', food: p.food } : { kind: 'recipe', id: p.recipe.id },
             })
             if (p.kind === 'food' && p.food.source === 'off') store.saveFood(p.food) // keep for offline + recents
             haptic()
             setAdding(null)
+            setAddMeal(null)
             setAdded((n) => n + 1)
           }}
         />
@@ -230,13 +241,13 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
   /** open straight into the camera (scan button) */
   startScan?: boolean
 }) {
-  const { foodLog, foods, recipes, saveFood } = useStore()
+  const { foodLog, foods, recipes, saveFood, settings, saveSettings } = useStore()
   const [q, setQ] = useState('')
   const [remote, setRemote] = useState<OffHit[]>([])
   const [loading, setLoading] = useState(false)
   const [offline, setOffline] = useState(false)
   const [scan, setScan] = useState(!!startScan)
-  const [view, setView] = useState<'recent' | 'recipes'>('recent')
+  const [view, setView] = useState<'recent' | 'recipes' | 'favs'>('recent')
   const [editRecipe, setEditRecipe] = useState<Recipe | null | 'new'>(null)
   const [missing, setMissing] = useState<{ code: string; name?: string } | null>(null)
   const [chosen, setChosen] = useState<Pick | null>(null)
@@ -276,6 +287,29 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
     for (const f of BASICS) push({ id: f.id, food: f })
     return out
   }, [aiText, recipes, foods, recents, noRecipes])
+
+  // favourites: heart in every row, own list behind the heart button in the header
+  const favIds = useMemo(() => new Set(settings.favFoods ?? []), [settings.favFoods])
+  const pickId = (p: Pick) => (p.kind === 'food' ? p.food.id : p.recipe.id)
+  const toggleFav = (p: Pick) => {
+    haptic()
+    const id = pickId(p)
+    const has = favIds.has(id)
+    // products from the online search are kept locally so the favourite works offline
+    if (!has && p.kind === 'food' && p.food.source === 'off') saveFood(p.food)
+    saveSettings({ ...settings, favFoods: has ? [...favIds].filter((x) => x !== id) : [...favIds, id] })
+  }
+  const favs = useMemo(() => {
+    const out: Pick[] = []
+    for (const id of settings.favFoods ?? []) {
+      const r = recipes.find((x) => x.id === id)
+      if (r) { if (!noRecipes) out.push({ kind: 'recipe', recipe: r }); continue }
+      const f = foods.find((x) => x.id === id) ?? BASICS.find((x) => x.id === id)
+        ?? foodLog.find((e) => e.ref.kind === 'food' && e.ref.food.id === id)?.ref as { kind: 'food'; food: Food } | undefined
+      if (f) out.push({ kind: 'food', food: 'food' in f ? f.food : f })
+    }
+    return out
+  }, [settings.favFoods, recipes, foods, foodLog, noRecipes])
 
   const term = q.trim().toLowerCase()
   const local = useMemo(() => {
@@ -326,6 +360,9 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
       <div className="fullsheet-head">
         <button className="icon-btn" onClick={onClose} aria-label={tr('Schließen', 'Close')}><Icon.back /></button>
         <div className="grow" style={{ fontWeight: 700, fontSize: 18 }}>{title}</div>
+        <button className={'btn btn-ghost btn-sm nut-fav-btn' + (view === 'favs' ? ' on' : '')} onClick={() => { haptic(); setQ(''); setView(view === 'favs' ? 'recent' : 'favs') }} aria-label={tr('Favoriten', 'Favourites')}>
+          <HeartIcon on={view === 'favs'} />
+        </button>
         <button className="btn btn-ghost btn-sm" onClick={() => setCustom({})}>{tr('Eigenes', 'Custom')}</button>
       </div>
       <div className="nut-search">
@@ -334,13 +371,19 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
       </div>
 
       <div className="fullsheet-body">
-        {!term && !noRecipes && (
+        {!term && !noRecipes && view !== 'favs' && (
           <div className="segmented" style={{ marginBottom: 10 }}>
             <button className={view === 'recent' ? 'on' : ''} onClick={() => setView('recent')}>{tr('Zuletzt', 'Recent')}</button>
             <button className={view === 'recipes' ? 'on' : ''} onClick={() => setView('recipes')}>{tr('Rezepte', 'Recipes')}</button>
           </div>
         )}
-        {!term && view === 'recipes' && !noRecipes ? (
+        {!term && view === 'favs' ? (
+          <>
+            <div className="eyebrow" style={{ margin: '2px 2px 6px' }}>{tr('Favoriten', 'Favourites')}</div>
+            {favs.length === 0 && <div className="faint" style={{ fontSize: 13, padding: '6px 2px' }}>{tr('Noch keine Favoriten – tipp bei einem Lebensmittel auf das Herz.', 'No favourites yet – tap the heart on a food.')}</div>}
+            {favs.map((p) => <FavRow key={pickId(p)} p={p} fav onFav={() => toggleFav(p)} onClick={() => setChosen(p)} />)}
+          </>
+        ) : !term && view === 'recipes' && !noRecipes ? (
           <>
             {recipes.map((r) => (
               <div key={r.id} className="nut-pick-row">
@@ -354,7 +397,7 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
           <>
             {!term && recents.length === 0 && <div className="faint" style={{ fontSize: 13, padding: '6px 2px' }}>{tr('Noch nichts eingetragen – suchen oder Barcode scannen.', 'Nothing logged yet – search or scan a barcode.')}</div>}
             {list.map((p) => (
-              <PickRow key={(p.kind === 'food' ? p.food.id : p.recipe.id)} p={p} onClick={() => setChosen(p)} />
+              <FavRow key={pickId(p)} p={p} fav={favIds.has(pickId(p))} onFav={() => toggleFav(p)} onClick={() => setChosen(p)} />
             ))}
           </>
         )}
@@ -436,7 +479,48 @@ function PickRow({ p, onClick }: { p: Pick; onClick: () => void }) {
         <div className="nut-entry-name">{pickName(p)}</div>
         <div className="faint" style={{ fontSize: 12 }}>{sub}</div>
       </div>
-      <span className="faint num" style={{ fontSize: 13 }}>{Math.round(f.kcal)} kcal</span>
+      {/* recipes: the whole dish (per 100 g alone looked far too low); foods: per 100 g */}
+      {p.kind === 'recipe' ? (
+        <span className="faint num" style={{ fontSize: 13, textAlign: 'right' }}>
+          {fmtInt(recipeTotal(p.recipe).kcal)} kcal
+          <span style={{ display: 'block', fontSize: 11 }}>{Math.round(f.kcal)} / 100 g</span>
+        </span>
+      ) : (
+        <span className="faint num" style={{ fontSize: 13 }}>{Math.round(f.kcal)} kcal</span>
+      )}
+    </button>
+  )
+}
+
+/** a pick row with a heart to (un)mark it as favourite */
+function FavRow({ p, fav, onFav, onClick }: { p: Pick; fav: boolean; onFav: () => void; onClick: () => void }) {
+  return (
+    <div className="nut-pick-row">
+      <PickRow p={p} onClick={onClick} />
+      <button className={'nut-heart' + (fav ? ' on' : '')} onClick={onFav} aria-label={fav ? tr('Aus Favoriten entfernen', 'Remove from favourites') : tr('Zu Favoriten', 'Add to favourites')}>
+        <HeartIcon on={fav} />
+      </button>
+    </div>
+  )
+}
+
+function HeartIcon({ on }: { on: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill={on ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.3a4.3 4.3 0 0 1 7.5 2.5C19.5 15.4 12 20 12 20Z" />
+    </svg>
+  )
+}
+
+/** one diary entry */
+function EntryRow({ e, onOpen }: { e: FoodEntry; onOpen: () => void }) {
+  return (
+    <button className="nut-entry" onClick={onOpen}>
+      <div className="grow">
+        <div className="nut-entry-name">{e.name}</div>
+        <div className="faint num" style={{ fontSize: 12 }}>{e.at.slice(11, 16)} · {fmtG(e.grams)} g · {fmtG(e.p)} {tr('E', 'P')} · {fmtG(e.c)} {tr('K', 'C')} · {fmtG(e.f)} F</div>
+      </div>
+      <span className="num">{fmtInt(e.kcal)}</span>
     </button>
   )
 }

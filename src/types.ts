@@ -107,6 +107,10 @@ export interface Settings {
   sex?: 'm' | 'f'
   /** UI language, German by default */
   lang?: Lang
+  /** favourite foods / recipes (food id or recipe id), marked with the heart in the food search */
+  favFoods?: string[]
+  /** split the food diary into breakfast / lunch / dinner / snacks */
+  mealSections?: boolean
 }
 
 // ---- Ernährung

@@ -407,7 +407,7 @@ export function Stats() {
 
       <PhaseList />
 
-      <div className="section-title"><h2>{tr('Übung im Detail', 'Exercise in detail')}</h2><span className="faint" style={{ fontSize: 13 }}>{tr('gesamter Verlauf', 'whole history')}</span></div>
+      <div className="section-title"><h2>{tr('Übung im Detail', 'Exercise in detail')}</h2><button className="link" onClick={() => nav.push({ kind: 'exercises' })}>{tr('Alle Übungen', 'All exercises')}</button></div>
       <div className="chips">
         {ranked.slice(0, 40).map((e) => <button key={e.id} className={'chip' + (e.id === ex ? ' on' : '')} onClick={() => setExId(e.id)}>{e.name}</button>)}
       </div>

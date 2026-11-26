@@ -9,6 +9,7 @@ import { haptic } from './lib'
 import { NavCtx, type Overlay } from './nav'
 import { Body } from './screens/Body'
 import { ExerciseDetail } from './screens/ExerciseDetail'
+import { ExerciseLibrary } from './screens/ExerciseLibrary'
 import { History } from './screens/History'
 import { Measures } from './screens/Measures'
 import { Nutrition } from './screens/Nutrition'
@@ -77,6 +78,7 @@ function Shell() {
   else if (top?.kind === 'measures') content = <Measures />
   else if (top?.kind === 'settings') content = <Settings toast={setToast} />
   else if (top?.kind === 'exercise') content = <ExerciseDetail key={top.id} id={top.id} />
+  else if (top?.kind === 'exercises') content = <ExerciseLibrary />
 
   else if (showWorkout && active) {
     content = (

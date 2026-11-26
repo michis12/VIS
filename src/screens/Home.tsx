@@ -1,6 +1,7 @@
 import { t as tr } from '../i18n'
 import { useState } from 'react'
-import { requireAi } from '../components/AiCredit'
+import { openPaywall, requireAi, usePlan } from '../components/AiCredit'
+import { Coach } from '../components/Coach'
 import { ScoreGauge } from '../components/ScoreGauge'
 import { TrainingImport } from '../components/TrainingImport'
 import { Icon, Sheet } from '../components/ui'
@@ -29,6 +30,13 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
   const [chosen, setChosen] = useState<Template | null>(null)
   const [manage, setManage] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [coach, setCoach] = useState(false)
+  const plan = usePlan()
+  // the coach is an Ultra feature (fam and dev have it too)
+  const openCoach = () => {
+    if (plan && plan.active && (plan.plan === 'ultra' || plan.plan === 'fam' || plan.plan === 'dev')) setCoach(true)
+    else openPaywall()
+  }
   const week = useWeekScore(0)
 
   const importTemplates = async () => {
@@ -53,6 +61,15 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
   }
 
   const lastOf = (t: Template) => [...workouts].reverse().find((w) => w.name === t.name && w.status === 'done')
+  // rhythm: templates run in their order (Day 1, Day 2, …); after the last finished
+  // one comes the next, after the last template the first again
+  const nextId = (() => {
+    if (templates.length < 2) return null
+    const lastDone = [...workouts].reverse().find((w) => w.status === 'done' && templates.some((t) => t.name === w.name))
+    if (!lastDone) return templates[0].id
+    const i = templates.findIndex((t) => t.name === lastDone.name)
+    return templates[(i + 1) % templates.length].id
+  })()
   const recent = [...workouts].filter((w) => w.status !== 'active').reverse().slice(0, 8)
   const lastWeight = weights[weights.length - 1]
   const phase = phases[phases.length - 1]
@@ -62,7 +79,15 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
   return (
     <div className="screen">
       <div className="eyebrow">{dateLabel(localIso(), false)}</div>
-      <h1 className="title">{greet}</h1>
+      <div className="home-head">
+        <h1 className="title">{greet}</h1>
+        <button className="coach-btn" onClick={openCoach} aria-label="Coach">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" aria-hidden="true">
+            <path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-4 3.5V17H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+            <path d="M12 8.2l.9 1.9 1.9.9-1.9.9-.9 1.9-.9-1.9-1.9-.9 1.9-.9Z" fill="currentColor" stroke="none" />
+          </svg>
+        </button>
+      </div>
 
       {active && (
         <button className="card chrome-edge hero" style={{ width: '100%', textAlign: 'left', marginBottom: 12 }} onClick={onOpenWorkout}>
@@ -107,9 +132,10 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
       {templates.map((t) => {
         const last = lastOf(t)
         return (
-          <button key={t.id} className="card tpl" style={{ width: '100%', textAlign: 'left' }} onClick={() => !active && setChosen(t)} disabled={!!active}>
+          <button key={t.id} className={'card tpl' + (t.id === nextId && !active ? ' tpl-next' : '')} style={{ width: '100%', textAlign: 'left' }} onClick={() => !active && setChosen(t)} disabled={!!active}>
             <div className="tpl-badge"><span className="chrome-text">{badge(t.name)}</span></div>
             <div className="tpl-main">
+              {t.id === nextId && !active && <div className="tpl-next-tag">{tr('Als Nächstes', 'Up next')}</div>}
               <div className="name">{t.name}</div>
               <div className="meta">{t.exercises.map((e) => exerciseById.get(e.exerciseId)?.name).join(' · ')}</div>
               {last && <div className="meta faint" style={{ marginTop: 2 }}>{tr('Zuletzt', 'Last')} {dateLabel(last.startedAt)}</div>}
@@ -135,6 +161,7 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
         {tr('Trainings aus alter App übernehmen', 'Bring workouts from your old app')}
       </button>
+      {coach && <Coach onClose={() => setCoach(false)} />}
       {importing && <TrainingImport onClose={() => setImporting(false)} toast={toast} />}
 
       {manage && (
@@ -142,6 +169,7 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
           <h3>Templates</h3>
           <div className="menu">
             <button onClick={() => { setManage(false); nav.push({ kind: 'template', template: null }) }}><Icon.plus /> {tr('Neues Template', 'New template')}</button>
+            <button onClick={() => { setManage(false); nav.push({ kind: 'exercises' }) }}>{tr('Alle Übungen', 'All exercises')}</button>
             <button onClick={importTemplates}>{tr('Template-Datei importieren', 'Import template file')}</button>
             <button disabled={!templates.length} onClick={async () => {
               setManage(false)

@@ -4,8 +4,11 @@ import type { WorkoutProgress } from './progress'
 import type { Phase, WeightEntry, Workout } from './types'
 
 /**
- * Weekly score 0–99 (Monday–Sunday), built from five parts:
- *   Training 35 · Volumen 20 · Fortschritt 25 · Konstanz 10 · Körper 10
+ * Weekly score 0–99 (Monday–Sunday), built from five parts. The weights follow
+ * the phase of that week:
+ *   Erhalt / keine Phase: Training 35 · Volumen 20 · Fortschritt 25 · Konstanz 10 · Körper 10
+ *   Bulk  (Fortschritt zählt mehr): Training 30 · Volumen 20 · Fortschritt 30 · Konstanz 10 · Körper 10
+ *   Cut   (Fortschritt ist Bonus):  Training 35 · Volumen 20 · Fortschritt 15 · Konstanz 15 · Körper 15
  * Volume and progress are compared with your own recent weeks, so the score
  * tracks "a good week for you", not an absolute standard.
  */
@@ -101,52 +104,61 @@ function scoreWeek(
   const baseGain = gainPer(prevWorkouts)
   const thisGain = gainPer(week)
 
+  // the phase of this week decides how much progress counts
+  const phase = [...phases].reverse().find((p) => p.start < end)
+  const W = phase?.type === 'bulk'
+    ? { train: 30, vol: 20, prog: 30, cons: 10, body: 10 }
+    : phase?.type === 'cut'
+      ? { train: 35, vol: 20, prog: 15, cons: 15, body: 15 }
+      : { train: 35, vol: 20, prog: 25, cons: 10, body: 10 }
+
   const parts: ScorePart[] = []
   // 1 · Training
   parts.push({
-    key: 'train', label: 'Training', max: 35,
-    pts: Math.round(clamp(week.length / WEEKLY_TARGET) * 35),
+    key: 'train', label: 'Training', max: W.train,
+    pts: Math.round(clamp(week.length / WEEKLY_TARGET) * W.train),
     detail: `${week.length} / ${WEEKLY_TARGET} Workouts`,
   })
   // 2 · Volumen
   const volRatio = avgVol ? volume / avgVol : volume > 0 ? 1 : 0
   parts.push({
-    key: 'vol', label: t('Volumen', 'Volume'), max: 20,
-    pts: Math.round(clamp((volRatio - 0.4) / 0.7) * 20),
+    key: 'vol', label: t('Volumen', 'Volume'), max: W.vol,
+    pts: Math.round(clamp((volRatio - 0.4) / 0.7) * W.vol),
     detail: avgVol ? t(`${Math.round(volRatio * 100)} % deines Schnitts`, `${Math.round(volRatio * 100)} % of your average`) : t('noch kein Vergleich', 'no comparison yet'),
   })
   // 3 · Fortschritt
   const gainRatio = baseGain ? thisGain / baseGain : thisGain > 0 ? 1 : 0
   parts.push({
-    key: 'prog', label: t('Fortschritt', 'Progress'), max: 25,
-    pts: Math.round(clamp(gainRatio / 1.2) * 25),
-    detail: t(`${prs} Rekorde · ${ups} Fortschritte`, `${prs} records · ${ups} progress`),
+    key: 'prog', label: t('Fortschritt', 'Progress'), max: W.prog,
+    // cut: holding your strength already earns most of it; bulk: it needs real gains
+    pts: Math.round(clamp(gainRatio / (phase?.type === 'cut' ? 0.8 : 1.2)) * W.prog),
+    detail: t(`${prs} Rekorde · ${ups} Fortschritte`, `${prs} records · ${ups} progress`)
+      + (phase?.type === 'bulk' ? t(' · im Bulk zählt das mehr', ' · counts more in a bulk') : phase?.type === 'cut' ? t(' · im Cut ein Bonus', ' · a bonus in a cut') : ''),
   })
   // 4 · Konstanz (skipped exercises)
   const planned = week.reduce((n, w) => n + w.exercises.length, 0)
   const skipped = week.reduce((n, w) => n + w.exercises.filter((e) => e.skipped).length, 0)
   const trained = week.reduce((n, w) => n + w.exercises.filter((e) => e.sets.some(isRealSet)).length, 0)
   parts.push({
-    key: 'const', label: t('Konstanz', 'Consistency'), max: 10,
-    pts: planned ? Math.round(clamp(trained / planned) * 10) : 0,
+    key: 'const', label: t('Konstanz', 'Consistency'), max: W.cons,
+    pts: planned ? Math.round(clamp(trained / planned) * W.cons) : 0,
     detail: planned ? (skipped ? t(`${skipped} Übung${skipped > 1 ? 'en' : ''} ausgelassen`, `${skipped} exercise${skipped > 1 ? 's' : ''} skipped`) : t('nichts ausgelassen', 'nothing skipped')) : t('kein Training', 'no training'),
   })
   // 5 · Körper (weight trend vs. phase)
-  const phase = [...phases].reverse().find((p) => p.start < end)
   const lastIn = [...weights].reverse().find((w) => w.date >= start && w.date < end)
   const lastBefore = [...weights].reverse().find((w) => w.date < start)
-  let bodyPts = 5
+  let bodyPts = Math.round(W.body / 2)
   let bodyDetail = t('keine Phase gesetzt', 'no phase set')
   if (phase && lastIn && lastBefore) {
     const d = lastIn.kg - lastBefore.kg
     const fit = phase.type === 'bulk' ? d >= 0.05 && d <= 0.6 : phase.type === 'cut' ? d <= -0.15 && d >= -1 : Math.abs(d) <= 0.35
     const near = phase.type === 'bulk' ? d > -0.2 : phase.type === 'cut' ? d < 0.2 : Math.abs(d) <= 0.7
-    bodyPts = fit ? 10 : near ? 6 : 2
+    bodyPts = Math.round(W.body * (fit ? 1 : near ? 0.6 : 0.2))
     bodyDetail = `${d > 0 ? '+' : ''}${dec(d, 1)} kg · ${phase.type === 'bulk' ? 'Bulk' : phase.type === 'cut' ? 'Cut' : t('Erhalt', 'Maintain')}`
   } else if (phase) {
     bodyDetail = t('kein Gewicht diese Woche', 'no weight this week')
   }
-  parts.push({ key: 'body', label: t('Körper', 'Body'), max: 10, pts: bodyPts, detail: bodyDetail })
+  parts.push({ key: 'body', label: t('Körper', 'Body'), max: W.body, pts: bodyPts, detail: bodyDetail })
 
   const score = Math.min(99, parts.reduce((n, p) => n + p.pts, 0))
   return { start, score: week.length ? score : 0, parts, workouts: week.length, sets, volume, ups, prs, current: weeksAgo === 0 }

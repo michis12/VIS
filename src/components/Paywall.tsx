@@ -53,6 +53,7 @@ const FEATURES: { icon: React.JSX.Element; title: string; text: string }[] = [
   { icon: <path d="M12 3a9 9 0 1 0 9 9M12 7v5l3 2M17 3l1 2 2 1-2 1-1 2-1-2-2-1 2-1Z" />, get title() { return t('Was soll ich noch essen?', 'What should I still eat?') }, get text() { return t('Vorschläge aus deinen echten Mahlzeiten für die restlichen Makros.', 'Ideas from your real meals for the remaining macros.') } },
   { icon: <path d="M3 18c3 0 4-9 7-9s3 6 5 6 3-9 6-9M3 21h18" />, get title() { return t('Phasenplaner', 'Phase planner') }, get text() { return t('Kalorien und Dauer für Bulk oder Cut aus deinen eigenen Daten.', 'Calories and duration for a bulk or cut from your own data.') } },
   { icon: <path d="M12 3v12M7 10l5 5 5-5M4 19h16" />, get title() { return t('Trainings importieren', 'Import workouts') }, get text() { return t('Strong, Hevy, FitNotes oder Notizen – deine Historie kommt mit.', 'Strong, Hevy, FitNotes or notes – your history comes along.') } },
+  { icon: <path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-4 3.5V17H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2ZM12 8.2l.9 1.9 1.9.9-1.9.9-.9 1.9-.9-1.9-1.9-.9 1.9-.9Z" />, get title() { return t('Coach-Chat · Ultra', 'Coach chat · Ultra') }, get text() { return t('Fragt deine Daten ab, gibt Tipps und baut dir Vorlagen.', 'Knows your data, gives tips and builds templates for you.') } },
 ]
 
 /**
@@ -158,7 +159,7 @@ export function Paywall({ onClose }: { onClose: () => void }) {
         <div className="pw-desc">
           {k === 'free' && t('Training, Statistiken, Körper und Ernährung – alles ohne KI.', 'Training, stats, body and nutrition – everything without AI.')}
           {k === 'solo' && t(`Alle KI-Funktionen. Reicht für ca. ${planPhotos('solo', friend)} Essensfotos im Monat.`, `All AI features. Enough for about ${planPhotos('solo', friend)} food photos a month.`)}
-          {k === 'ultra' && t(`200 % Limit – ca. ${planPhotos('ultra', friend)} Essensfotos im Monat.`, `200% limit – about ${planPhotos('ultra', friend)} food photos a month.`)}
+          {k === 'ultra' && t(`200 % Limit + Coach-Chat – ca. ${planPhotos('ultra', friend)} Essensfotos im Monat.`, `200% limit + coach chat – about ${planPhotos('ultra', friend)} food photos a month.`)}
         </div>
       </button>
     )

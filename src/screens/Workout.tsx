@@ -1,5 +1,6 @@
 import { t as tr } from '../i18n'
-import { muscleLabel } from '../muscles'
+import { muscleLabel, musclesFor } from '../muscles'
+import { MuscleIcon } from '../components/MuscleMap'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Icon, ProgressBadges, SetMark, Sheet, Tap, Wheel } from '../components/ui'
 import { clock, fmtKg, haptic, isRealSet, localIso, uid, workoutVolume, fmtInt } from '../lib'
@@ -555,7 +556,8 @@ export function ExercisePicker({ onClose, onPick }: { onClose: () => void; onPic
       <input className="input" placeholder={tr('Suchen oder neu anlegen', 'Search or create')} value={q} onChange={(e) => setQ(e.target.value)} style={{ margin: '12px 0' }} />
       <div className="menu">
         {list.map((e) => (
-          <button key={e.id} onClick={() => onPick(e.id)}>
+          <button key={e.id} onClick={() => onPick(e.id)} style={{ gap: 12 }}>
+            <MuscleIcon primary={e.muscle} secondary={musclesFor(e).secondary} name={e.name} size={36} />
             <span style={{ flex: 1 }}>{e.name}</span><span className="faint" style={{ fontSize: 13 }}>{muscleLabel(e.muscle)}</span>
           </button>
         ))}
