@@ -254,6 +254,8 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
   const [custom, setCustom] = useState<{ barcode?: string; name?: string } | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [aiText, setAiText] = useState<string | null>(null)
+  const [editing, setEditing] = useState<Food | null>(null)
+  const updateFood = useUpdateFood()
   const ctrl = useRef<AbortController | null>(null)
 
 
@@ -457,7 +459,21 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
           <button className="btn btn-ghost btn-block" style={{ marginTop: 10 }} onClick={() => { setMissing(null); setScan(true) }}>{tr('Erneut scannen', 'Scan again')}</button>
         </Sheet>
       )}
-      {chosen && <AmountSheet pick={chosen} onClose={() => setChosen(null)} onDone={(g) => { onPick(chosen, g); setChosen(null) }} />}
+      {chosen && (
+        <AmountSheet
+          pick={chosen} onClose={() => setChosen(null)} onDone={(g) => { onPick(chosen, g); setChosen(null) }}
+          extra={chosen.kind === 'food' && chosen.food.source !== 'basic' ? (
+            <button className="btn btn-ghost btn-block" style={{ marginTop: 10 }} onClick={() => setEditing(chosen.food)}>{tr('Nährwerte bearbeiten', 'Edit nutrition values')}</button>
+          ) : undefined}
+        />
+      )}
+      {editing && (
+        <CustomFoodSheet
+          initial={{}} edit={editing}
+          onClose={() => setEditing(null)}
+          onSave={(f) => { updateFood(f); setEditing(null); setChosen({ kind: 'food', food: f }) }}
+        />
+      )}
       {custom && (
         <CustomFoodSheet
           initial={custom}
@@ -573,8 +589,27 @@ function AmountSheet({ pick, onClose, onDone, initial, action = tr('Hinzufügen'
   )
 }
 
+/**
+ * Saves an edited food and puts the new values everywhere it was used: every
+ * diary entry with it is recalculated, recipes get the new values too.
+ */
+function useUpdateFood() {
+  const store = useStore()
+  return (f: Food) => {
+    store.saveFood(f)
+    for (const e of store.foodLog) {
+      if (e.ref.kind === 'food' && e.ref.food.id === f.id) store.saveFoodEntry({ ...e, name: f.name, ref: { kind: 'food', food: f }, ...forGrams(f, e.grams) })
+    }
+    for (const r of store.recipes) {
+      if (r.items.some((it) => it.food.id === f.id)) store.saveRecipe({ ...r, items: r.items.map((it) => (it.food.id === f.id ? { ...it, food: f } : it)) })
+    }
+  }
+}
+
 function EntrySheet({ entry, onClose }: { entry: FoodEntry; onClose: () => void }) {
   const store = useStore()
+  const updateFood = useUpdateFood()
+  const [editFood, setEditFood] = useState<Food | null>(null)
   const rec = entry.ref.kind === 'recipe' ? store.recipes.find((r) => r.id === (entry.ref as { id: string }).id) : null
   const pick: Pick = entry.ref.kind === 'food'
     ? { kind: 'food', food: entry.ref.food }
@@ -593,15 +628,54 @@ function EntrySheet({ entry, onClose }: { entry: FoodEntry; onClose: () => void 
       }}
       extra={
         <>
+          {entry.ref.kind === 'food' && (
+            <button className="btn btn-ghost btn-block" style={{ marginTop: 10 }} onClick={() => setEditFood(store.foods.find((x) => x.id === (entry.ref as { food: Food }).food.id) ?? (entry.ref as { food: Food }).food)}>
+              {tr('Nährwerte bearbeiten', 'Edit nutrition values')}
+            </button>
+          )}
           <button className="btn btn-danger btn-block" style={{ marginTop: 10 }} onClick={() => { store.deleteFoodEntry(entry.id); onClose() }}>{tr('Eintrag löschen', 'Delete entry')}</button>
+          {editFood && (
+            <CustomFoodSheet
+              initial={{}} edit={editFood}
+              onClose={() => setEditFood(null)}
+              onSave={(f) => { updateFood(f); setEditFood(null); onClose() }}
+            />
+          )}
         </>
       }
     />
   )
 }
 
-function CustomFoodSheet({ initial, onClose, onSave }: { initial: { barcode?: string; name?: string }; onClose: () => void; onSave: (f: Food) => void }) {
-  const [v, setV] = useState({ name: initial.name ?? '', brand: '', kcal: '', p: '', c: '', f: '', serving: '' })
+function CustomFoodSheet({ initial, edit, onClose, onSave }: {
+  initial: { barcode?: string; name?: string }
+  /** an existing food: the sheet edits it (same id) instead of creating a new one */
+  edit?: Food
+  onClose: () => void
+  onSave: (f: Food) => void
+}) {
+  const fmt = (x: number | undefined) => (x == null ? '' : decStr(Math.round(x * 10) / 10))
+  const [v, setV] = useState(edit
+    ? { name: edit.name, brand: edit.brand ?? '', kcal: String(Math.round(edit.kcal)), p: fmt(edit.p), c: fmt(edit.c), f: fmt(edit.f), serving: edit.serving ? String(Math.round(edit.serving.g)) : '' }
+    : { name: initial.name ?? '', brand: '', kcal: '', p: '', c: '', f: '', serving: '' })
+  // front of the pack: the AI reads product name and brand
+  const front = useRef<HTMLInputElement>(null)
+  const [readingFront, setReadingFront] = useState(false)
+  const readFront = async (file: File) => {
+    setReadingFront(true)
+    setLabelMsg(null)
+    try {
+      const d = await foodAi({ mode: 'front', image: await shrink(file, 1024), mediaType: 'image/jpeg' })
+      if (!d?.found || !(d.name || d.brand)) throw new Error(tr('Kein Produkt erkannt – die Vorderseite gerade und nah fotografieren.', 'No product recognised – photograph the front straight and close.'))
+      setV((cur) => ({ ...cur, name: d.name || cur.name, brand: d.brand || cur.brand }))
+      setLabelMsg(tr('Name und Marke eingetragen – jetzt noch die Nährwerttabelle.', 'Name and brand filled in – now the nutrition label.'))
+      haptic(true)
+    } catch (e) {
+      setLabelMsg((e as Error).message)
+    } finally {
+      setReadingFront(false)
+    }
+  }
   const num = (s: string) => Math.max(0, Number(s.replace(',', '.')) || 0)
   const set = (k: keyof typeof v) => (e: React.ChangeEvent<HTMLInputElement>) => setV({ ...v, [k]: e.target.value })
   const ok = v.name.trim() && num(v.kcal) > 0
@@ -631,11 +705,18 @@ function CustomFoodSheet({ initial, onClose, onSave }: { initial: { barcode?: st
   }
   return (
     <Sheet onClose={onClose}>
-      <h3>{tr('Eigenes Lebensmittel', 'Custom food')}</h3>
+      <h3>{edit ? tr('Lebensmittel bearbeiten', 'Edit food') : tr('Eigenes Lebensmittel', 'Custom food')}</h3>
       {initial.barcode && <p className="faint" style={{ fontSize: 13 }}>{tr(`Barcode ${initial.barcode} ist noch unbekannt – einmal anlegen, dann erkennt VIS ihn.`, `Barcode ${initial.barcode} is still unknown – create it once, then VIS recognises it.`)}</p>}
-      <Tap className="btn btn-ghost btn-block" style={{ marginTop: 10 }} onClick={() => !reading && requireAi() && label.current?.click()}>
-        <CameraIcon /> {reading ? tr('Wird abgelesen…', 'Reading…') : tr('Nährwerttabelle fotografieren', 'Photograph nutrition label')}
-      </Tap>
+      <div className="grid-2" style={{ marginTop: 10 }}>
+        <Tap className="btn btn-ghost btn-block nut-photo-btn" onClick={() => !readingFront && requireAi() && front.current?.click()}>
+          <CameraIcon /> {readingFront ? tr('Wird gelesen…', 'Reading…') : tr('Vorderseite', 'Front')}
+        </Tap>
+        <Tap className="btn btn-ghost btn-block nut-photo-btn" onClick={() => !reading && requireAi() && label.current?.click()}>
+          <CameraIcon /> {reading ? tr('Wird abgelesen…', 'Reading…') : tr('Nährwerte', 'Nutrition')}
+        </Tap>
+      </div>
+      <div className="faint" style={{ fontSize: 12, marginTop: 6, textAlign: 'center' }}>{tr('Vorderseite = Name und Marke · Nährwerte = die Tabelle', 'Front = name and brand · Nutrition = the table')}</div>
+      <input ref={front} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) readFront(f); e.target.value = '' }} />
       <input ref={label} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) readLabel(f); e.target.value = '' }} />
       {labelMsg && <div className="hint"><span>{labelMsg}</span></div>}
       <label className="lbl">Name</label>
@@ -654,9 +735,9 @@ function CustomFoodSheet({ initial, onClose, onSave }: { initial: { barcode?: st
       <button
         className="btn btn-chrome btn-block" style={{ marginTop: 16 }} disabled={!ok}
         onClick={() => onSave({
-          id: 'c-' + uid(), name: v.name.trim(), brand: v.brand.trim() || undefined,
+          id: edit?.id ?? 'c-' + uid(), name: v.name.trim(), brand: v.brand.trim() || undefined,
           kcal: num(v.kcal), p: num(v.p), c: num(v.c), f: num(v.f), source: 'custom',
-          ...(initial.barcode ? { barcode: initial.barcode } : {}),
+          ...(edit?.barcode || initial.barcode ? { barcode: edit?.barcode ?? initial.barcode } : {}),
           ...(num(v.serving) > 0 ? { serving: { label: tr('1 Portion', '1 serving'), g: num(v.serving) } } : {}),
         })}
       >{tr('Speichern', 'Save')}</button>

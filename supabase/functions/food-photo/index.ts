@@ -1,6 +1,7 @@
 // Food AI for the app, modes:
 //   photo   - estimate the foods on a meal photo (FOOD_MODEL, default Sonnet)
 //   label   - read a nutrition label photo into per-100 g values (FAST_MODEL, Haiku)
+//   front   - read product name and brand from the front of a pack (FAST_MODEL)
 //   text    - turn "2 Semmeln mit Schinken" into foods with grams (FAST_MODEL, Haiku)
 //   plan    - next bulk/cut/maintain phase from body data + activity text (FAST_MODEL)
 //   suggest - what to eat for the rest of the day, from the user's own foods (FAST_MODEL)
@@ -78,11 +79,28 @@ const LABEL_SCHEMA = {
   additionalProperties: false,
 }
 
+const FRONT_SCHEMA = {
+  type: 'object',
+  properties: {
+    found: { type: 'boolean', description: 'false, wenn keine Verpackung / kein Produkt erkennbar ist' },
+    name: { type: 'string', description: 'Produktname, wie man ihn im Supermarkt sagen würde, z. B. "Proteinriegel Schoko" (ohne Marke), sonst ""' },
+    brand: { type: 'string', description: 'Marke, z. B. "Corny", sonst ""' },
+  },
+  required: ['found', 'name', 'brand'],
+  additionalProperties: false,
+}
+
+const FRONT_SYSTEM = `Du liest von einem Foto der Vorderseite einer Lebensmittelverpackung den Produktnamen und die Marke ab.
+- name: kurzer, klarer Produktname mit Sorte (z. B. "Proteinriegel Schoko", "Skyr Natur"), ohne die Marke, ohne Werbesprüche oder Gewichtsangaben.
+- brand: nur die Marke (z. B. "Corny", "Milbona").
+- Rate nicht: Was nicht lesbar ist, bleibt "". Ist keine Verpackung zu sehen: found = false.`
+
 const LABEL_SYSTEM = `Du liest Nährwerttabellen von Lebensmittelverpackungen ab (Fotos).
 - Gib die Werte pro 100 g (bzw. 100 ml) zurück, exakt wie auf der Packung. Steht nur ein Wert pro Portion da, rechne auf 100 g um.
 - Steht nur kJ da, rechne kcal = kJ / 4,184.
 - Kohlenhydrate = Gesamtkohlenhydrate (nicht "davon Zucker"); Fett = Gesamtfett (nicht "davon gesättigte").
-- Rate keine Werte. Wenn keine Tabelle lesbar ist: found = false und alle Zahlen 0.`
+- Rate keine Werte. Wenn keine Tabelle lesbar ist: found = false und alle Zahlen 0.
+- Kontrolle: kcal ≈ 4 × Eiweiß + 4 × Kohlenhydrate + 9 × Fett (± 15 %). Passt das nicht, lies die Ziffern nochmal genau – z. B. ist "6,2" leicht mit "0,2" zu verwechseln.`
 
 const TEXT_SYSTEM = `Du wandelst eine kurze Beschreibung, was jemand gegessen hat, in einzelne Lebensmittel mit Mengen um (Fitness-App, Österreich).
 - Übliche Portionen, wenn keine Menge genannt ist (z. B. 1 Semmel 50 g, 1 Scheibe Schinken 20 g, 1 Ei 55 g, 1 großes Glas 300 ml).
@@ -324,7 +342,7 @@ Deno.serve(async (req) => {
   if (!key) return json({ error: 'nokey' }, 503)
 
   let body: {
-    mode?: 'photo' | 'label' | 'text' | 'plan' | 'suggest' | 'import-cols' | 'import-ex' | 'import-text'; image?: string; mediaType?: string; note?: string; grams?: number
+    mode?: 'photo' | 'label' | 'front' | 'text' | 'plan' | 'suggest' | 'import-cols' | 'import-ex' | 'import-text'; image?: string; mediaType?: string; note?: string; grams?: number
     text?: string; foods?: { id: string; name: string; g?: number }[]
     goal?: string; activity?: string; wish?: string; data?: unknown
     left?: { kcal: number; p: number; c: number; f: number }; time?: string
@@ -341,7 +359,7 @@ Deno.serve(async (req) => {
   const mode = body.mode ?? 'photo'
   const { image, note, grams } = body
   const mediaType = body.mediaType === 'image/png' ? 'image/png' : 'image/jpeg'
-  const withImage = mode === 'photo' || mode === 'label'
+  const withImage = mode === 'photo' || mode === 'label' || mode === 'front'
   if (withImage && (!image || image.length > 4_000_000)) return json({ error: 'image' }, 400)
   if (mode === 'text' && !body.text?.trim()) return json({ error: 'text' }, 400)
   if (mode === 'plan' && !body.activity?.trim()) return json({ error: 'text' }, 400)
@@ -393,6 +411,11 @@ Deno.serve(async (req) => {
         text: `Geplante Phase: ${goal}\nAktivität: ${body.activity!.trim().slice(0, 500)}\nWunsch: ${body.wish?.trim().slice(0, 300) || '(keiner)'}\n\nDaten aus der App:\n${JSON.stringify(body.data ?? {}).slice(0, 6000)}`,
       }],
     }
+  } else if (mode === 'front') {
+    call = {
+      model: FAST_MODEL, system: FRONT_SYSTEM, schema: FRONT_SCHEMA,
+      content: [img, { type: 'text', text: 'Wie heißt das Produkt und welche Marke ist es?' }],
+    }
   } else if (mode === 'label') {
     call = {
       model: FAST_MODEL, system: LABEL_SYSTEM, schema: LABEL_SCHEMA,
@@ -443,7 +466,7 @@ Deno.serve(async (req) => {
     const u = res.usage ?? {}
     const usd = ((u.input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) * 1.25 + (u.cache_read_input_tokens ?? 0) * 0.1) * pin / 1e6
       + (u.output_tokens ?? 0) * pout / 1e6
-    const label = mode.startsWith('import') ? 'Import' : mode === 'label' ? 'Etikett' : mode === 'text' ? 'Text' : mode === 'plan' ? 'Phase' : mode === 'suggest' ? 'Vorschlag' : 'Foto'
+    const label = mode.startsWith('import') ? 'Import' : mode === 'label' ? 'Etikett' : mode === 'front' ? 'Vorderseite' : mode === 'text' ? 'Text' : mode === 'plan' ? 'Phase' : mode === 'suggest' ? 'Vorschlag' : 'Foto'
     await sb.from('ai_ledger').insert({ user_id: user.id, kind: 'use', usd, note: `${label} · ${res.model}` })
     // paid plans see how much of their month is used, never the $ amount
     if (limit != null) return json({ ...out, pct: Math.min(100, Math.round((Number(q.month_usd) + usd) / limit * 1000) / 10) })
