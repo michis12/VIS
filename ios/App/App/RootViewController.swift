@@ -27,6 +27,9 @@ final class RootViewController: UIViewController, UITabBarControllerDelegate {
     private var tabIds: [String] = []
     private var lastInset: CGFloat = -1
     private var tabBarVisible = true
+    /// Dark frosted band behind the bar: the Liquid Glass refracts this instead of the bright
+    /// web content, so the bar looks darker and cloudier. Strength: see GlassBackdrop.
+    private let backdrop = GlassBackdrop()
 
     var onTabSelected: ((String) -> Void)?
     var onBottomInset: ((CGFloat) -> Void)?
@@ -112,6 +115,7 @@ final class RootViewController: UIViewController, UITabBarControllerDelegate {
             tbc.tabBar.isHidden = !visible
         }
         (view as? PassThroughView)?.tabBarEnabled = visible
+        UIView.animate(withDuration: 0.25) { self.backdrop.alpha = visible ? 1 : 0 }
     }
 
     private func makeTabController() -> UITabBarController {
@@ -127,6 +131,7 @@ final class RootViewController: UIViewController, UITabBarControllerDelegate {
         tbc.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.addSubview(tbc.view)
         tbc.didMove(toParent: self)
+        view.insertSubview(backdrop, belowSubview: tbc.view)
         (view as? PassThroughView)?.tabs = tbc.view
         tabController = tbc
         return tbc
@@ -141,10 +146,50 @@ final class RootViewController: UIViewController, UITabBarControllerDelegate {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         let inset = tabBarInset
+        if inset > 0 {
+            // a little higher than the bar so its top edge fades in softly
+            let h = inset + GlassBackdrop.fadeHeight
+            backdrop.frame = CGRect(x: 0, y: view.bounds.maxY - h, width: view.bounds.width, height: h)
+        }
         if inset > 0, abs(inset - lastInset) > 0.5 {
             lastInset = inset
             onBottomInset?(inset)
         }
+    }
+}
+
+/// Blur + black tint, fading in from the top, sitting between the web view and the tab bar.
+final class GlassBackdrop: UIView {
+    /// how dark (0…1) and how far above the bar the fade starts
+    static let darkness: CGFloat = 0.55
+    static let fadeHeight: CGFloat = 28
+
+    private let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemThinMaterialDark))
+    private let tint = UIView()
+    private let fade = CAGradientLayer()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isUserInteractionEnabled = false
+        tint.backgroundColor = UIColor.black.withAlphaComponent(Self.darkness)
+        addSubview(blur)
+        addSubview(tint)
+        fade.colors = [UIColor.clear.cgColor, UIColor.black.cgColor, UIColor.black.cgColor]
+        layer.mask = fade
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        blur.frame = bounds
+        tint.frame = bounds
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        fade.frame = bounds
+        let edge = bounds.height > 0 ? NSNumber(value: Double(Self.fadeHeight / bounds.height)) : 0
+        fade.locations = [0, edge, 1]
+        CATransaction.commit()
     }
 }
 
