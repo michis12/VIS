@@ -1,3 +1,4 @@
+import { Capacitor, CapacitorHttp } from '@capacitor/core'
 import { decStr, t } from './i18n'
 import { calorieSteps, type Food, type FoodEntry, type Phase, type Recipe, type WeightEntry } from './types'
 
@@ -58,10 +59,26 @@ const clean = (s?: unknown) => {
   return String(first ?? '').replace(/^\w\w:/, '').trim()
 }
 
+/**
+ * GET as JSON. In the iOS/Android app the request goes through the native HTTP stack:
+ * the web view's origin (capacitor://localhost) is not allowed by Open Food Facts (CORS),
+ * which made the product search look "offline".
+ */
+async function getJson(url: string, signal?: AbortSignal): Promise<{ ok: boolean; json: () => Promise<any> }> { // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (!Capacitor.isNativePlatform()) {
+    const r = await fetch(url, { signal })
+    return { ok: r.ok, json: () => r.json() }
+  }
+  const r = await CapacitorHttp.get({ url, responseType: 'json', headers: { Accept: 'application/json' } })
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+  const data = typeof r.data === 'string' ? JSON.parse(r.data) : r.data
+  return { ok: r.status >= 200 && r.status < 300, json: async () => data }
+}
+
 export async function offSearch(q: string, signal?: AbortSignal): Promise<OffHit[]> {
   const run = async (query: string) => {
     const url = 'https://search.openfoodfacts.org/search?page_size=25&langs=de&fields=code,product_name,product_name_de,brands,nutriments&q=' + encodeURIComponent(query)
-    const r = await fetch(url, { signal })
+    const r = await getJson(url, signal)
     if (!r.ok) return []
     const j = await r.json()
     return ((j.hits ?? []) as Record<string, unknown>[])
@@ -82,7 +99,7 @@ export async function offSearch(q: string, signal?: AbortSignal): Promise<OffHit
 
 /** Full product by barcode, or null when unknown / without nutrition values. */
 export async function offProduct(code: string, signal?: AbortSignal): Promise<Food | null> {
-  const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}?fields=code,product_name,product_name_de,brands,nutriments,serving_quantity,serving_size`, { signal })
+  const r = await getJson(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}?fields=code,product_name,product_name_de,brands,nutriments,serving_quantity,serving_size`, signal)
   if (!r.ok) return null
   const j = await r.json()
   const p = j.product

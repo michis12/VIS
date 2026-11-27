@@ -47,6 +47,29 @@ function upsert<T>(list: T[], item: T, key: (t: T) => string, sortKey?: (t: T) =
   return next
 }
 
+/** Union of two snapshots; on the same key `mine` wins. Settings come from `mine`. */
+function mergeSnapshots(theirs: Snapshot, mine: Snapshot): Snapshot {
+  const by = <T,>(a: T[], b: T[], key: (x: T) => string) => {
+    const m = new Map(a.map((x) => [key(x), x]))
+    for (const x of b) m.set(key(x), x)
+    return [...m.values()]
+  }
+  const id = (x: { id: string }) => x.id
+  const date = (x: { date: string }) => x.date
+  return {
+    exercises: by(theirs.exercises, mine.exercises, id),
+    workouts: by(theirs.workouts, mine.workouts, id),
+    templates: by(theirs.templates, mine.templates, id),
+    weights: by(theirs.weights, mine.weights, date),
+    phases: by(theirs.phases, mine.phases, id),
+    measurements: by(theirs.measurements, mine.measurements, date),
+    foods: by(theirs.foods, mine.foods, id),
+    recipes: by(theirs.recipes, mine.recipes, id),
+    foodLog: by(theirs.foodLog, mine.foodLog, id),
+    settings: mine.settings,
+  }
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [snap, setSnap] = useState<Snapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -61,9 +84,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // cloud backup: upload 15 s after the last change, and right away when the app goes to the background
   const latest = useRef<Snapshot | null>(null)
   const dirty = useRef(false)
+  /** the next snapshot came from the cloud: nothing to upload */
+  const fromCloud = useRef(false)
   useEffect(() => {
     if (!snap) return
-    if (latest.current) dirty.current = true
+    if (latest.current && !fromCloud.current) dirty.current = true
+    fromCloud.current = false
     latest.current = snap
     if (!cloud.cloudConfigured || !cloud.cloudReady()) return
     const t = setTimeout(() => flush(), 15000)
@@ -74,6 +100,50 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     dirty.current = false
     cloud.upload(latest.current).catch(() => { dirty.current = true })
   }, [])
+
+  // cloud pull: on start and whenever the app comes back, load what another device saved meanwhile
+  const pulling = useRef(false)
+  const pull = useCallback(async () => {
+    const local = latest.current
+    if (pulling.current || !local || !cloud.cloudConfigured || !cloud.cloudReady()) return
+    pulling.current = true
+    try {
+      const newer = await cloud.newerBackup()
+      if (!newer) return
+      const theirs = db.normalizeSnapshot(newer.data, local.settings)
+      // unsynced changes here as well (e.g. logged offline): keep both, this device wins per entry
+      const both = dirty.current || cloud.changedSinceSync(local) // same object upload() hashes
+      const next = both ? mergeSnapshots(theirs, db.snapshotOf(latest.current ?? local)) : theirs
+      await db.replaceAll(next)
+      const loaded = await db.loadAll()
+      fromCloud.current = true
+      dirty.current = false
+      setSnap(loaded)
+      if (both) await cloud.upload(loaded, true)
+      else cloud.markSynced(loaded, newer.id, newer.created_at)
+      window.dispatchEvent(new CustomEvent('vis-synced'))
+    } catch {
+      /* offline – try again next time */
+    } finally {
+      pulling.current = false
+    }
+  }, [])
+  const ready = !!snap
+  useEffect(() => {
+    if (!ready) return
+    void pull()
+    const onShow = () => document.visibilityState === 'visible' && void pull()
+    document.addEventListener('visibilitychange', onShow)
+    window.addEventListener('focus', onShow)
+    // while open: look again every minute (one tiny query)
+    const tick = setInterval(() => document.visibilityState === 'visible' && void pull(), 60000)
+    return () => {
+      clearInterval(tick)
+      document.removeEventListener('visibilitychange', onShow)
+      window.removeEventListener('focus', onShow)
+    }
+  }, [ready, pull])
+
   useEffect(() => {
     const onHide = () => document.visibilityState === 'hidden' && flush()
     document.addEventListener('visibilitychange', onHide)
