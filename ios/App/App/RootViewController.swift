@@ -126,6 +126,14 @@ final class RootViewController: UIViewController, UITabBarControllerDelegate {
         // label colours like the web tab bar (selected #f5f5f7, others grey)
         tbc.tabBar.tintColor = UIColor(red: 0xF5 / 255, green: 0xF5 / 255, blue: 0xF7 / 255, alpha: 1)
         tbc.tabBar.unselectedItemTintColor = UIColor(red: 0x8E / 255, green: 0x8E / 255, blue: 0x93 / 255, alpha: 1)
+        // bar colour like the web app's cards (Gewicht / Phase): --surface #0b0b0c, border --line
+        let look = UITabBarAppearance()
+        look.configureWithDefaultBackground()
+        look.backgroundEffect = nil
+        look.backgroundColor = UIColor(red: 0x0B / 255, green: 0x0B / 255, blue: 0x0C / 255, alpha: 1)
+        look.shadowColor = UIColor.white.withAlphaComponent(0.07)
+        tbc.tabBar.standardAppearance = look
+        tbc.tabBar.scrollEdgeAppearance = look
         addChild(tbc)
         tbc.view.frame = view.bounds
         tbc.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
