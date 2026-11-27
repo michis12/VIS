@@ -6,6 +6,7 @@ import { Icon, ProgressBadges, SetMark, Sheet, Tap, Wheel } from '../components/
 import { clock, fmtKg, haptic, isRealSet, localIso, uid, workoutVolume, fmtInt } from '../lib'
 import { rateWorkout } from '../progress'
 import { cancelRestPush, moveRestPush, scheduleRestPush } from '../push'
+import { nativeRestEnd, nativeRestStart, nativeRestUpdate } from '../native'
 import { loadRestEnd, restFinished, storeRestEnd, unlockAudio } from '../rest'
 import { useNav } from '../nav'
 import { useStore } from '../store'
@@ -142,6 +143,7 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
       setRestEnd(null)
       storeRestEnd(null)
       cancelRestPush() // app is open and signals itself; no push needed
+      nativeRestEnd(true)
       // Ended a while ago = the app was in the background and the push already
       // told you. Just tidy up instead of chiming a second time.
       if (now - restEnd > 3000) return
@@ -158,13 +160,16 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
     setRestDone(false)
     // server push so the end of the rest also reaches a locked phone
     const next = w.exercises.find((e) => !e.skipped && e.sets.some((s) => !s.done))
-    scheduleRestPush(end, next ? exerciseById.get(next.exerciseId)?.name : undefined)
+    const nextName = next ? exerciseById.get(next.exerciseId)?.name : undefined
+    scheduleRestPush(end, nextName)
+    nativeRestStart(end, nextName) // iOS app: Live Activity + local notification
   }
   const stopRest = () => {
     setRestEnd(null)
     storeRestEnd(null)
     setRestDone(false)
     cancelRestPush()
+    nativeRestEnd()
   }
 
   const updateSet = (ex: number, set: number, patch: Partial<SetEntry>) => {
@@ -259,6 +264,7 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
     save(done)
     storeRestEnd(null)
     cancelRestPush()
+    nativeRestEnd()
     onFinished(done.id)
   }
 
@@ -266,6 +272,7 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
     store.deleteWorkout(w.id)
     storeRestEnd(null)
     cancelRestPush()
+    nativeRestEnd()
     onClose(tr('Workout verworfen', 'Workout discarded'))
   }
 
@@ -398,6 +405,7 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
             setRestEnd(end)
             storeRestEnd(end)
             moveRestPush(end)
+            nativeRestUpdate(end)
           }}
           onSkip={stopRest}
         />

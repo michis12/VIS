@@ -7,6 +7,7 @@ import { Icon, Tap, Toast } from './components/ui'
 import { getLang, t } from './i18n'
 import { haptic } from './lib'
 import { NavCtx, type Overlay } from './nav'
+import { useNativeTabs } from './native'
 import { Body } from './screens/Body'
 import { ExerciseDetail } from './screens/ExerciseDetail'
 import { ExerciseLibrary } from './screens/ExerciseLibrary'
@@ -24,12 +25,13 @@ import { StoreProvider, useStore } from './store'
 
 type Tab = 'train' | 'stats' | 'body' | 'food' | 'profile'
 
-const TABS: { id: Tab; label: () => string; icon: () => React.JSX.Element }[] = [
-  { id: 'stats', label: () => t('Statistik', 'Stats'), icon: Icon.chart },
-  { id: 'body', label: () => t('Körper', 'Body'), icon: Icon.body },
-  { id: 'train', label: () => t('Training', 'Training'), icon: Icon.dumbbell },
-  { id: 'food', label: () => t('Ernährung', 'Nutrition'), icon: Icon.food },
-  { id: 'profile', label: () => t('Profil', 'Profile'), icon: Icon.trophy },
+// `sf`: SF Symbol for the native iOS tab bar (native.ts)
+const TABS: { id: Tab; label: () => string; icon: () => React.JSX.Element; sf: string }[] = [
+  { id: 'stats', label: () => t('Statistik', 'Stats'), icon: Icon.chart, sf: 'chart.bar.fill' },
+  { id: 'body', label: () => t('Körper', 'Body'), icon: Icon.body, sf: 'figure.stand' },
+  { id: 'train', label: () => t('Training', 'Training'), icon: Icon.dumbbell, sf: 'dumbbell.fill' },
+  { id: 'food', label: () => t('Ernährung', 'Nutrition'), icon: Icon.food, sf: 'fork.knife' },
+  { id: 'profile', label: () => t('Profil', 'Profile'), icon: Icon.trophy, sf: 'trophy.fill' },
 ]
 
 function Shell() {
@@ -71,6 +73,7 @@ function Shell() {
   }, [achievements])
 
   const top = stack[stack.length - 1]
+  const covered = !!top || (showWorkout && !!active) || paywall || !!celebrate
   let content: React.ReactNode
   if (top?.kind === 'workout') content = <WorkoutView key={top.id} id={top.id} />
   else if (top?.kind === 'history') content = <History />
@@ -90,6 +93,14 @@ function Shell() {
     )
   }
 
+  // iOS app on iOS 26+: the tab bar is the native Liquid Glass one (no-op everywhere else)
+  const nativeTabs = useNativeTabs(
+    TABS.map((x) => ({ id: x.id, label: x.label(), icon: x.sf })),
+    tab,
+    (id) => { setBodyFocus(null); setTab(id as Tab) },
+    covered,
+  )
+
   return (
     <NavCtx.Provider value={nav}>
       <div className="app">
@@ -102,14 +113,14 @@ function Shell() {
           {tab === 'profile' && <Profile toast={setToast} />}
           {tab === 'food' && <Nutrition />}
           </Fragment>
-          <nav className="tabbar">
+          {!nativeTabs && <nav className="tabbar">
             {TABS.map((t) => (
               <Tap key={t.id} className={'tab' + (tab === t.id ? ' on' : '')} onClick={() => { if (t.id !== tab) haptic(); setBodyFocus(null); setTab(t.id) }}>
                 <t.icon />
                 {t.label()}
               </Tap>
             ))}
-          </nav>
+          </nav>}
         </div>
         {content && <div className="overlay" key={stack.length + (showWorkout ? 'w' : '')}><Fragment key={lang}>{content}</Fragment></div>}
         {toast && <Toast text={toast} onDone={clearToast} />}

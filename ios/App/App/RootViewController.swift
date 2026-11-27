@@ -1,0 +1,168 @@
+import Capacitor
+import UIKit
+
+/// Capacitor's web view registering the app's own plugins.
+class VISBridgeViewController: CAPBridgeViewController {
+    override func capacitorDidLoad() {
+        bridge?.registerPluginInstance(RestActivityPlugin())
+        bridge?.registerPluginInstance(NativeTabsPlugin())
+    }
+}
+
+/// Root of the app window: the web view fills the screen; on iOS 26+ a real
+/// UITabBarController (Liquid Glass) floats above it once the web app asks for it.
+/// The tab controller only provides the bar – its pages are empty and transparent, so
+/// every touch outside the bar goes straight to the web view (see PassThroughView).
+final class RootViewController: UIViewController, UITabBarControllerDelegate {
+    struct Tab {
+        let id: String
+        let label: String
+        let icon: String
+    }
+
+    static weak var current: RootViewController?
+
+    let bridgeController = VISBridgeViewController()
+    private var tabController: UITabBarController?
+    private var tabIds: [String] = []
+    private var lastInset: CGFloat = -1
+    private var tabBarVisible = true
+
+    var onTabSelected: ((String) -> Void)?
+    var onBottomInset: ((CGFloat) -> Void)?
+
+    override func loadView() {
+        view = PassThroughView()
+        view.backgroundColor = .black
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        RootViewController.current = self
+        addChild(bridgeController)
+        bridgeController.view.frame = view.bounds
+        bridgeController.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.addSubview(bridgeController.view)
+        bridgeController.didMove(toParent: self)
+        (view as? PassThroughView)?.content = bridgeController.view
+
+        #if DEBUG
+        // UI check without tapping through the app: `simctl launch … -VISDemoRest 90`
+        let args = ProcessInfo.processInfo.arguments
+        if let i = args.firstIndex(of: "-VISDemoRest"), #available(iOS 16.2, *) {
+            let sec = (i + 1 < args.count ? Double(args[i + 1]) : nil) ?? 90
+            Task {
+                _ = await RestActivities.start(title: "Pause", subtitle: "Danach: Bankdrücken", doneText: "Pause vorbei",
+                                               start: Date(), end: Date().addingTimeInterval(sec))
+            }
+        }
+        #endif
+    }
+
+    // status bar + orientation are decided by Capacitor's controller
+    override var childForStatusBarStyle: UIViewController? { bridgeController }
+    override var childForStatusBarHidden: UIViewController? { bridgeController }
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        bridgeController.supportedInterfaceOrientations
+    }
+
+    // MARK: - tabs
+
+    /// Height the tab bar covers at the bottom of the screen (incl. home indicator), in points.
+    var tabBarInset: CGFloat {
+        guard let bar = tabController?.tabBar, tabBarVisible, bar.window != nil else { return 0 }
+        let frame = bar.convert(bar.bounds, to: view)
+        return max(0, view.bounds.maxY - frame.minY)
+    }
+
+    @available(iOS 26.0, *)
+    func configureTabs(_ tabs: [Tab], selected: String) {
+        let tbc = tabController ?? makeTabController()
+        tabIds = tabs.map(\.id)
+        let pages = tabs.enumerated().map { index, tab -> UIViewController in
+            let page = UIViewController()
+            page.view.backgroundColor = .clear
+            page.tabBarItem = UITabBarItem(title: tab.label, image: UIImage(systemName: tab.icon), tag: index)
+            return page
+        }
+        tbc.setViewControllers(pages, animated: false)
+        selectTab(selected)
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+    }
+
+    func selectTab(_ id: String) {
+        guard let tbc = tabController, let index = tabIds.firstIndex(of: id), tbc.selectedIndex != index else { return }
+        tbc.selectedIndex = index
+    }
+
+    func setTabBarVisible(_ visible: Bool) {
+        guard let tbc = tabController, visible != tabBarVisible else { return }
+        tabBarVisible = visible
+        if #available(iOS 18.0, *) {
+            tbc.setTabBarHidden(!visible, animated: true)
+        } else {
+            tbc.tabBar.isHidden = !visible
+        }
+        (view as? PassThroughView)?.tabBarEnabled = visible
+    }
+
+    private func makeTabController() -> UITabBarController {
+        let tbc = UITabBarController()
+        tbc.delegate = self
+        tbc.view.backgroundColor = .clear
+        tbc.overrideUserInterfaceStyle = .dark // the app is dark only
+        addChild(tbc)
+        tbc.view.frame = view.bounds
+        tbc.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.addSubview(tbc.view)
+        tbc.didMove(toParent: self)
+        (view as? PassThroughView)?.tabs = tbc.view
+        tabController = tbc
+        return tbc
+    }
+
+    func tabBarController(_ tabBarController: UITabBarController, didSelect viewController: UIViewController) {
+        let index = tabBarController.selectedIndex
+        guard tabIds.indices.contains(index) else { return }
+        onTabSelected?(tabIds[index])
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        let inset = tabBarInset
+        if inset > 0, abs(inset - lastInset) > 0.5 {
+            lastInset = inset
+            onBottomInset?(inset)
+        }
+    }
+}
+
+/// Lets touches through the (transparent) tab controller to the web view – except on the bar itself.
+final class PassThroughView: UIView {
+    weak var content: UIView?
+    weak var tabs: UIView?
+    var tabBarEnabled = true
+
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let tabs, tabBarEnabled,
+           let hit = tabs.hitTest(convert(point, to: tabs), with: event),
+           Self.belongsToTabBar(hit, below: tabs) {
+            return hit
+        }
+        if let content {
+            return content.hitTest(convert(point, to: content), with: event)
+        }
+        return super.hitTest(point, with: event)
+    }
+
+    /// True if `view` is (inside) the tab bar and not just the empty page / container behind it.
+    private static func belongsToTabBar(_ view: UIView, below root: UIView) -> Bool {
+        var v: UIView? = view
+        while let current = v, current !== root {
+            if current is UITabBar || String(describing: type(of: current)).contains("TabBar") { return true }
+            v = current.superview
+        }
+        return false
+    }
+}

@@ -118,6 +118,9 @@ input { font: inherit; color: inherit; }
   border-top: 1px solid var(--line);
   display: flex; justify-content: space-around;
 }
+/* iOS app on iOS 26+: native Liquid Glass tab bar (native.ts); --native-bottom = height it covers */
+html.native-tabs { --tab-h: max(0px, calc(var(--native-bottom, 90px) - var(--safe-bottom))); }
+html.native-tabs .tabbar { display: none; }
 .tab { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: var(--text-3); padding: 4px 14px; min-width: 64px; }
 .tab svg { width: 24px; height: 24px; }
 .tab.on { color: var(--text); }
