@@ -112,7 +112,7 @@ input { font: inherit; color: inherit; }
 
 /* ---------- tab bar ---------- */
 .tabbar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 42;
   padding: 8px 12px calc(var(--safe-bottom) + 8px);
   background: rgba(0,0,0,.72); backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%);
   border-top: 1px solid var(--line);
