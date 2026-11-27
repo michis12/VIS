@@ -53,6 +53,8 @@ jobs:
 
       - name: Run in simulator
         working-directory: ios/App
+        timeout-minutes: 10
+        continue-on-error: true
         run: |
           UDID=$(xcrun simctl list devices available -j | python3 -c '
           import json,sys

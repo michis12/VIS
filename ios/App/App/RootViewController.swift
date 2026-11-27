@@ -82,7 +82,14 @@ final class RootViewController: UIViewController, UITabBarControllerDelegate {
         let pages = tabs.enumerated().map { index, tab -> UIViewController in
             let page = UIViewController()
             page.view.backgroundColor = .clear
-            page.tabBarItem = UITabBarItem(title: tab.label, image: UIImage(systemName: tab.icon), tag: index)
+            // the web app's own icons (Assets.xcassets/tab-<id>[-on]), SF Symbol as fallback
+            if let off = UIImage(named: "tab-\(tab.id)"), let on = UIImage(named: "tab-\(tab.id)-on") {
+                page.tabBarItem = UITabBarItem(title: tab.label,
+                                               image: off.withRenderingMode(.alwaysOriginal),
+                                               selectedImage: on.withRenderingMode(.alwaysOriginal))
+            } else {
+                page.tabBarItem = UITabBarItem(title: tab.label, image: UIImage(systemName: tab.icon), tag: index)
+            }
             return page
         }
         tbc.setViewControllers(pages, animated: false)
@@ -112,6 +119,9 @@ final class RootViewController: UIViewController, UITabBarControllerDelegate {
         tbc.delegate = self
         tbc.view.backgroundColor = .clear
         tbc.overrideUserInterfaceStyle = .dark // the app is dark only
+        // label colours like the web tab bar (selected #f5f5f7, others grey)
+        tbc.tabBar.tintColor = UIColor(red: 0xF5 / 255, green: 0xF5 / 255, blue: 0xF7 / 255, alpha: 1)
+        tbc.tabBar.unselectedItemTintColor = UIColor(red: 0x8E / 255, green: 0x8E / 255, blue: 0x93 / 255, alpha: 1)
         addChild(tbc)
         tbc.view.frame = view.bounds
         tbc.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
