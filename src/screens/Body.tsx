@@ -6,6 +6,7 @@ import { dateLabel, fmtInt, fmtKg, shortDate, today, uid } from '../lib'
 import { useNav } from '../nav'
 import { CurrentPhaseScore, usePhaseScores } from '../components/PhaseScores'
 import { requireAi } from '../components/AiCredit'
+import { MuscleMap } from '../components/MuscleMap'
 import { PhasePlanner } from '../components/PhasePlanner'
 import { useStore } from '../store'
 import { calorieSteps, type Phase, type PhaseType } from '../types'
@@ -171,6 +172,9 @@ export function Body({ focus }: { focus?: 'phase' | null }) {
           ))}
         </div>
       )}
+
+      <div className="section-title"><h2>{tr('Muskeln', 'Muscles')}</h2></div>
+      <MuscleMap />
 
       <button className="card subtle-link" onClick={() => nav.push({ kind: 'measures' })}>
         <span style={{ flex: 1 }}>

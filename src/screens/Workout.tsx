@@ -271,8 +271,35 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
 
   const ed = editing && w.exercises[editing.ex]?.sets[editing.set] ? editing : null
 
+  // a soft emerald glow behind the exercises that shows the end is near: it starts when
+  // you scroll down to the exercise at 60 % of the list (no. 6 of 10) and is full at the bottom
+  const root = useRef<HTMLDivElement>(null)
+  const fade = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    let raf = 0
+    const update = () => {
+      raf = 0
+      const cards = root.current?.querySelectorAll<HTMLElement>('.ex-card')
+      if (!cards?.length || !fade.current) return
+      const start = cards[Math.max(0, Math.ceil(cards.length * 0.6) - 1)].getBoundingClientRect().top
+      const end = cards[cards.length - 1].getBoundingClientRect().bottom
+      const p = end > start ? (window.innerHeight - start) / (end - start) : 0
+      fade.current.style.opacity = String(Math.max(0, Math.min(1, p)))
+    }
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update) }
+    update()
+    window.addEventListener('scroll', onScroll, { capture: true, passive: true })
+    window.addEventListener('resize', onScroll)
+    return () => {
+      window.removeEventListener('scroll', onScroll, { capture: true })
+      window.removeEventListener('resize', onScroll)
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [w.exercises.length])
+
   return (
-    <div className="screen no-tabs">
+    <div className="screen no-tabs" ref={root}>
+      <div className="wo-end-fade" ref={fade} style={{ opacity: 0 }} aria-hidden="true" />
       <div className="wo-head">
         <button className="icon-btn" onClick={() => onClose()} aria-label={tr('Minimieren', 'Minimise')}><Icon.back /></button>
         <div className="grow">

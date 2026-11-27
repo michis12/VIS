@@ -1,7 +1,6 @@
 import { dec, t as tr } from '../i18n'
 import { useMemo, useState } from 'react'
 import { BarChart, LineChart } from '../components/charts'
-import { MuscleMap } from '../components/MuscleMap'
 import { PhaseList } from '../components/PhaseScores'
 import { ScoreGauge } from '../components/ScoreGauge'
 import { pastWeekScores } from '../weekly'
@@ -253,8 +252,6 @@ export function Stats() {
 
       <WeeklyReport />
 
-      <div className="section-title"><h2>{tr('Muskeln diese Woche', 'Muscles this week')}</h2></div>
-      <MuscleMap />
       <div style={{ height: 22 }} />
 
       {/* everything in this section follows the range; the bar sticks only while the section is on screen */}

@@ -973,3 +973,10 @@ button.nut-ring:active { transform: scale(.97); transition: transform .1s; }
 /* coach action cards */
 .coach-tpl.done { opacity: .62; }
 .coach-all { align-self: flex-start; margin-top: 8px; }
+
+/* active workout: soft glow behind the exercises, follows the scroll from exercise 6 of 10 to the end */
+.wo-end-fade {
+  position: fixed; left: 0; right: 0; bottom: 0; height: 26vh; pointer-events: none; z-index: -1;
+  background: linear-gradient(to top, rgba(34,199,132,.22), rgba(34,199,132,.07) 40%, transparent);
+  transition: opacity .25s linear;
+}
