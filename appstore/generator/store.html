@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  /* 6 App Store images side by side: each 1320 × 2868 (6.9" iPhone) */
+  :root { --W: 1320px; --H: 2868px; --em: #3fd69a; --em2: #22c784; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #000; }
+  body { width: calc(var(--W) * 6); height: var(--H); position: relative; overflow: hidden; font-family: Inter, system-ui, sans-serif; color: #f5f5f7; -webkit-font-smoothing: antialiased; }
+
+  /* background: deep black, soft emerald light, thin arcs running across the seams */
+  .bg { position: absolute; inset: 0; }
+  .glow { position: absolute; border-radius: 50%; filter: blur(140px); opacity: .55; }
+  .arc { position: absolute; border-radius: 50%; border: 3px dashed rgba(255,255,255,.10); }
+  .arc.solid { border-style: solid; border-color: rgba(255,255,255,.07); }
+  .line { position: absolute; height: 3px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.16), transparent); transform-origin: left center; }
+
+  /* text per panel */
+  .panel { position: absolute; top: 0; width: var(--W); height: var(--H); padding: 210px 110px 0; }
+  .eyebrow { font-size: 40px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--em); margin-bottom: 34px; display: flex; align-items: center; gap: 18px; }
+  .eyebrow i { width: 16px; height: 16px; border-radius: 50%; background: var(--em); box-shadow: 0 0 24px var(--em); }
+  h1 { font-size: 150px; line-height: 1.02; font-weight: 800; letter-spacing: -0.035em; }
+  .chrome { background: linear-gradient(180deg, #ffffff 0%, #d9dade 45%, #8d8f96 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .em { background: linear-gradient(180deg, #8af5c6, #2fca88); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sub { margin-top: 40px; font-size: 52px; line-height: 1.32; color: #a1a1a8; font-weight: 500; max-width: 1060px; }
+
+  /* big number badges */
+  .stats { display: flex; gap: 26px; margin-top: 70px; flex-wrap: wrap; }
+  .stat { padding: 30px 40px; border-radius: 44px; background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.025)); border: 2px solid rgba(255,255,255,.12); }
+  .stat b { display: block; font-size: 78px; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+  .stat span { display: block; font-size: 34px; color: #9b9ba3; margin-top: 12px; font-weight: 500; }
+
+  /* phones: tilted, half in one image, half in the next */
+  .phone { position: absolute; width: 1180px; height: 2470px; border-radius: 190px; padding: 22px;
+    background: linear-gradient(135deg, #8e9096 0%, #3b3c41 18%, #1b1b1e 45%, #4a4b50 75%, #a5a7ad 100%);
+    box-shadow: 0 80px 160px rgba(0,0,0,.85), 0 0 0 2px rgba(255,255,255,.08), inset 0 0 0 2px rgba(255,255,255,.18); }
+  .phone::before, .phone::after { content: ''; position: absolute; width: 12px; border-radius: 6px; background: linear-gradient(90deg, #2b2c30, #8a8c92); }
+  .phone::before { left: -10px; top: 470px; height: 150px; box-shadow: 0 210px 0 #5c5e63, 0 420px 0 #5c5e63; }
+  .phone::after { right: -10px; top: 640px; height: 260px; }
+  .bezel { width: 100%; height: 100%; border-radius: 170px; background: #000; padding: 26px; }
+  .screen { position: relative; width: 100%; height: 100%; border-radius: 146px; overflow: hidden; background: #000; }
+  .screen img { width: 100%; display: block; }
+  .island { position: absolute; top: 34px; left: 50%; width: 330px; height: 98px; margin-left: -165px; border-radius: 60px; background: #000; z-index: 3; }
+  .status { position: absolute; top: 44px; left: 0; right: 0; height: 80px; padding: 0 96px 0 120px; display: flex; justify-content: space-between; align-items: center; z-index: 2; font-weight: 600; font-size: 50px; letter-spacing: -0.01em; }
+  .status svg { height: 36px; }
+  /* status bar area stays black like on a real iPhone */
+  .screen::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 175px; background: linear-gradient(#000 78%, rgba(0,0,0,0)); z-index: 1; }
+  .glare { position: absolute; inset: 0; border-radius: 146px; background: linear-gradient(115deg, rgba(255,255,255,.08) 0%, rgba(255,255,255,0) 32%); pointer-events: none; z-index: 4; }
+
+  /* floating cards cut from the real screens */
+  .float { position: absolute; border-radius: 70px; overflow: hidden; background: #0b0b0c;
+    border: 2px solid rgba(255,255,255,.14); box-shadow: 0 70px 140px rgba(0,0,0,.9), 0 0 0 1px rgba(0,0,0,.6); }
+  .float img { display: block; }
+  .float.em-edge { border-color: rgba(79,227,166,.45); box-shadow: 0 70px 140px rgba(0,0,0,.9), 0 0 90px rgba(63,214,154,.18); }
+  .tag { position: absolute; padding: 20px 34px; border-radius: 999px; font-size: 38px; font-weight: 700; background: rgba(12,40,29,.92); border: 2px solid rgba(79,227,166,.5); color: #a6f5d1; display: flex; gap: 14px; align-items: center; box-shadow: 0 30px 60px rgba(0,0,0,.7); }
+</style>
+</head>
+<body>
+<div class="bg">
+  <div class="glow" style="left:600px;top:1500px;width:1600px;height:1600px;background:#0f6b48"></div>
+  <div class="glow" style="left:3300px;top:1300px;width:1500px;height:1500px;background:#0d5c3e"></div>
+  <div class="glow" style="left:5900px;top:1400px;width:1700px;height:1700px;background:#0f6b48"></div>
+  <div class="arc" style="left:300px;top:1250px;width:2100px;height:2100px"></div>
+  <div class="arc solid" style="left:2950px;top:1050px;width:2300px;height:2300px"></div>
+  <div class="arc" style="left:5550px;top:1150px;width:2200px;height:2200px"></div>
+  <div class="line" style="left:120px;top:1180px;width:900px;transform:rotate(28deg)"></div>
+  <div class="line" style="left:4100px;top:2450px;width:900px;transform:rotate(-24deg)"></div>
+  <div class="line" style="left:6700px;top:1050px;width:800px;transform:rotate(32deg)"></div>
+</div>
+
+<!-- 1 -->
+<div class="panel" style="left:0">
+  <div class="eyebrow"><i></i>VIS Fitness</div>
+  <h1 data-t="p1h"></h1>
+  <div class="stats">
+    <div class="stat"><b class="chrome">210</b><span data-t="ex"></span></div>
+    <div class="stat"><b class="chrome">57</b><span>Achievements</span></div>
+  </div>
+</div>
+<!-- 2 -->
+<div class="panel" style="left:1320px">
+  <div class="eyebrow"><i></i>Training</div>
+  <h1 data-t="p2h"></h1>
+  <p class="sub" data-t="p2s"></p>
+</div>
+<!-- 3 -->
+<div class="panel" style="left:2640px">
+  <div class="eyebrow"><i></i><span data-t="p3e"></span></div>
+  <h1 data-t="p3h"></h1>
+  <p class="sub" data-t="p3s"></p>
+</div>
+<!-- 4 -->
+<div class="panel" style="left:3960px">
+  <div class="eyebrow"><i></i><span data-t="p4e"></span></div>
+  <h1 data-t="p4h"></h1>
+  <p class="sub" data-t="p4s"></p>
+</div>
+<!-- 5 -->
+<div class="panel" style="left:5280px">
+  <div class="eyebrow"><i></i><span data-t="p5e"></span></div>
+  <h1 data-t="p5h"></h1>
+  <p class="sub" data-t="p5s"></p>
+</div>
+<!-- 6 -->
+<div class="panel" style="left:6600px">
+  <div class="eyebrow"><i></i>Achievements</div>
+  <h1 data-t="p6h"></h1>
+  <p class="sub" data-t="p6s"></p>
+</div>
+
+<!-- phone A: training, across 1|2 -->
+<div class="phone" style="left:730px;top:1040px;transform:rotate(-9deg)"><div class="bezel"><div class="screen">
+  <div class="island"></div><div class="status">STATUS</div><img data-src="home.png"><div class="glare"></div></div></div></div>
+<!-- phone B: coach, across 3|4 -->
+<div class="phone" style="left:3370px;top:1100px;transform:rotate(8deg)"><div class="bezel"><div class="screen">
+  <div class="island"></div><div class="status">STATUS</div><img data-src="coach.png"><div class="glare"></div></div></div></div>
+<!-- phone C: muscles, across 5|6 -->
+<div class="phone" style="left:6010px;top:1060px;transform:rotate(-9deg)"><div class="bezel"><div class="screen">
+  <div class="island"></div><div class="status">STATUS</div><img data-src="body-muscles.png"><div class="glare"></div></div></div></div>
+
+<!-- floating cards -->
+<!-- 2: first exercise of the running workout: a record and progress -->
+<div class="float em-edge" style="left:1640px;top:2060px;width:850px;height:560px;transform:rotate(-9deg)"><img data-src="workout.png" style="width:900px;margin:-352px 0 0 -26px"></div>
+<div class="tag" style="left:1700px;top:2720px;transform:rotate(-9deg)" data-t="t2"></div>
+<!-- 3: AI result -->
+<div class="float em-edge" style="left:2760px;top:1480px;width:1000px;height:860px;transform:rotate(-7deg)"><img data-src="ai-food.png" style="width:1080px;margin:-445px 0 0 -38px"></div>
+<div class="tag" style="left:2840px;top:2470px;transform:rotate(-7deg)" data-t="t3"></div>
+<!-- 4: coach action card -->
+<div class="float em-edge" style="left:4330px;top:1930px;width:900px;height:350px;transform:rotate(8deg)"><img data-src="coach.png" style="width:1110px;margin:-1335px 0 0 -40px" data-style-en="width:1110px;margin:-1212px 0 0 -40px"></div>
+<div class="tag" style="left:4460px;top:2400px;transform:rotate(8deg)" data-t="t4"></div>
+<!-- 5 -->
+<div class="tag" style="left:5420px;top:2420px;transform:rotate(-9deg)" data-t="t5"></div>
+<!-- 6: rank and achievements -->
+<div class="float" style="left:7010px;top:1230px;width:830px;height:405px;transform:rotate(-9deg)"><img data-src="profile.png" style="width:900px;margin:-462px 0 0 -34px"></div>
+<div class="float" style="left:7030px;top:2120px;width:830px;height:322px;transform:rotate(-9deg)"><img data-src="profile.png" style="width:900px;margin:-1308px 0 0 -34px"></div>
+
+<script>
+  // language from ?lang=de|en: texts and the matching screenshots (raw-de / raw-en)
+  const L = new URLSearchParams(location.search).get('lang') === 'en' ? 'en' : 'de'
+  document.documentElement.lang = L
+  const T = {
+    de: {
+      ex: 'Übungen',
+      p1h: '<span class="chrome">Training.<br>Ernährung.</span><br><span class="em">Mit KI.</span>',
+      p2h: '<span class="chrome">Jeder Satz</span><br><span class="em">zählt.</span>',
+      p2s: 'Rekorde und Fortschritte bei jedem Satz – dazu Vorlagen im Rhythmus und Pausen-Timer.',
+      t2: '✦ 2 Rekorde · 2 Fortschritte',
+      p3e: 'KI-Ernährung',
+      p3h: '<span class="chrome">Foto oder Text.</span><br><span class="em">Die KI zählt.</span>',
+      p3s: 'Kalorien und Makros in Sekunden – dazu Barcode-Scan mit Millionen Produkten.',
+      t3: '✦ 506 kcal · 25 g Eiweiß erkannt',
+      p4e: 'KI-Coach',
+      p4h: '<span class="chrome">Dein Coach</span><br><span class="em">kennt deine Daten.</span>',
+      p4s: 'Fragen stellen, Essen eintragen, Pläne bauen – mit einem Tipp.',
+      t4: '✦ Ein Tipp – schon eingetragen',
+      p5e: 'Körper',
+      p5h: '<span class="chrome">Sieh, was du</span><br><span class="em">trainierst.</span>',
+      p5s: 'Die Heatmap zeigt jeden Muskel – und was du zu lange liegen lässt.',
+      t5: '✦ Vorne &amp; hinten · 7 oder 30 Tage',
+      p6h: '<span class="chrome">Vom Rookie</span><br><span class="em">zum Shōgun.</span>',
+      p6s: '57 Achievements – ernste und welche zum Schmunzeln – mit Sternen, Rängen und deiner Ehrenhalle.',
+    },
+    en: {
+      ex: 'Exercises',
+      p1h: '<span class="chrome">Training.<br>Nutrition.</span><br><span class="em">Powered by AI.</span>',
+      p2h: '<span class="chrome">Every set</span><br><span class="em">counts.</span>',
+      p2s: 'Records and progress on every set – plus templates in rhythm and a rest timer.',
+      t2: '✦ 2 records · 2 progressions',
+      p3e: 'AI nutrition',
+      p3h: '<span class="chrome">Photo or text.</span><br><span class="em">AI does the math.</span>',
+      p3s: 'Calories and macros in seconds – plus barcode scanning with millions of products.',
+      t3: '✦ 506 kcal · 25 g protein found',
+      p4e: 'AI coach',
+      p4h: '<span class="chrome">Your coach</span><br><span class="em">knows your data.</span>',
+      p4s: 'Ask questions, log food, build plans – with a single tap.',
+      t4: '✦ One tap – already logged',
+      p5e: 'Body',
+      p5h: '<span class="chrome">See what</span><br><span class="em">you train.</span>',
+      p5s: 'The heat map shows every muscle – and what you have been skipping.',
+      t5: '✦ Front &amp; back · 7 or 30 days',
+      p6h: '<span class="chrome">From rookie</span><br><span class="em">to Shōgun.</span>',
+      p6s: '57 achievements – serious ones and some just for fun – with stars, ranks and your hall of fame.',
+    },
+  }[L]
+  document.querySelectorAll('[data-t]').forEach((el) => { el.innerHTML = T[el.dataset.t] })
+  document.querySelectorAll('img[data-src]').forEach((img) => { img.src = `raw-${L}/${img.dataset.src}` })
+  // crops that sit elsewhere in the English screens
+  if (L === 'en') document.querySelectorAll('[data-style-en]').forEach((el) => { el.setAttribute('style', el.dataset.styleEn) })
+
+  // iOS-like status bar in every phone
+  const status = `<span>9:41</span><span style="display:flex;gap:20px;align-items:center">
+    <svg viewBox="0 0 36 24"><rect x="0" y="16" width="6" height="8" rx="1.5" fill="#fff"/><rect x="10" y="11" width="6" height="13" rx="1.5" fill="#fff"/><rect x="20" y="6" width="6" height="18" rx="1.5" fill="#fff"/><rect x="30" y="0" width="6" height="24" rx="1.5" fill="#fff"/></svg>
+    <svg viewBox="0 0 34 24"><path d="M17 23l5-6a8 8 0 0 0-10 0Z M6 11a16 16 0 0 1 22 0l-3 3.5a11 11 0 0 0-16 0Z M0 5a25 25 0 0 1 34 0l-3 3.5a20 20 0 0 0-28 0Z" fill="#fff"/></svg>
+    <svg viewBox="0 0 54 24"><rect x="1" y="1" width="46" height="22" rx="7" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="2"/><rect x="4.5" y="4.5" width="34" height="15" rx="4" fill="#fff"/><path d="M50 8v8a4 4 0 0 0 0-8Z" fill="rgba(255,255,255,.45)"/></svg></span>`
+  document.querySelectorAll('.status').forEach((s) => { s.innerHTML = status })
+</script>
+</body>
+</html>
