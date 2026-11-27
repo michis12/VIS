@@ -55,6 +55,9 @@ export function CloudCard({ toast }: { toast: (t: string) => void }) {
   const restore = (id: number) => run(async () => {
     const data = await cloud.fetchBackup(id)
     await store.importSnapshot(normalizeSnapshot(data, store.settings))
+    // this device now has backup `id`; the automatic pull only loads newer ones
+    const meta = (versions ?? []).find((v) => v.id === id) ?? found
+    cloud.markSynced(snapshotOf({ ...store, ...normalizeSnapshot(data, store.settings) }), id, meta?.created_at ?? new Date().toISOString())
     cloud.setCloudReady(true)
     setReady(true); setFound(null); setVersions(null)
     toast(t('Aus der Cloud wiederhergestellt', 'Restored from the cloud'))

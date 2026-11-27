@@ -29,6 +29,41 @@ export const cloudReady = () => LS.get('vis.cloudReady') === '1'
 export const setCloudReady = (v: boolean) => LS.set('vis.cloudReady', v ? '1' : null)
 export const lastSync = () => LS.get('vis.lastSync')
 
+/** id of the backup row this device last wrote or loaded – newer rows come from another device */
+const cloudId = () => Number(LS.get('vis.cloudId')) || null
+/** Remember that this device now has exactly the content of backup `id`. */
+export function markSynced(snap: Snapshot, id: number, at: string) {
+  LS.set('vis.cloudId', String(id))
+  LS.set('vis.lastHash', hash(JSON.stringify(snap)))
+  LS.set('vis.lastSync', at)
+}
+/** True if `snap` differs from what this device last uploaded or loaded. */
+export const changedSinceSync = (snap: Snapshot) => LS.get('vis.lastHash') !== hash(JSON.stringify(snap))
+
+/**
+ * The newest backup if it was written by another device after this one last synced,
+ * otherwise null.
+ */
+export async function newerBackup(): Promise<{ id: number; created_at: string; data: Snapshot } | null> {
+  if (!supabase || !cloudReady() || !(await getSession())) return null
+  const { data, error } = await supabase.from('backups').select('id, created_at').order('id', { ascending: false }).limit(1)
+  if (error) throw new Error(error.message)
+  const top = data?.[0] as { id: number; created_at: string } | undefined
+  if (!top) return null
+  const mine = cloudId()
+  if (mine != null) {
+    if (top.id <= mine) return null
+  } else {
+    // installs from before this existed: compare times (2 s slack for clock skew)
+    const last = Date.parse(lastSync() ?? '')
+    if (!last || Date.parse(top.created_at) <= last + 2000) {
+      LS.set('vis.cloudId', String(top.id))
+      return null
+    }
+  }
+  return { ...top, data: await fetchBackup(top.id) }
+}
+
 function hash(s: string) {
   let h = 0
   for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0
@@ -57,6 +92,7 @@ export async function signOut() {
   await supabase?.auth.signOut()
   setCloudReady(false)
   LS.set('vis.lastHash', null)
+  LS.set('vis.cloudId', null)
 }
 
 export async function listBackups(): Promise<BackupMeta[]> {
@@ -80,10 +116,11 @@ export async function upload(snap: Snapshot, force = false): Promise<boolean> {
   const h = hash(json)
   if (!force && LS.get('vis.lastHash') === h) return false
   const workouts = snap.workouts.filter((w) => w.status === 'done').length
-  const { error } = await supabase.from('backups').insert({ data: snap, workouts })
+  const { data, error } = await supabase.from('backups').insert({ data: snap, workouts }).select('id, created_at').single()
   if (error) throw new Error(error.message)
   LS.set('vis.lastHash', h)
-  LS.set('vis.lastSync', new Date().toISOString())
+  LS.set('vis.lastSync', data?.created_at ?? new Date().toISOString())
+  if (data?.id) LS.set('vis.cloudId', String(data.id))
   return true
 }
 
