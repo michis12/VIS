@@ -1,5 +1,5 @@
 import { dec, t as tr } from '../i18n'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BarChart, LineChart } from '../components/charts'
 import { PhaseList } from '../components/PhaseScores'
 import { ScoreGauge } from '../components/ScoreGauge'
@@ -23,6 +23,21 @@ const RANGES = [
 export function Stats() {
   const { workouts, exerciseById, exercises, progress, weights, phases, workoutScores, foodLog } = useStore()
   const nav = useNav()
+  // range bar: while it sticks, it also covers the status bar / Dynamic Island area above it
+  const rangeBar = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const bar = rangeBar.current
+    const scroller = bar?.closest('.screen')
+    if (!bar || !scroller) return
+    const check = () => {
+      const sc = scroller.getBoundingClientRect().top + parseFloat(getComputedStyle(scroller).paddingTop)
+      const stuckAt = sc + parseFloat(getComputedStyle(bar).top)
+      bar.classList.toggle('stuck', bar.getBoundingClientRect().top <= stuckAt + 0.5)
+    }
+    check()
+    scroller.addEventListener('scroll', check, { passive: true })
+    return () => scroller.removeEventListener('scroll', check)
+  }, [])
   const [range, setRange] = useState<(typeof RANGES)[number]['id']>('6m')
   const R = RANGES.find((r) => r.id === range)!
   const days = R.days
@@ -256,7 +271,7 @@ export function Stats() {
 
       {/* everything in this section follows the range; the bar sticks only while the section is on screen */}
       <section className="range-sec">
-        <div className="range-bar">
+        <div className="range-bar" ref={rangeBar}>
           <div className="range-bar-head">
             <span className="range-dot" />
             <span>{tr('Zeitraum', 'Range')}</span>

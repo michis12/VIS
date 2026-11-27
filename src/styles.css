@@ -708,6 +708,11 @@ button.nut-ring:active { transform: scale(.97); transition: transform .1s; }
   background: rgba(0,0,0,.82); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
   border-bottom: 1px solid var(--line);
 }
+/* while stuck: solid black and reaching up into the safe area, so nothing scrolls past next to the Dynamic Island */
+.range-bar.stuck { background: #000; }
+.range-bar.stuck::before {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 100%; height: calc(var(--safe-top) + 1px); background: #000;
+}
 .range-bar-head { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); margin-bottom: 8px; }
 .range-bar-head .faint { text-transform: none; letter-spacing: 0; font-weight: 500; }
 .range-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text); box-shadow: 0 0 8px rgba(255,255,255,.6); }
