@@ -150,6 +150,9 @@ final class RootViewController: UIViewController, UITabBarControllerDelegate {
             // a little higher than the bar so its top edge fades in softly
             let h = inset + GlassBackdrop.fadeHeight
             backdrop.frame = CGRect(x: 0, y: view.bounds.maxY - h, width: view.bounds.width, height: h)
+            // fully black only from the vertical middle of the bar (without the home indicator area)
+            backdrop.solidFrom = GlassBackdrop.fadeHeight + max(0, inset - view.safeAreaInsets.bottom) / 2
+            backdrop.setNeedsLayout()
         }
         if inset > 0, abs(inset - lastInset) > 0.5 {
             lastInset = inset
@@ -166,6 +169,8 @@ final class GlassBackdrop: UIView {
 
     private let tint = UIView()
     private let fade = CAGradientLayer()
+    /// distance from the top where the fade reaches full black
+    var solidFrom: CGFloat = fadeHeight
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -184,7 +189,7 @@ final class GlassBackdrop: UIView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         fade.frame = bounds
-        let edge = bounds.height > 0 ? NSNumber(value: Double(Self.fadeHeight / bounds.height)) : 0
+        let edge = bounds.height > 0 ? NSNumber(value: Double(min(1, solidFrom / bounds.height))) : 0
         fade.locations = [0, edge, 1]
         CATransaction.commit()
     }
