@@ -29,7 +29,8 @@ const P = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLineca
 
 export const Icon = {
   dumbbell: () => (
-    <svg viewBox="0 0 24 24" {...P}><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11" /></svg>
+    // the outer plates in emerald, like the app icon
+    <svg viewBox="0 0 24 24" {...P}><path d="M6.5 6.5v11M17.5 6.5v11M6.5 12h11" /><path className="ico-plate" d="M3.5 9v6M20.5 9v6" stroke="#3fd69a" /></svg>
   ),
   chart: () => (
     <svg viewBox="0 0 24 24" {...P}><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>
