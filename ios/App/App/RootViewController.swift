@@ -27,8 +27,8 @@ final class RootViewController: UIViewController, UITabBarControllerDelegate {
     private var tabIds: [String] = []
     private var lastInset: CGFloat = -1
     private var tabBarVisible = true
-    /// Dark frosted band behind the bar: the Liquid Glass refracts this instead of the bright
-    /// web content, so the bar looks darker and cloudier. Strength: see GlassBackdrop.
+    /// Black band behind the bar: the Liquid Glass refracts this instead of the bright
+    /// web content, so the bar looks dark. Strength: see GlassBackdrop.
     private let backdrop = GlassBackdrop()
 
     var onTabSelected: ((String) -> Void)?
@@ -158,13 +158,12 @@ final class RootViewController: UIViewController, UITabBarControllerDelegate {
     }
 }
 
-/// Blur + black tint, fading in from the top, sitting between the web view and the tab bar.
+/// Solid black band, fading in from the top, sitting between the web view and the tab bar.
 final class GlassBackdrop: UIView {
     /// how dark (0…1) and how far above the bar the fade starts
-    static let darkness: CGFloat = 0.55
-    static let fadeHeight: CGFloat = 28
+    static let darkness: CGFloat = 1
+    static let fadeHeight: CGFloat = 14
 
-    private let blur = UIVisualEffectView(effect: UIBlurEffect(style: .systemThinMaterialDark))
     private let tint = UIView()
     private let fade = CAGradientLayer()
 
@@ -172,7 +171,6 @@ final class GlassBackdrop: UIView {
         super.init(frame: frame)
         isUserInteractionEnabled = false
         tint.backgroundColor = UIColor.black.withAlphaComponent(Self.darkness)
-        addSubview(blur)
         addSubview(tint)
         fade.colors = [UIColor.clear.cgColor, UIColor.black.cgColor, UIColor.black.cgColor]
         layer.mask = fade
@@ -182,7 +180,6 @@ final class GlassBackdrop: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        blur.frame = bounds
         tint.frame = bounds
         CATransaction.begin()
         CATransaction.setDisableActions(true)
