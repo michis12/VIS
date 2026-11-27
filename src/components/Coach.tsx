@@ -1,25 +1,34 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { describe, knownFoods, runActions, sanitize, type Action } from '../coachActions'
 import { STARTER_SPLIT } from '../data/starterSplit'
 import { foodAi } from '../foodAi'
 import { getLang, t } from '../i18n'
-import { e1rm, haptic, isRealSet, today, uid, workoutSetCount, workoutVolume } from '../lib'
+import { e1rm, haptic, isRealSet, localIso, today, uid, workoutSetCount, workoutVolume } from '../lib'
 import { dayTotals, kcalTarget } from '../nutrition'
 import { useStore } from '../store'
+import { nextTemplate, orderedTemplates } from '../templateOrder'
 import { CreditPill, useCredit } from './AiCredit'
 import { useWeekScore } from './WeeklyReport'
 import { Icon } from './ui'
 
 /**
  * VIS Coach (Ultra): a chat with Haiku that sees a compact summary of the
- * user's data and can draft workout templates, which are only created after
- * tapping "Anlegen". The conversation stays on this device.
+ * user's data and can do things in the app (templates, exercises, foods,
+ * recipes, diary, weight, phase, rest timer). Every action shows up as a card
+ * and only runs after a tap. The conversation stays on this device.
  */
-interface Draft { name: string; exercises: { ref: string; sets: number }[]; saved?: boolean }
-interface Msg { id: string; role: 'user' | 'assistant'; text: string; templates?: Draft[] }
+interface Act { a: Action; done?: boolean; title?: string; detail?: string }
+interface Msg { id: string; role: 'user' | 'assistant'; text: string; actions?: Act[]; templates?: { name: string; exercises: { ref: string; sets: number }[]; saved?: boolean }[] }
 
 const KEY = 'vis.coach.v1'
-const load = (): Msg[] => { try { return JSON.parse(localStorage.getItem(KEY) ?? '[]') } catch { return [] } }
+const load = (): Msg[] => {
+  try {
+    const list = JSON.parse(localStorage.getItem(KEY) ?? '[]') as Msg[]
+    // older answers kept template drafts in their own field
+    return list.map((m) => (m.templates?.length && !m.actions ? { ...m, actions: m.templates.map((d) => ({ a: { kind: 'template', name: d.name, exercises: d.exercises } as Action, done: d.saved })), templates: undefined } : m))
+  } catch { return [] }
+}
 const keep = (m: Msg[]) => { try { localStorage.setItem(KEY, JSON.stringify(m.slice(-30))) } catch { /* ignore */ } }
 
 export function Coach({ onClose }: { onClose: () => void }) {
@@ -63,11 +72,17 @@ export function Coach({ onClose }: { onClose: () => void }) {
         records: store.progress.byId.get(w.id)?.prs ?? 0, progress: store.progress.byId.get(w.id)?.ups ?? 0, score: store.workoutScores.get(w.id),
         exercises: w.exercises.map((e) => name(e.exerciseId)).join(', '),
       })),
-      templates: store.templates.map((tp) => ({ name: tp.name, exercises: tp.exercises.map((e) => `${name(e.exerciseId)} ×${e.sets}`).join(', ') })),
+      templates: orderedTemplates(store.templates, store.settings.templateOrder).map((tp) => ({ id: tp.id, name: tp.name, exercises: tp.exercises.map((e) => `${e.exerciseId} ×${e.sets}`).join(', ') })),
+      templatesNote: 'in dieser Reihenfolge (Rhythmus); als Nächstes: ' + (nextTemplate(orderedTemplates(store.templates, store.settings.templateOrder), store.workouts)?.name ?? '-'),
+      diaryToday: store.foodLog.filter((e) => e.date === d).map((e) => `${e.meal}: ${Math.round(e.grams)} g ${e.name} (${Math.round(e.kcal)} kcal)`),
+      recipes: store.recipes.map((r) => r.name),
+      restSec: store.settings.restSec,
       topLifts90d: [...lifts].sort((a, b) => b[1].sets - a[1].sets).slice(0, 10).map(([id, l]) => `${name(id)}: ${l.sets} Sätze, bestes e1RM ${Math.round(l.best)} kg`),
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store.workouts, store.phases, store.weights, store.foodLog, store.templates, store.settings, week.score])
+  }, [store.workouts, store.phases, store.weights, store.foodLog, store.templates, store.recipes, store.settings, week.score])
+  const known = useMemo(() => knownFoods(store), [store])
+  const knownMap = useMemo(() => new Map(known.map((k) => [k.id, k])), [known])
 
   const starter = useMemo(() => STARTER_SPLIT.map((d) => `${d.name}: ${d.exercises.map((e) => `${e.id} ×${e.sets}`).join(', ')}`).join('\n'), [])
 
@@ -82,11 +97,11 @@ export function Coach({ onClose }: { onClose: () => void }) {
         messages: next.map((m) => ({ role: m.role, text: m.text })),
         context, starter,
         catalog: store.exercises.map((e) => ({ id: e.id, name: e.name })),
+        foods: known.map((k) => ({ id: k.id, name: k.food.name + (k.food.brand ? ` (${k.food.brand})` : ''), kcal: k.food.kcal, p: k.food.p, c: k.food.c, f: k.food.f, ...(k.g ? { g: k.g } : {}) })),
+        now: localIso().slice(0, 16),
       }, 'coach')
-      const templates = ((res.templates ?? []) as Draft[])
-        .map((d) => ({ name: String(d.name).slice(0, 40), exercises: d.exercises.filter((e) => store.exerciseById.has(e.ref)).map((e) => ({ ref: e.ref, sets: Math.max(1, Math.min(6, Math.round(e.sets))) })) }))
-        .filter((d) => d.exercises.length)
-      const withReply: Msg[] = [...next, { id: uid(), role: 'assistant', text: String(res.reply ?? ''), templates }]
+      const actions = sanitize(Array.isArray(res.actions) ? res.actions : [], store).map((a) => ({ a, ...describe(a, store, knownMap) }))
+      const withReply: Msg[] = [...next, { id: uid(), role: 'assistant', text: String(res.reply ?? ''), actions }]
       setMsgs(withReply); keep(withReply)
       haptic()
     } catch (e) {
@@ -96,19 +111,24 @@ export function Coach({ onClose }: { onClose: () => void }) {
     }
   }
 
-  const create = (msgId: string, i: number) => {
+  // run one action (i) or all open ones (i = -1) of an answer
+  const run = (msgId: string, i: number) => {
     const m = msgs.find((x) => x.id === msgId)
-    const d = m?.templates?.[i]
-    if (!d || d.saved) return
-    store.saveTemplate({ id: 'tpl-' + uid(), name: d.name, exercises: d.exercises.map((e) => ({ exerciseId: e.ref, sets: e.sets })) })
+    if (!m?.actions) return
+    const open = m.actions.map((x, j) => ({ ...x, j })).filter((x) => !x.done && (i < 0 || x.j === i))
+    if (!open.length) return
+    runActions(open.map((x) => x.a), m.actions.map((x) => x.a), store, knownMap)
     haptic(true)
-    const next = msgs.map((x) => (x.id === msgId ? { ...x, templates: x.templates!.map((y, j) => (j === i ? { ...y, saved: true } : y)) } : x))
+    const did = new Set(open.map((x) => x.j))
+    // a template that needed a new exercise has created it, so that card is done too
+    const made = new Set(open.flatMap((x) => ('exercises' in x.a ? x.a.exercises : []).filter((e) => e.ref.startsWith('new:')).map((e) => e.ref.slice(4).trim().toLowerCase())))
+    const next = msgs.map((x) => (x.id === msgId ? { ...x, actions: x.actions!.map((y, j) => (did.has(j) || (y.a.kind === 'exercise' && made.has(y.a.name.trim().toLowerCase())) ? { ...y, done: true } : y)) } : x))
     setMsgs(next); keep(next)
   }
 
   const ideas = getLang() === 'en'
-    ? ['How was my week?', 'What should I train today?', 'Create an Upper/Lower plan for me', 'Am I eating enough protein?']
-    : ['Wie lief meine Woche?', 'Was soll ich heute trainieren?', 'Erstell mir einen Upper/Lower-Plan', 'Esse ich genug Eiweiß?']
+    ? ['How was my week?', 'Create an Upper/Lower plan for me', 'Log 2 eggs and a slice of toast for breakfast', 'Sort my templates smartly']
+    : ['Wie lief meine Woche?', 'Erstell mir einen Upper/Lower-Plan', 'Trag 2 Eier und eine Semmel zum Frühstück ein', 'Sortier meine Vorlagen sinnvoll']
 
   return createPortal(
     <div className="fullsheet coach">
@@ -125,22 +145,29 @@ export function Coach({ onClose }: { onClose: () => void }) {
         {msgs.length === 0 && (
           <div className="coach-empty">
             <div className="coach-spark" aria-hidden="true">✦</div>
-            <p>{t('Frag mich alles zu deinem Training und deiner Ernährung – oder lass dir eine Vorlage bauen.', 'Ask me anything about your training and food – or let me build a template.')}</p>
+            <p>{t('Frag mich alles zu deinem Training und deiner Ernährung – oder lass mich etwas erledigen: Vorlagen, Übungen, Rezepte, Essen eintragen, Gewicht, Phase.', 'Ask me anything about your training and food – or let me do things: templates, exercises, recipes, logging food, weight, phase.')}</p>
             <div className="coach-ideas">{ideas.map((x) => <button key={x} className="chip" onClick={() => send(x)}>{x}</button>)}</div>
           </div>
         )}
         {msgs.map((m) => (
           <div key={m.id} className={'coach-msg ' + m.role}>
             <div className="coach-bubble">{m.text}</div>
-            {m.templates?.map((d, i) => (
-              <div key={i} className="coach-tpl">
-                <div className="coach-tpl-name">{d.name}</div>
-                <div className="faint" style={{ fontSize: 12.5, lineHeight: 1.45 }}>{d.exercises.map((e) => `${name(e.ref)} ×${e.sets}`).join(' · ')}</div>
-                <button className={'btn btn-sm ' + (d.saved ? 'btn-ghost' : 'btn-chrome')} disabled={d.saved} onClick={() => create(m.id, i)}>
-                  {d.saved ? t('Angelegt ✓', 'Created ✓') : t('Als Vorlage anlegen', 'Create template')}
-                </button>
-              </div>
-            ))}
+            {m.actions?.map((x, i) => {
+              // the text from when the answer came (afterwards the data has changed)
+              const d = x.title ? { title: x.title, detail: x.detail ?? '' } : describe(x.a, store, knownMap)
+              return (
+                <div key={i} className={'coach-tpl' + (x.done ? ' done' : '')}>
+                  <div className="coach-tpl-name">{d.title}</div>
+                  {d.detail && <div className="faint" style={{ fontSize: 12.5, lineHeight: 1.45 }}>{d.detail}</div>}
+                  <button className={'btn btn-sm ' + (x.done ? 'btn-ghost' : 'btn-chrome')} disabled={x.done} onClick={() => run(m.id, i)}>
+                    {x.done ? t('Erledigt ✓', 'Done ✓') : t('Übernehmen', 'Apply')}
+                  </button>
+                </div>
+              )
+            })}
+            {(m.actions?.filter((x) => !x.done).length ?? 0) > 1 && (
+              <button className="btn btn-sm btn-ghost coach-all" onClick={() => run(m.id, -1)}>{t('Alles übernehmen', 'Apply all')}</button>
+            )}
           </div>
         ))}
         {busy && <div className="coach-msg assistant"><div className="coach-bubble coach-typing"><i /><i /><i /></div></div>}

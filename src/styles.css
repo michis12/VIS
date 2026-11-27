@@ -955,3 +955,21 @@ button.nut-ring:active { transform: scale(.97); transition: transform .1s; }
 /* own food: two photo buttons side by side */
 .nut-photo-btn { gap: 6px; font-size: 14px; }
 .nut-photo-btn svg { width: 18px; height: 18px; }
+
+/* template order sheet */
+.tpl-order .tpl-row + .tpl-row { margin-top: 8px; }
+.tpl-order-row { display: flex; align-items: center; gap: 12px; padding: 10px 8px 10px 14px; }
+.tpl-order-row .grow { flex: 1; min-width: 0; }
+.tpl-order-n { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #5ef0b2; border: 1px solid rgba(79,227,166,.4); flex-shrink: 0; }
+/* training page: only the next template, the rest folded */
+.tpl-more { width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 10px; padding: 10px; color: var(--text-2); font-size: 14px; font-weight: 600; background: none; border: 0; }
+.tpl-more svg { transition: transform .25s cubic-bezier(.2,.9,.3,1); }
+.tpl-more.open svg { transform: rotate(180deg); }
+.tpl-rest { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .3s cubic-bezier(.2,.9,.3,1); }
+.tpl-rest.open { grid-template-rows: 1fr; }
+.tpl-rest > div { overflow: hidden; min-height: 0; }
+.tpl-rest .card.tpl { margin-top: 10px; }
+
+/* coach action cards */
+.coach-tpl.done { opacity: .62; }
+.coach-all { align-self: flex-start; margin-top: 8px; }

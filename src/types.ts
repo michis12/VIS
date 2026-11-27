@@ -111,6 +111,8 @@ export interface Settings {
   favFoods?: string[]
   /** split the food diary into breakfast / lunch / dinner / snacks */
   mealSections?: boolean
+  /** order of the workout templates (ids): the training page shows the next one in this rhythm */
+  templateOrder?: string[]
 }
 
 // ---- Ernährung

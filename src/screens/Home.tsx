@@ -3,11 +3,13 @@ import { useState } from 'react'
 import { openPaywall, requireAi, usePlan } from '../components/AiCredit'
 import { Coach } from '../components/Coach'
 import { ScoreGauge } from '../components/ScoreGauge'
+import { TemplateOrder } from '../components/TemplateOrder'
 import { TrainingImport } from '../components/TrainingImport'
+import { nextTemplate, orderedTemplates } from '../templateOrder'
 import { Icon, Sheet } from '../components/ui'
 import { useWeekScore } from '../components/WeeklyReport'
 import { scoreLabel, WEEKLY_TARGET } from '../weekly'
-import { dateLabel, fmtInt, fmtKg, localIso, today } from '../lib'
+import { dateLabel, fmtInt, fmtKg, haptic, localIso, today } from '../lib'
 import { dayTotals, kcalTarget } from '../nutrition'
 import { progressColors } from './Nutrition'
 import { parseTemplatesFile, pickFile, shareOrDownload, templatesFile } from '../files'
@@ -26,7 +28,10 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
 }) {
   const store = useStore()
   const nav = useNav()
-  const { templates, workouts, exerciseById, active, weights, phases } = store
+  const { workouts, exerciseById, active, weights, phases } = store
+  const templates = orderedTemplates(store.templates, store.settings.templateOrder)
+  const [ordering, setOrdering] = useState(false)
+  const [showAll, setShowAll] = useState(false)
   const [chosen, setChosen] = useState<Template | null>(null)
   const [manage, setManage] = useState(false)
   const [importing, setImporting] = useState(false)
@@ -61,15 +66,28 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
   }
 
   const lastOf = (t: Template) => [...workouts].reverse().find((w) => w.name === t.name && w.status === 'done')
-  // rhythm: templates run in their order (Day 1, Day 2, …); after the last finished
-  // one comes the next, after the last template the first again
-  const nextId = (() => {
-    if (templates.length < 2) return null
-    const lastDone = [...workouts].reverse().find((w) => w.status === 'done' && templates.some((t) => t.name === w.name))
-    if (!lastDone) return templates[0].id
-    const i = templates.findIndex((t) => t.name === lastDone.name)
-    return templates[(i + 1) % templates.length].id
-  })()
+  // rhythm: templates run in their order (Settings › Verwalten › Reihenfolge); after the
+  // last trained one comes the next, after the last template the first again
+  const next = nextTemplate(templates, workouts)
+  const nextId = templates.length > 1 ? next?.id ?? null : null
+  // only the next template is shown, the others fold out
+  const rest = next && templates.length > 1 ? templates.filter((x) => x.id !== next.id) : []
+  const shown = rest.length ? [next!] : templates
+  const tplCard = (t: Template) => {
+    const last = lastOf(t)
+    return (
+      <button key={t.id} className={'card tpl' + (t.id === nextId && !active ? ' tpl-next' : '')} style={{ width: '100%', textAlign: 'left' }} onClick={() => !active && setChosen(t)} disabled={!!active}>
+        <div className="tpl-badge"><span className="chrome-text">{badge(t.name)}</span></div>
+        <div className="tpl-main">
+          {t.id === nextId && !active && <div className="tpl-next-tag">{tr('Als Nächstes', 'Up next')}</div>}
+          <div className="name">{t.name}</div>
+          <div className="meta">{t.exercises.map((e) => exerciseById.get(e.exerciseId)?.name).join(' · ')}</div>
+          {last && <div className="meta faint" style={{ marginTop: 2 }}>{tr('Zuletzt', 'Last')} {dateLabel(last.startedAt)}</div>}
+        </div>
+        <span className="chev"><Icon.chevron /></span>
+      </button>
+    )
+  }
   const recent = [...workouts].filter((w) => w.status !== 'active').reverse().slice(0, 8)
   const lastWeight = weights[weights.length - 1]
   const phase = phases[phases.length - 1]
@@ -129,21 +147,16 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
         <h2>{tr('Training starten', 'Start training')}</h2>
         <button className="link" onClick={() => setManage(true)}>{tr('Verwalten', 'Manage')}</button>
       </div>
-      {templates.map((t) => {
-        const last = lastOf(t)
-        return (
-          <button key={t.id} className={'card tpl' + (t.id === nextId && !active ? ' tpl-next' : '')} style={{ width: '100%', textAlign: 'left' }} onClick={() => !active && setChosen(t)} disabled={!!active}>
-            <div className="tpl-badge"><span className="chrome-text">{badge(t.name)}</span></div>
-            <div className="tpl-main">
-              {t.id === nextId && !active && <div className="tpl-next-tag">{tr('Als Nächstes', 'Up next')}</div>}
-              <div className="name">{t.name}</div>
-              <div className="meta">{t.exercises.map((e) => exerciseById.get(e.exerciseId)?.name).join(' · ')}</div>
-              {last && <div className="meta faint" style={{ marginTop: 2 }}>{tr('Zuletzt', 'Last')} {dateLabel(last.startedAt)}</div>}
-            </div>
-            <span className="chev"><Icon.chevron /></span>
+      {shown.map((t) => tplCard(t))}
+      {rest.length > 0 && (
+        <>
+          <button className={'tpl-more' + (showAll ? ' open' : '')} onClick={() => { haptic(); setShowAll(!showAll) }} aria-expanded={showAll}>
+            {showAll ? tr('Weniger anzeigen', 'Show less') : tr(`Weitere Vorlagen (${rest.length})`, `More templates (${rest.length})`)}
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
           </button>
-        )
-      })}
+          <div className={'tpl-rest' + (showAll ? ' open' : '')}><div>{rest.map((t) => tplCard(t))}</div></div>
+        </>
+      )}
       {!active && (
         <button className="btn btn-ghost btn-block" style={{ marginTop: 12 }} onClick={() => start(null)}>
           <Icon.plus /> {tr('Leeres Training', 'Empty workout')}
@@ -162,6 +175,7 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
         {tr('Trainings aus alter App übernehmen', 'Bring workouts from your old app')}
       </button>
       {coach && <Coach onClose={() => setCoach(false)} />}
+      {ordering && <TemplateOrder onClose={() => setOrdering(false)} />}
       {importing && <TrainingImport onClose={() => setImporting(false)} toast={toast} />}
 
       {manage && (
@@ -169,6 +183,7 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
           <h3>Templates</h3>
           <div className="menu">
             <button onClick={() => { setManage(false); nav.push({ kind: 'template', template: null }) }}><Icon.plus /> {tr('Neues Template', 'New template')}</button>
+            <button disabled={templates.length < 2} onClick={() => { setManage(false); setOrdering(true) }}>{tr('Reihenfolge festlegen', 'Set the order')}</button>
             <button onClick={() => { setManage(false); nav.push({ kind: 'exercises' }) }}>{tr('Alle Übungen', 'All exercises')}</button>
             <button onClick={importTemplates}>{tr('Template-Datei importieren', 'Import template file')}</button>
             <button disabled={!templates.length} onClick={async () => {
