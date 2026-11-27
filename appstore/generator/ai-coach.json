@@ -1,0 +1,9 @@
+[
+  { "id": "m1", "role": "user", "text": "Wie lief meine Woche?" },
+  { "id": "m2", "role": "assistant", "text": "Starke Woche, Max: 3 von 3 Workouts und Wochenscore 80 – Elite. Beim Bankdrücken hast du einen neuen Rekord geschafft. Heute fehlen dir noch 76 g Eiweiß bis zum Ziel." },
+  { "id": "m3", "role": "user", "text": "Trag mir 250 g Skyr mit Beeren als Snack ein und bau mir einen Push-Tag" },
+  { "id": "m4", "role": "assistant", "text": "Hab ich vorbereitet – tipp einfach auf Übernehmen.", "actions": [
+    { "a": { "kind": "log" }, "title": "Eintragen: Snacks, heute", "detail": "250 g Skyr · 100 g Beeren · 205 kcal · 29 g Eiweiß" },
+    { "a": { "kind": "template" }, "title": "Neue Vorlage: Push Day", "detail": "Bench Press (Barbell) ×3 · Incline Chest Fly (Dumbbell) ×2 · Lateral Raise (Machine) ×3 · Triceps Pushdown ×2" }
+  ] }
+]
