@@ -95,7 +95,7 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
   const greet = hour < 11 ? tr('Guten Morgen', 'Good morning') : hour < 18 ? tr('Bereit?', 'Ready?') : tr('Guten Abend', 'Good evening')
 
   return (
-    <div className="screen">
+    <div className="screen home">
       <div className="eyebrow">{dateLabel(localIso(), false)}</div>
       <div className="home-head">
         <h1 className="title">{greet}</h1>

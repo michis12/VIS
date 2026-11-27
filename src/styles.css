@@ -52,6 +52,9 @@ input { font: inherit; color: inherit; }
   padding: var(--pad-top) 16px calc(var(--tab-h) + var(--safe-bottom) + 28px);
   max-width: 640px; width: 100%; margin: 0 auto;
 }
+/* home: the date sits higher (half the usual gap below the status bar); the top fade shrinks with it */
+.screen.home { --pad-top: calc(var(--safe-top) + 14px); }
+.app:has(> .app > .screen.home) .top-blur { height: calc(var(--safe-top) + 10px); }
 .screen.no-tabs { padding-bottom: calc(var(--safe-bottom) + 140px); }
 .overlay { position: fixed; inset: 0 0 0 0; z-index: 15; background: var(--bg); display: flex; flex-direction: column; animation: slide-in .26s cubic-bezier(.2,.9,.3,1); }
 @keyframes slide-in { from { transform: translateX(24px); opacity: 0; } }
