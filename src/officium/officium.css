@@ -1,5 +1,10 @@
 /* VIS-Officium: same black / chrome / emerald look as the app, laid out as a dashboard */
-#root { min-height: 100dvh; }
+/* the app locks the page and scrolls inside its screens; the Officium is a normal scrolling page */
+/* overflow-x: clip, not hidden: hidden would make body its own scroll box and the sticky tabs stop sticking */
+html, body { height: auto; overflow: visible; }
+body { overflow-x: clip; }
+body { overscroll-behavior-y: auto; -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+#root { height: auto; min-height: 100dvh; }
 .of { max-width: 760px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px calc(env(safe-area-inset-bottom, 0px) + 30px); }
 .of-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 0 10px; }
 .of-title { display: flex; align-items: center; gap: 10px; font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
