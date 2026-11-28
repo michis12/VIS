@@ -68,7 +68,7 @@ export function nativeRestEnd(finished = false) {
 // ---------- native iOS 26 tab bar (Liquid Glass) ----------
 
 // Anything that covers the web tab bar also has to hide the native one, which sits above the web view.
-const COVERS = '.overlay, .scrim, .sheet, .fullsheet, .scanner, .scan-check, .welcome, .celebrate'
+const COVERS = '.overlay, .scrim, .sheet, .fullsheet, .scanner, .scan-check, .welcome, .celebrate, .ob'
 
 /**
  * Hands the tab bar to iOS when the app runs on iOS 26+. Returns true while the native
