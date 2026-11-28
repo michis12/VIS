@@ -2,7 +2,7 @@ import { dec, t } from '../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { haptic } from '../lib'
-import { PLANS, fmtEuro, openPaywall, planPhotos, planPrice, useCredit, usePlan, type Plan } from './AiCredit'
+import { FREE_TEMPLATES, PLANS, fmtEuro, openPaywall, planPhotos, planPrice, useCredit, usePlan, type Plan } from './AiCredit'
 import { Icon, Sheet } from './ui'
 
 /** plan badges: chrome pills for Free and Solo, a cut emerald for Ultra, Fam and Dev */
@@ -107,13 +107,14 @@ const COACH_TEXT = () => t(
   'Your personal coach knows all your training, food and phases – and gets things done: logs food, builds templates and plans, creates exercises and recipes, adjusts your phase. All with one tap.',
 )
 
-const FEATURES: { icon: React.JSX.Element; title: string; text: string; coach?: boolean }[] = [
+const FEATURES: { icon: React.JSX.Element; title: string; text: string; coach?: boolean; templates?: boolean }[] = [
   { icon: <path d="M4 8h3l2-3h6l2 3h3v11H4ZM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />, get title() { return t('Essen per Foto', 'Food by photo') }, get text() { return t('Teller fotografieren – Lebensmittel, Mengen und Makros stehen drin.', 'Snap your plate – foods, amounts and macros are filled in.') } },
   { icon: <path d="M5 6h14M5 11h14M5 16h8M16 15l3 3-3 3" />, get title() { return t('Einfach hinschreiben', 'Just write it down') }, get text() { return t('„2 Semmeln mit Schinken" wird zu fertigen Einträgen.', '“2 rolls with ham” turns into ready entries.') } },
   { icon: <path d="M6 4h12v16H6ZM9 8h6M9 11h6M9 14h3" />, get title() { return t('Nährwerttabelle scannen', 'Scan nutrition labels') }, get text() { return t('Packung fotografieren statt Werte abtippen.', 'Photograph the pack instead of typing values.') } },
   { icon: <path d="M12 3a9 9 0 1 0 9 9M12 7v5l3 2M17 3l1 2 2 1-2 1-1 2-1-2-2-1 2-1Z" />, get title() { return t('Was soll ich noch essen?', 'What should I still eat?') }, get text() { return t('Vorschläge aus deinen echten Mahlzeiten für die restlichen Makros.', 'Ideas from your real meals for the remaining macros.') } },
   { icon: <path d="M3 18c3 0 4-9 7-9s3 6 5 6 3-9 6-9M3 21h18" />, get title() { return t('Phasenplaner', 'Phase planner') }, get text() { return t('Kalorien und Dauer für Bulk oder Cut aus deinen eigenen Daten.', 'Calories and duration for a bulk or cut from your own data.') } },
   { icon: <path d="M12 3v12M7 10l5 5 5-5M4 19h16" />, get title() { return t('Trainings importieren', 'Import workouts') }, get text() { return t('Strong, Hevy, FitNotes oder Notizen – deine Historie kommt mit.', 'Strong, Hevy, FitNotes or notes – your history comes along.') } },
+  { templates: true, icon: <path d="M5 4h10l4 4v12H5ZM15 4v4h4M8.5 12h7M8.5 15.5h7M8.5 8.5h3" />, get title() { return t('Unbegrenzt Vorlagen', 'Unlimited templates') }, get text() { return t(`Free hat bis zu ${FREE_TEMPLATES} Vorlagen – mit Solo und Ultra so viele du willst.`, `Free has up to ${FREE_TEMPLATES} templates – with Solo and Ultra as many as you like.`) } },
   { coach: true, icon: <path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-4 3.5V17H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2ZM12 8.2l.9 1.9 1.9.9-1.9.9-.9 1.9-.9-1.9-1.9-.9 1.9-.9Z" />, get title() { return t('KI-Coach · Ultra', 'AI coach · Ultra') }, get text() { return COACH_TEXT() } },
 ]
 
@@ -184,7 +185,7 @@ function SlideToBuy({ label, doneLabel, onDone }: { label: string; doneLabel: st
 }
 
 /** The plans page: opens from the Free badge in the profile or when someone without a plan taps an AI feature. */
-export function Paywall({ onClose }: { onClose: () => void }) {
+export function Paywall({ onClose, reason }: { onClose: () => void; reason?: string }) {
   const s = usePlan()
   const [yearly, setYearly] = useState(true)
   const current: Plan | 'free' = s?.plan && s.active ? s.plan : 'free'
@@ -218,9 +219,9 @@ export function Paywall({ onClose }: { onClose: () => void }) {
           </div>
         )}
         <div className="pw-desc">
-          {k === 'free' && t('Training, Statistiken, Körper und Ernährung – alles ohne KI.', 'Training, stats, body and nutrition – everything without AI.')}
-          {k === 'solo' && t(`Alle KI-Funktionen. Reicht für ca. ${planPhotos('solo', friend)} Essensfotos im Monat.`, `All AI features. Enough for about ${planPhotos('solo', friend)} food photos a month.`)}
-          {k === 'ultra' && t(`200 % Limit + Coach-Chat – ca. ${planPhotos('ultra', friend)} Essensfotos im Monat.`, `200% limit + coach chat – about ${planPhotos('ultra', friend)} food photos a month.`)}
+          {k === 'free' && t(`Training, Statistiken, Körper und Ernährung – ohne KI, bis zu ${FREE_TEMPLATES} Vorlagen.`, `Training, stats, body and nutrition – no AI, up to ${FREE_TEMPLATES} templates.`)}
+          {k === 'solo' && t(`Alle KI-Funktionen und unbegrenzt Vorlagen. Reicht für ca. ${planPhotos('solo', friend)} Essensfotos im Monat.`, `All AI features and unlimited templates. Enough for about ${planPhotos('solo', friend)} food photos a month.`)}
+          {k === 'ultra' && t(`200 % Limit + KI-Coach + unbegrenzt Vorlagen – ca. ${planPhotos('ultra', friend)} Essensfotos im Monat.`, `200% limit + AI coach + unlimited templates – about ${planPhotos('ultra', friend)} food photos a month.`)}
         </div>
       </button>
     )
@@ -238,6 +239,12 @@ export function Paywall({ onClose }: { onClose: () => void }) {
           <h1>VIS Pro</h1>
           <p>{t('Weniger tippen, mehr trainieren. Die KI erledigt das Eintragen und plant mit deinen Daten.', 'Less typing, more training. The AI does the logging and plans with your data.')}</p>
         </div>
+        {reason === 'templates' && (
+          <div className="pw-reason">
+            <b>{t(`Free: bis zu ${FREE_TEMPLATES} Vorlagen`, `Free: up to ${FREE_TEMPLATES} templates`)}</b>
+            <span>{t('Mit Solo oder Ultra legst du so viele Vorlagen an, wie du willst.', 'With Solo or Ultra you can create as many templates as you like.')}</span>
+          </div>
+        )}
         {expired && <div className="hint" style={{ justifyContent: 'center' }}><span>{t('Dein Abo ist abgelaufen – verlängere es, um die KI weiter zu nutzen.', 'Your subscription has expired – renew it to keep using the AI.')}</span></div>}
 
         {/* the killer feature: the coach gets its own card above the list */}

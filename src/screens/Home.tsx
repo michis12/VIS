@@ -1,6 +1,6 @@
 import { t as tr } from '../i18n'
 import { useState } from 'react'
-import { openPaywall, requireAi, usePlan } from '../components/AiCredit'
+import { FREE_TEMPLATES, openPaywall, requireAi, requireTemplateSlot, templateLimit, usePlan } from '../components/AiCredit'
 import { Coach } from '../components/Coach'
 import { ScoreGauge } from '../components/ScoreGauge'
 import { TemplateOrder } from '../components/TemplateOrder'
@@ -51,8 +51,13 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
     try {
       const { templates: imported, newExercises } = await parseTemplatesFile(file, store.exercises)
       if (!imported.length) throw new Error(tr('Keine Templates in der Datei', 'No templates in the file'))
+      // Free keeps at most 3 templates: import what still fits, then show why the rest is missing
+      const limit = templateLimit()
+      const room = limit == null ? imported.length : Math.max(0, limit - templates.length)
+      if (!room) { requireTemplateSlot(templates.length); return }
       for (const e of newExercises) store.saveExercise(e)
-      for (const t of imported) store.saveTemplate(t)
+      for (const t of imported.slice(0, room)) store.saveTemplate(t)
+      if (room < imported.length) { openPaywall('templates'); return }
       toast(tr(`${imported.length} Template${imported.length > 1 ? 's' : ''} importiert`, `${imported.length} template${imported.length > 1 ? 's' : ''} imported`))
     } catch (e) {
       toast((e as Error).message)
@@ -182,7 +187,10 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
         <Sheet onClose={() => setManage(false)}>
           <h3>Templates</h3>
           <div className="menu">
-            <button onClick={() => { setManage(false); nav.push({ kind: 'template', template: null }) }}><Icon.plus /> {tr('Neues Template', 'New template')}</button>
+            <button onClick={() => { setManage(false); if (requireTemplateSlot(templates.length)) nav.push({ kind: 'template', template: null }) }}>
+              <Icon.plus /> {tr('Neues Template', 'New template')}
+              {templateLimit() != null && <span className="tpl-limit">{templates.length}/{FREE_TEMPLATES}</span>}
+            </button>
             <button disabled={templates.length < 2} onClick={() => { setManage(false); setOrdering(true) }}>{tr('Reihenfolge festlegen', 'Set the order')}</button>
             <button onClick={() => { setManage(false); nav.push({ kind: 'exercises' }) }}>{tr('Alle Übungen', 'All exercises')}</button>
             <button onClick={importTemplates}>{tr('Template-Datei importieren', 'Import template file')}</button>

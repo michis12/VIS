@@ -1156,3 +1156,9 @@ button.nut-ring:active { transform: scale(.97); transition: transform .1s; }
 @keyframes streak-flame { 0%, 100% { transform: scale(1) rotate(0deg); } 30% { transform: scale(1.08) rotate(-3deg); } 60% { transform: scale(.96) rotate(2deg); } }
 .nut-streak-big { font-size: 56px; font-weight: 800; letter-spacing: -0.03em; margin: 6px 0 8px; color: #7ff0bf; display: flex; align-items: baseline; gap: 8px; }
 .nut-streak-big span { font-size: 18px; font-weight: 600; color: var(--text-2); letter-spacing: 0; }
+
+/* Free: template limit */
+.tpl-limit { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.pw-reason { margin-top: 16px; padding: 14px 16px; border-radius: 16px; border: 1px solid rgba(79,227,166,.4); background: rgba(34,199,132,.08); text-align: center; }
+.pw-reason b { display: block; font-size: 16px; color: #a6f5d1; }
+.pw-reason span { display: block; margin-top: 4px; font-size: 13.5px; color: var(--text-2); }

@@ -1,5 +1,6 @@
 import { t as tr } from '../i18n'
 import { useRef, useState } from 'react'
+import { requireTemplateSlot } from '../components/AiCredit'
 import { Icon } from '../components/ui'
 import { shareOrDownload, templatesFile } from '../files'
 import { haptic, uid } from '../lib'
@@ -71,7 +72,12 @@ export function TemplateEditor({ template, onClose }: { template: Template | nul
         <button className="icon-btn" onClick={onClose} aria-label={tr('Zurück', 'Back')}><Icon.back /></button>
         <div className="grow"><div className="name">{isNew ? tr('Neues Template', 'New template') : tr('Template bearbeiten', 'Edit template')}</div></div>
         <button className="btn btn-chrome btn-sm" disabled={!canSave} style={{ opacity: canSave ? 1 : 0.4 }}
-          onClick={() => { store.saveTemplate({ ...t, name: t.name.trim() }); onClose() }}>
+          onClick={() => {
+            // a new template on Free counts against the limit of 3
+            if (isNew && !store.templates.some((x) => x.id === t.id) && !requireTemplateSlot(store.templates.length)) return
+            store.saveTemplate({ ...t, name: t.name.trim() })
+            onClose()
+          }}>
           {tr('Speichern', 'Save')}
         </button>
       </div>
