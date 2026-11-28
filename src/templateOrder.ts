@@ -29,6 +29,30 @@ export function nextTemplate(ordered: Template[], workouts: Workout[]): Template
   return ordered[0]
 }
 
+/**
+ * Templates beyond a plan's limit (Free: 3, e.g. after a subscription ended) are
+ * locked, not deleted: the most trained ones stay usable; ties go to the one
+ * trained last, then to the order.
+ */
+export function lockedTemplates(ordered: Template[], workouts: Workout[], limit: number | null): Set<string> {
+  if (limit == null || ordered.length <= limit) return new Set()
+  const uses = new Map<string, { n: number; last: string }>()
+  for (const w of workouts) {
+    if (w.status !== 'done') continue
+    const tp = templateOf(ordered, w)
+    if (!tp) continue
+    const u = uses.get(tp.id) ?? { n: 0, last: '' }
+    u.n++
+    if (w.startedAt > u.last) u.last = w.startedAt
+    uses.set(tp.id, u)
+  }
+  const ranked = [...ordered].sort((a, b) => {
+    const ua = uses.get(a.id), ub = uses.get(b.id)
+    return (ub?.n ?? 0) - (ua?.n ?? 0) || (ub?.last ?? '').localeCompare(ua?.last ?? '') || ordered.indexOf(a) - ordered.indexOf(b)
+  })
+  return new Set(ranked.slice(limit).map((x) => x.id))
+}
+
 /** Share of the work sets per muscle group of a template. */
 function muscleShare(tp: Template, exById: Map<string, Exercise>) {
   const m = new Map<string, number>()

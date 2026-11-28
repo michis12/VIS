@@ -239,6 +239,12 @@ export function Paywall({ onClose, reason }: { onClose: () => void; reason?: str
           <h1>VIS Pro</h1>
           <p>{t('Weniger tippen, mehr trainieren. Die KI erledigt das Eintragen und plant mit deinen Daten.', 'Less typing, more training. The AI does the logging and plans with your data.')}</p>
         </div>
+        {reason === 'templates-locked' && (
+          <div className="pw-reason">
+            <b>{t('Diese Vorlage ist gesperrt', 'This template is locked')}</b>
+            <span>{t(`Mit Free bleiben deine ${FREE_TEMPLATES} meistgenutzten Vorlagen. Mit Solo oder Ultra sind alle wieder da – nichts ist gelöscht.`, `On Free your ${FREE_TEMPLATES} most used templates stay. With Solo or Ultra all of them are back – nothing was deleted.`)}</span>
+          </div>
+        )}
         {reason === 'templates' && (
           <div className="pw-reason">
             <b>{t(`Free: bis zu ${FREE_TEMPLATES} Vorlagen`, `Free: up to ${FREE_TEMPLATES} templates`)}</b>

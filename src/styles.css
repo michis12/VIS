@@ -1173,3 +1173,6 @@ button.nut-ring:active { transform: scale(.97); transition: transform .1s; }
 .pw-reason { margin-top: 16px; padding: 14px 16px; border-radius: 16px; border: 1px solid rgba(79,227,166,.4); background: rgba(34,199,132,.08); text-align: center; }
 .pw-reason b { display: block; font-size: 16px; color: #a6f5d1; }
 .pw-reason span { display: block; margin-top: 4px; font-size: 13.5px; color: var(--text-2); }
+/* Free: templates beyond the 3 most used are locked (greyed out, tap opens the plans page) */
+.card.tpl.tpl-locked { opacity: .45; filter: grayscale(1); }
+.card.tpl.tpl-locked .tpl-badge { color: var(--text-2); }
