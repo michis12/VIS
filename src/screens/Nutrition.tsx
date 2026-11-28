@@ -1,4 +1,5 @@
 import { decStr, t as tr } from '../i18n'
+import { overrideKcal, sendCorrection, withOverride } from '../foodCorrections'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Num, useTween } from '../anim'
@@ -6,12 +7,12 @@ import { requireAi } from '../components/AiCredit'
 import { FoodPhoto, type KnownFood, type PhotoItem } from '../components/FoodPhoto'
 import { MealSuggest } from '../components/MealSuggest'
 import { Scanner } from '../components/Scanner'
-import { Icon, Sheet, Tap } from '../components/ui'
+import { HWheel, Icon, Sheet, Tap } from '../components/ui'
 import { BASICS } from '../data/foods'
 import { foodAi, shrink } from '../foodAi'
 import { dateLabel, fmtInt, haptic, localIso, today, uid } from '../lib'
 import {
-  dayTotals, fmtG, forGrams, kcalTarget, macroTargets, offProduct, offSearch, recipeAsFood, recipeTotal, recipeWeight,
+  dayTotals, fmtG, forGrams, kcalTarget, macroTargets, offFillValues, offProduct, offSearch, recipeAsFood, recipeTotal, recipeWeight,
   type Macros, type OffHit,
 } from '../nutrition'
 import { useStore } from '../store'
@@ -138,10 +139,10 @@ export function Nutrition() {
           startScan={adding === 'scan'}
           onClose={() => { setAdding(null); setAddMeal(null) }}
           onPickMany={(items) => { saveItems(items); setAdding(null); setAddMeal(null) }}
-          onPick={(p, grams) => {
+          onPick={(p, grams, portion) => {
             const m = forGrams(pickFood(p), grams)
             store.saveFoodEntry({
-              id: uid(), date, meal: mealOf(), name: pickName(p), grams, ...m, at: localIso(),
+              id: uid(), date, meal: mealOf(), name: pickName(p), grams, ...m, at: localIso(), ...(portion ? { portion } : {}),
               ref: p.kind === 'food' ? { kind: 'food', food: p.food } : { kind: 'recipe', id: p.recipe.id },
             })
             if (p.kind === 'food' && p.food.source === 'off') store.saveFood(p.food) // keep for offline + recents
@@ -233,7 +234,7 @@ function MacroBar({ label, v, t }: { label: string; v: number; t: number | null 
 /** Full-screen search: recents, recipes, own foods, basics and Open Food Facts; plus barcode scan. */
 export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, startScan }: {
   title: string
-  onPick: (p: Pick, grams: number) => void
+  onPick: (p: Pick, grams: number, portion?: { g: number; n: number }) => void
   /** several foods at once (AI text entry); the AI row only shows when set */
   onPickMany?: (items: PhotoItem[]) => void
   onClose: () => void
@@ -242,6 +243,7 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
   startScan?: boolean
 }) {
   const { foodLog, foods, recipes, saveFood, settings, saveSettings } = useStore()
+  const notes = useMemo(() => settings.foodNotes ?? {}, [settings.foodNotes])
   const [q, setQ] = useState('')
   const [remote, setRemote] = useState<OffHit[]>([])
   const [loading, setLoading] = useState(false)
@@ -282,17 +284,27 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
     if (!aiText) return []
     const out: KnownFood[] = []
     const seen = new Set<string>()
-    const push = (k: KnownFood) => { if (!seen.has(k.id)) { seen.add(k.id); out.push(k) } }
+    const push = (k: KnownFood) => { if (!seen.has(k.id)) { seen.add(k.id); out.push(notes[k.id] ? { ...k, note: notes[k.id] } : k) } }
     if (!noRecipes) for (const r of recipes) push({ id: r.id, food: recipeAsFood(r), recipeId: r.id, g: recipeWeight(r) })
     for (const f of foods) push({ id: f.id, food: f })
     for (const p of recents) if (p.kind === 'food') push({ id: p.food.id, food: p.food })
     for (const f of BASICS) push({ id: f.id, food: f })
     return out
-  }, [aiText, recipes, foods, recents, noRecipes])
+  }, [aiText, recipes, foods, recents, noRecipes, notes])
 
   // favourites: heart in every row, own list behind the heart button in the header
   const favIds = useMemo(() => new Set(settings.favFoods ?? []), [settings.favFoods])
   const pickId = (p: Pick) => (p.kind === 'food' ? p.food.id : p.recipe.id)
+  // the amount from the last time this food / recipe was logged is suggested again
+  const lastAmount = (p: Pick): { initial?: number; initialCount?: number } => {
+    const id = pickId(p)
+    for (let i = foodLog.length - 1; i >= 0; i--) {
+      const e = foodLog[i]
+      if ((e.ref.kind === 'food' ? e.ref.food.id : e.ref.id) !== id) continue
+      return e.portion ? { initial: e.portion.g, initialCount: e.portion.n } : { initial: e.grams }
+    }
+    return {}
+  }
   const toggleFav = (p: Pick) => {
     haptic()
     const id = pickId(p)
@@ -318,12 +330,19 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
     if (!term) return []
     const words = term.split(/\s+/)
     const hit = (s: string) => words.every((w) => s.toLowerCase().includes(w))
+    const note = (id: string) => ' ' + (notes[id] ?? '')
     const out: Pick[] = []
-    if (!noRecipes) for (const r of recipes) if (hit(r.name)) out.push({ kind: 'recipe', recipe: r })
-    for (const f of foods) if (hit(f.name + ' ' + (f.brand ?? ''))) out.push({ kind: 'food', food: f })
-    for (const f of BASICS) if (hit(f.name)) out.push({ kind: 'food', food: f })
+    if (!noRecipes) for (const r of recipes) if (hit(r.name + note(r.id))) out.push({ kind: 'recipe', recipe: r })
+    for (const f of foods) if (hit(f.name + ' ' + (f.brand ?? '') + note(f.id))) out.push({ kind: 'food', food: withOverride(f) })
+    for (const f of BASICS) if (hit(f.name + note(f.id))) out.push({ kind: 'food', food: f })
+    // eaten foods that are only in the diary (e.g. from the AI) can be found by their note too
+    for (const id of Object.keys(notes)) {
+      if (out.some((p) => pickId(p) === id) || !hit(note(id))) continue
+      const e = foodLog.find((x) => x.ref.kind === 'food' && x.ref.food.id === id)
+      if (e && e.ref.kind === 'food') out.push({ kind: 'food', food: e.ref.food })
+    }
     return out.slice(0, 30)
-  }, [term, recipes, foods, noRecipes])
+  }, [term, recipes, foods, noRecipes, notes, foodLog])
 
   useEffect(() => {
     ctrl.current?.abort()
@@ -334,7 +353,11 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
     setLoading(true)
     const t = setTimeout(() => {
       offSearch(term, c.signal)
-        .then((r) => { setRemote(r); setOffline(false) })
+        .then((r) => {
+          setRemote(r); setOffline(false)
+          // then the missing values; products that really have none move to the end
+          offFillValues(r, c.signal).then((f) => { if (!c.signal.aborted) setRemote(f) }).catch(() => { /* keep the plain list */ })
+        })
         .catch((e) => { if ((e as Error).name !== 'AbortError') setOffline(true) })
         .finally(() => { if (!c.signal.aborted) setLoading(false) })
     }, 450)
@@ -343,11 +366,11 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
 
   const openProduct = async (code: string, fallbackName?: string) => {
     const known = foods.find((f) => f.barcode === code)
-    if (known) { setChosen({ kind: 'food', food: known }); return }
+    if (known) { setChosen({ kind: 'food', food: withOverride(known) }); return }
     setBusy(code)
     try {
       const f = await offProduct(code)
-      if (f) setChosen({ kind: 'food', food: f })
+      if (f) setChosen({ kind: 'food', food: withOverride(f) })
       else setMissing({ code, name: fallbackName })
     } catch {
       setOffline(true)
@@ -418,13 +441,14 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
               <span>{tr('Produkte', 'Products')}</span><span className="faint">{loading ? tr('suche…', 'searching…') : offline ? 'offline' : 'Open Food Facts'}</span>
             </div>
             {term.length < 3 && <div className="faint" style={{ fontSize: 13, padding: '4px 2px' }}>{tr('Ab 3 Buchstaben wird online gesucht', 'Online search starts at 3 letters')}</div>}
+            {/* products without nutrition values come last, marked so they don't have to be opened to find out */}
             {remote.map((h) => (
-              <button key={h.code} className="nut-pick" onClick={() => openProduct(h.code, h.name)} disabled={busy === h.code}>
+              <button key={h.code} className={'nut-pick' + (h.none ? ' nut-pick-novalues' : '')} onClick={() => openProduct(h.code, h.name)} disabled={busy === h.code}>
                 <div className="grow">
                   <div className="nut-entry-name">{h.name}</div>
-                  <div className="faint" style={{ fontSize: 12 }}>{h.brand ?? ''}</div>
+                  <div className="faint" style={{ fontSize: 12 }}>{h.brand ?? ''}{h.none && <span className="nut-novalues">{h.brand ? ' · ' : ''}{tr('keine Nährwerte', 'no nutrition values')}</span>}</div>
                 </div>
-                <span className="faint num" style={{ fontSize: 13 }}>{busy === h.code ? '…' : h.kcal != null ? `${Math.round(h.kcal)} kcal` : ''}</span>
+                <span className="faint num" style={{ fontSize: 13 }}>{busy === h.code ? '…' : (overrideKcal(h.code) ?? h.kcal) != null ? `${Math.round(overrideKcal(h.code) ?? h.kcal!)} kcal` : ''}</span>
               </button>
             ))}
             {!loading && !offline && term.length >= 3 && remote.length === 0 && <div className="faint" style={{ fontSize: 13, padding: '4px 2px' }}>{tr('Nichts gefunden – „Eigenes“ anlegen.', 'Nothing found – create a “Custom” one.')}</div>}
@@ -461,7 +485,9 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
       )}
       {chosen && (
         <AmountSheet
-          pick={chosen} onClose={() => setChosen(null)} onDone={(g) => { onPick(chosen, g); setChosen(null) }}
+          pick={chosen} onClose={() => setChosen(null)} onDone={(g, portion) => { onPick(chosen, g, portion); setChosen(null) }}
+          noteId={pickId(chosen)}
+          {...lastAmount(chosen)}
           extra={chosen.kind === 'food' && chosen.food.source !== 'basic' ? (
             <button className="btn btn-ghost btn-block" style={{ marginTop: 10 }} onClick={() => setEditing(chosen.food)}>{tr('Nährwerte bearbeiten', 'Edit nutrition values')}</button>
           ) : undefined}
@@ -471,7 +497,7 @@ export function FoodPicker({ title, onPick, onPickMany, onClose, noRecipes, star
         <CustomFoodSheet
           initial={{}} edit={editing}
           onClose={() => setEditing(null)}
-          onSave={(f) => { updateFood(f); setEditing(null); setChosen({ kind: 'food', food: f }) }}
+          onSave={(f) => { updateFood(f, editing); setEditing(null); setChosen({ kind: 'food', food: f }) }}
         />
       )}
       {custom && (
@@ -542,13 +568,23 @@ function EntryRow({ e, onOpen }: { e: FoodEntry; onOpen: () => void }) {
 }
 
 /** Amount in grams with quick chips; live macros. */
-function AmountSheet({ pick, onClose, onDone, initial, action = tr('Hinzufügen', 'Add'), extra }: {
+// portions on the flat wheel: halves up to 5, then whole ones
+const PORTIONS = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9, 10]
+
+function AmountSheet({ pick, onClose, onDone, initial, initialCount = 1, action = tr('Hinzufügen', 'Add'), extra, heart, noteId }: {
   pick: Pick
   onClose: () => void
-  onDone: (grams: number) => void
+  /** total grams; `portion` when more or less than one portion was chosen */
+  onDone: (grams: number, portion?: { g: number; n: number }) => void
+  /** grams of one portion */
   initial?: number
+  initialCount?: number
   action?: string
   extra?: React.ReactNode
+  /** shown next to the title, e.g. the favourite heart */
+  heart?: React.ReactNode
+  /** food / recipe id the own note belongs to */
+  noteId?: string | null
 }) {
   const food = pickFood(pick)
   const chips = useMemo(() => {
@@ -563,16 +599,29 @@ function AmountSheet({ pick, onClose, onDone, initial, action = tr('Hinzufügen'
     return c
   }, [pick, food])
   const [text, setText] = useState(() => String(Math.round(initial ?? (food.serving?.g ?? (pick.kind === 'recipe' ? recipeWeight(pick.recipe) / 2 : 100)))))
-  const grams = Math.max(0, Number(text.replace(',', '.')) || 0)
+  const [n, setN] = useState(initialCount)
+  const one = Math.max(0, Number(text.replace(',', '.')) || 0)
+  const grams = Math.round(one * n * 10) / 10
   const m: Macros = forGrams(food, grams)
+  const fmtN = (x: number) => (x === 0.5 ? '½' : Number.isInteger(x) ? String(x) : `${Math.floor(x)}½`)
   return (
     <Sheet onClose={onClose}>
-      <h3 style={{ paddingRight: 8 }}>{pickName(pick)}</h3>
+      <div className="nut-amount-head">
+        <h3 style={{ paddingRight: 8 }}>{pickName(pick)}</h3>
+        {heart}
+      </div>
+      {noteId && <FoodNote id={noteId} />}
       <p className="faint num" style={{ fontSize: 13 }}>
         {tr('pro 100 g', 'per 100 g')}: {Math.round(food.kcal)} kcal · {fmtG(food.p)} {tr('E', 'P')} · {fmtG(food.c)} {tr('K', 'C')} · {fmtG(food.f)} F
       </p>
-      <div className="chips" style={{ margin: '12px -18px 0', padding: '2px 18px 4px' }}>
-        {chips.map((c) => <button key={c.label} className={'chip' + (Math.round(c.g) === Math.round(grams) ? ' on' : '')} onClick={() => setText(String(Math.round(c.g)))}>{c.label}</button>)}
+      {/* how many: × portions on a flat wheel, the chips and the field are one portion */}
+      <div className="nut-portion-cap">
+        <span>{tr('Anzahl', 'Portions')}</span>
+        <b className="num">{n === 1 ? tr('1 Portion', '1 portion') : `${fmtN(n)} × ${fmtG(one)} g = ${fmtG(grams)} g`}</b>
+      </div>
+      <HWheel values={PORTIONS} value={n} onChange={setN} format={(x) => `${fmtN(x)}×`} />
+      <div className="chips" style={{ margin: '8px -18px 0', padding: '2px 18px 4px' }}>
+        {chips.map((c) => <button key={c.label} className={'chip' + (Math.round(c.g) === Math.round(one) ? ' on' : '')} onClick={() => setText(String(Math.round(c.g)))}>{c.label}</button>)}
       </div>
       <div className="nut-amount">
         <input className="field num" inputMode="decimal" value={text} onChange={(e) => setText(e.target.value)} onFocus={(e) => e.target.select()} />
@@ -584,8 +633,41 @@ function AmountSheet({ pick, onClose, onDone, initial, action = tr('Hinzufügen'
         <div><b className="num">{fmtG(m.c)} / {fmtG(m.f)}</b><span>{tr('KH / Fett', 'Carbs / fat')}</span></div>
       </div>
       {extra}
-      <Tap className="btn btn-chrome btn-block" style={{ marginTop: 14 }} onClick={() => grams > 0 && onDone(grams)}>{action}</Tap>
+      <Tap className="btn btn-chrome btn-block" style={{ marginTop: 14 }} onClick={() => grams > 0 && onDone(grams, n !== 1 ? { g: one, n } : undefined)}>{action}</Tap>
     </Sheet>
+  )
+}
+
+/**
+ * The user's own note on a food or recipe (only on this account), e.g. "Toast" on
+ * an American sandwich bread: the search and the AI then find it by that word.
+ */
+function FoodNote({ id }: { id: string }) {
+  const store = useStore()
+  const saved = store.settings.foodNotes?.[id] ?? ''
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState(saved)
+  const save = () => {
+    const v = text.trim().slice(0, 120)
+    const notes = { ...(store.settings.foodNotes ?? {}) }
+    if (v) notes[id] = v
+    else delete notes[id]
+    if (v !== saved) store.saveSettings({ ...store.settings, foodNotes: notes })
+    setOpen(false)
+  }
+  if (open) {
+    return (
+      <form className="nut-note-edit" onSubmit={(e) => { e.preventDefault(); save() }}>
+        <input className="input" autoFocus value={text} onChange={(e) => setText(e.target.value)} onBlur={save} maxLength={120}
+          placeholder={tr('z. B. Toast – so findet dich die Suche und die KI', 'e.g. toast – how search and AI find it')} />
+      </form>
+    )
+  }
+  return (
+    <button className={'nut-note' + (saved ? ' has' : '')} onClick={() => { setText(saved); setOpen(true) }}>
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z" /></svg>
+      {saved ? saved : tr('Notiz hinzufügen', 'Add a note')}
+    </button>
   )
 }
 
@@ -593,10 +675,14 @@ function AmountSheet({ pick, onClose, onDone, initial, action = tr('Hinzufügen'
  * Saves an edited food and puts the new values everywhere it was used: every
  * diary entry with it is recalculated, recipes get the new values too.
  */
+const toastCorrection = () => window.dispatchEvent(new CustomEvent('vis-toast', { detail: tr('Geändert – und zur Prüfung für alle gesendet', 'Changed – and sent for review for everyone') }))
+
 function useUpdateFood() {
   const store = useStore()
-  return (f: Food) => {
+  return (f: Food, before?: Food) => {
     store.saveFood(f)
+    // a database product: the change applies here at once and goes to the owner as a request
+    if (before) sendCorrection(before, f).then((sent) => sent && toastCorrection()).catch(() => {})
     for (const e of store.foodLog) {
       if (e.ref.kind === 'food' && e.ref.food.id === f.id) store.saveFoodEntry({ ...e, name: f.name, ref: { kind: 'food', food: f }, ...forGrams(f, e.grams) })
     }
@@ -616,14 +702,33 @@ function EntrySheet({ entry, onClose }: { entry: FoodEntry; onClose: () => void 
     : rec ? { kind: 'recipe', recipe: rec }
       // recipe was deleted: keep its values as a plain food
       : { kind: 'food', food: { id: 'x', name: entry.name, source: 'custom', ...forGrams(entry, 100 * 100 / entry.grams / 100) } }
+  // heart: mark what was eaten as a favourite right from the diary
+  const favId = pick.kind === 'recipe' ? pick.recipe.id : pick.food.id !== 'x' ? pick.food.id : null
+  const fav = !!favId && (store.settings.favFoods ?? []).includes(favId)
+  const toggleFav = () => {
+    if (!favId) return
+    haptic()
+    // products from the online search are kept locally so the favourite works offline
+    if (!fav && pick.kind === 'food' && pick.food.source === 'off' && !store.foods.some((f) => f.id === favId)) store.saveFood(pick.food)
+    const list = store.settings.favFoods ?? []
+    store.saveSettings({ ...store.settings, favFoods: fav ? list.filter((x) => x !== favId) : [...list, favId] })
+  }
   return (
     <AmountSheet
       pick={pick}
-      initial={entry.grams}
+      noteId={favId}
+      heart={favId ? (
+        <button className={'nut-heart' + (fav ? ' on' : '')} onClick={toggleFav} aria-label={fav ? tr('Aus Favoriten entfernen', 'Remove from favourites') : tr('Zu Favoriten', 'Add to favourites')}>
+          <HeartIcon on={fav} />
+        </button>
+      ) : undefined}
+      initial={entry.portion?.g ?? entry.grams}
+      initialCount={entry.portion?.n ?? 1}
       action={tr('Speichern', 'Save')}
       onClose={onClose}
-      onDone={(g) => {
-        store.saveFoodEntry({ ...entry, grams: g, ...forGrams(pickFood(pick), g) })
+      onDone={(g, portion) => {
+        const { portion: _old, ...rest } = entry // eslint-disable-line @typescript-eslint/no-unused-vars
+        store.saveFoodEntry({ ...rest, grams: g, ...forGrams(pickFood(pick), g), ...(portion ? { portion } : {}) })
         onClose()
       }}
       extra={
@@ -638,7 +743,7 @@ function EntrySheet({ entry, onClose }: { entry: FoodEntry; onClose: () => void 
             <CustomFoodSheet
               initial={{}} edit={editFood}
               onClose={() => setEditFood(null)}
-              onSave={(f) => { updateFood(f); setEditFood(null); onClose() }}
+              onSave={(f) => { updateFood(f, editFood); setEditFood(null); onClose() }}
             />
           )}
         </>

@@ -51,7 +51,7 @@ export const fmtG = (v: number) => (v >= 10 ? String(Math.round(v)) : decStr(rou
 // Free and open product database (no key). Search via search.openfoodfacts.org
 // (Austria + Germany first), full nutrition by barcode via the product API.
 
-export interface OffHit { code: string; name: string; brand?: string; kcal?: number }
+export interface OffHit { code: string; name: string; brand?: string; kcal?: number; /** checked: the product has no nutrition values */ none?: boolean }
 
 /** brands come as "a,b" (product API) or ["xx:a", "b"] (search) */
 const clean = (s?: unknown) => {
@@ -82,12 +82,17 @@ export async function offSearch(q: string, signal?: AbortSignal): Promise<OffHit
     if (!r.ok) return []
     const j = await r.json()
     return ((j.hits ?? []) as Record<string, unknown>[])
-      .map((h) => ({
-        code: String(h.code ?? ''),
-        name: String(h.product_name_de || h.product_name || '').trim(),
-        brand: clean(h.brands) || undefined,
-        kcal: (h.nutriments as Record<string, number> | undefined)?.['energy-kcal_100g'],
-      }))
+      .map((h) => {
+        const n = (h.nutriments ?? {}) as Record<string, number>
+        // same rule as offProduct: kcal, or kJ converted; without either the product has no values
+        const kcal = n['energy-kcal_100g'] ?? (n['energy_100g'] != null ? n['energy_100g'] / 4.184 : undefined)
+        return {
+          code: String(h.code ?? ''),
+          name: String(h.product_name_de || h.product_name || '').trim(),
+          brand: clean(h.brands) || undefined,
+          kcal: kcal == null || Number.isNaN(Number(kcal)) ? undefined : Number(kcal),
+        }
+      })
       .filter((h) => h.code && h.name)
   }
   const local = await run(`${q} countries:("en:austria" OR "en:germany")`)
@@ -95,6 +100,32 @@ export async function offSearch(q: string, signal?: AbortSignal): Promise<OffHit
   const world = await run(q)
   const seen = new Set(local.map((h) => h.code))
   return [...local, ...world.filter((h) => !seen.has(h.code))]
+}
+
+/**
+ * The search often leaves the nutrition values out (with the country filter always),
+ * so the list looked like many products had none. This looks them up for all hits
+ * in one request: kcal filled in where the product has values, `none` where it
+ * really has none – those go to the end of the list.
+ */
+export async function offFillValues(hits: OffHit[], signal?: AbortSignal): Promise<OffHit[]> {
+  const codes = hits.filter((h) => h.kcal == null).map((h) => h.code)
+  if (!codes.length) return hits
+  const r = await getJson(`https://world.openfoodfacts.org/api/v2/search?code=${codes.map(encodeURIComponent).join(',')}&fields=code,nutriments&page_size=${codes.length}`, signal)
+  if (!r.ok) return hits
+  const j = await r.json()
+  const kcal = new Map<string, number | null>()
+  for (const p of (j.products ?? []) as { code: string; nutriments?: Record<string, number> }[]) {
+    const n = p.nutriments ?? {}
+    const v = n['energy-kcal_100g'] ?? (n['energy_100g'] != null ? n['energy_100g'] / 4.184 : null)
+    kcal.set(String(p.code), v == null || Number.isNaN(Number(v)) ? null : Number(v))
+  }
+  const out = hits.map((h) => {
+    if (h.kcal != null || !kcal.has(h.code)) return h
+    const v = kcal.get(h.code)
+    return v == null ? { ...h, none: true } : { ...h, kcal: v }
+  })
+  return [...out.filter((h) => !h.none), ...out.filter((h) => h.none)]
 }
 
 /** Full product by barcode, or null when unknown / without nutrition values. */

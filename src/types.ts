@@ -113,6 +113,8 @@ export interface Settings {
   mealSections?: boolean
   /** order of the workout templates (ids): the training page shows the next one in this rhythm */
   templateOrder?: string[]
+  /** own notes on foods / recipes (id → text), e.g. "Toast": found by the search and the AI */
+  foodNotes?: Record<string, string>
 }
 
 // ---- Ernährung
@@ -163,4 +165,6 @@ export interface FoodEntry {
   f: number
   ref: { kind: 'food'; food: Food } | { kind: 'recipe'; id: string }
   at: string // ISO local, when it was logged
+  /** several portions: n × g (grams = n · g); suggested again next time */
+  portion?: { g: number; n: number }
 }

@@ -31,7 +31,7 @@ const L: [string, string][] = [
   // Trizeps
   ['Skull Crusher (EZ-Bar)', 'Trizeps'], ['Skull Crusher (Dumbbell)', 'Trizeps'], ['Close-Grip Bench Press (Barbell)', 'Trizeps'],
   ['Overhead Triceps Extension (Dumbbell)', 'Trizeps'], ['Triceps Kickback (Dumbbell)', 'Trizeps'], ['Triceps Kickback (Cable)', 'Trizeps'],
-  ['Dips (Weighted)', 'Trizeps'], ['Bench Dips', 'Trizeps'], ['Triceps Dip (Machine)', 'Trizeps'], ['Triceps Extension (Machine)', 'Trizeps'],
+  ['Dips (Weighted)', 'Trizeps'], ['Bench Dips', 'Trizeps'], ['Triceps Dip (Machine)', 'Trizeps'], ['Triceps Dip (Assisted)', 'Trizeps'], ['Triceps Extension (Machine)', 'Trizeps'],
   // Beine
   ['Squat (Barbell)', 'Beine'], ['Front Squat (Barbell)', 'Beine'], ['Goblet Squat', 'Beine'], ['Hack Squat (Machine)', 'Beine'],
   ['Pendulum Squat (Machine)', 'Beine'], ['Belt Squat', 'Beine'], ['Sissy Squat', 'Beine'], ['Bulgarian Split Squat (Dumbbell)', 'Beine'],

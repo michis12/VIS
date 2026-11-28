@@ -97,7 +97,7 @@ export function Coach({ onClose }: { onClose: () => void }) {
         messages: next.map((m) => ({ role: m.role, text: m.text })),
         context, starter,
         catalog: store.exercises.map((e) => ({ id: e.id, name: e.name })),
-        foods: known.map((k) => ({ id: k.id, name: k.food.name + (k.food.brand ? ` (${k.food.brand})` : ''), kcal: k.food.kcal, p: k.food.p, c: k.food.c, f: k.food.f, ...(k.g ? { g: k.g } : {}) })),
+        foods: known.map((k) => ({ id: k.id, name: k.food.name + (k.food.brand ? ` (${k.food.brand})` : '') + (k.note ? ` – Notiz: ${k.note}` : ''), kcal: k.food.kcal, p: k.food.p, c: k.food.c, f: k.food.f, ...(k.g ? { g: k.g } : {}) })),
         now: localIso().slice(0, 16),
       }, 'coach')
       const actions = sanitize(Array.isArray(res.actions) ? res.actions : [], store).map((a) => ({ a, ...describe(a, store, knownMap) }))

@@ -61,6 +61,9 @@ export const fmtInt = (n: number) => Math.round(n).toLocaleString(locale())
 /** Epley estimated one-rep max. */
 export const e1rm = (w: number, r: number) => (r <= 0 ? 0 : r === 1 ? w : w * (1 + r / 30))
 
+/** Assisted exercises (machine pull-ups / dips): the weight is help, so less is stronger. */
+export const isAssisted = (exerciseId: string) => /assist/i.test(exerciseId)
+
 export const isRealSet = (s: SetEntry) => s.done && (s.weight ?? 0) >= 0 && (s.reps ?? 0) > 0
 
 export function workoutVolume(w: Workout) {

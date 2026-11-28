@@ -5,7 +5,6 @@ import { pastWeekScores } from '../weekly'
 import { scorePhases } from '../phaseScore'
 import { kcalTarget } from '../nutrition'
 import { computeMetrics, evaluate, fmtMetric, MAX_STARS, nextRank, rankFor, ULTIMATE, type AchievementState, type Glyph } from '../achievements'
-import { openPaywall } from '../components/AiCredit'
 import { Avatar, ProfileEditor } from '../components/Avatar'
 import { PlanBadge } from '../components/Paywall'
 import { Icon, Sheet } from '../components/ui'
@@ -255,7 +254,7 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
         <div className="who">
           <div className="nm-row">
             <div className="nm" lang={getLang()} style={{ fontSize: nameSize(settings.name || tr('Dein Name', 'Your name')) }}>{settings.name || tr('Dein Name', 'Your name')}</div>
-            <PlanBadge onClick={openPaywall} />
+            <PlanBadge />
           </div>
           <button className="link muted" style={{ fontSize: 14 }} onClick={() => setEditing(true)}>{tr('Profil bearbeiten', 'Edit profile')}</button>
         </div>

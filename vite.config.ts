@@ -4,6 +4,12 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   base: './',
+  // two pages from one build: the app (index.html) and the owner's VIS-Officium (officium.html)
+  build: {
+    rollupOptions: {
+      input: { main: 'index.html', officium: 'officium.html' },
+    },
+  },
   define: {
     __BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16).replace('T', ' ')),
   },
@@ -32,7 +38,18 @@ export default defineConfig({
         globIgnores: ['push-sw.js'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         importScripts: ['push-sw.js'],
+        // the Officium is its own page, never the app's fallback
+        navigateFallbackDenylist: [/officium/],
       },
     }),
+    // the PWA plugin adds the app's manifest to every page; the Officium keeps only its own
+    {
+      name: 'officium-own-manifest',
+      enforce: 'post',
+      transformIndexHtml: {
+        order: 'post',
+        handler: (html, ctx) => (ctx.filename.endsWith('officium.html') ? html.replace(/<link rel="manifest" href="\.\/manifest\.webmanifest"\s*\/?>/, '') : html),
+      },
+    },
   ],
 })
