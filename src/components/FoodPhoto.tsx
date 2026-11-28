@@ -17,7 +17,7 @@ import { AiWait, Icon, Tap } from './ui'
 export interface PhotoItem { food: Food; grams: number; recipeId?: string }
 
 /** A food the text mode may map to; `g` = whole-dish weight for recipes. */
-export interface KnownFood { id: string; food: Food; recipeId?: string; g?: number }
+export interface KnownFood { id: string; food: Food; recipeId?: string; g?: number; /** the user's own note, e.g. "Toast" */ note?: string }
 
 interface Row { name: string; grams: string; per: Macros /* per gram */; food?: Food; recipeId?: string }
 
@@ -63,7 +63,8 @@ export function FoodPhoto({ source, onClose, onAdd }: { source: Source; onClose:
       if (source.kind === 'text') {
         data = await foodAi({
           mode: 'text', text: source.text,
-          foods: source.known.map((k) => ({ id: k.id, name: k.food.name, ...(k.g ? { g: k.g } : {}) })),
+          // the user's note goes with the name, so "Toast" finds the sandwich bread it was noted on
+          foods: source.known.map((k) => ({ id: k.id, name: k.food.name + (k.note ? ` – Notiz des Nutzers: ${k.note}` : ''), ...(k.g ? { g: k.g } : {}) })),
         })
       } else {
         const image = await shrink(source.file)

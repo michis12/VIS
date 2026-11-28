@@ -144,6 +144,22 @@ export async function loadAll(): Promise<Snapshot> {
       await tx.done
     }
   }
+  // the assisted dip is done triceps-focused: once per device, every template and past
+  // workout with the chest version moves to "Triceps Dip (Assisted)" (records go along)
+  if (!(await d.get('meta', 'dipsTriceps'))) {
+    const FROM = 'chest-dip-assisted', TO = 'triceps-dip-assisted'
+    const tx = d.transaction(['workouts', 'templates', 'meta'], 'readwrite')
+    for (const w of (await tx.objectStore('workouts').getAll()) as Workout[]) {
+      if (!w.exercises.some((e) => e.exerciseId === FROM)) continue
+      tx.objectStore('workouts').put({ ...w, exercises: w.exercises.map((e) => (e.exerciseId === FROM ? { ...e, exerciseId: TO } : e)) })
+    }
+    for (const t of (await tx.objectStore('templates').getAll()) as Template[]) {
+      if (!t.exercises.some((e) => e.exerciseId === FROM)) continue
+      tx.objectStore('templates').put({ ...t, exercises: t.exercises.map((e) => (e.exerciseId === FROM ? { ...e, exerciseId: TO } : e)) })
+    }
+    tx.objectStore('meta').put(true, 'dipsTriceps')
+    await tx.done
+  }
   // starter recipes, once per device (again after restoring a backup that has none)
   if (!(await d.get('meta', 'recipesSeeded'))) {
     const tx = d.transaction(['recipes', 'meta'], 'readwrite')
@@ -201,6 +217,8 @@ export async function replaceAll(s: Snapshot) {
   }
   // a backup without recipes gets the starter recipes again
   if (!s.recipes?.length) tx.objectStore('meta').delete('recipesSeeded')
+  // an older backup may still have the chest dips: move them to triceps again on the next load
+  tx.objectStore('meta').delete('dipsTriceps')
   tx.objectStore('meta').put(s.settings, 'settings')
   tx.objectStore('meta').put(true, 'seeded')
   tx.objectStore('meta').put(4, 'seedVersion')

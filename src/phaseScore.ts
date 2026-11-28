@@ -1,5 +1,5 @@
 import { dec, t as tr } from './i18n'
-import { e1rm, isRealSet } from './lib'
+import { e1rm, isAssisted, isRealSet } from './lib'
 import type { WorkoutProgress } from './progress'
 import type { Phase, PhaseType, WeightEntry, Workout } from './types'
 
@@ -74,6 +74,8 @@ function strengthRatio(ws: Workout[], start: string, end: string) {
     const target = d < win ? early : d >= days - win ? late : null
     if (!target) continue
     for (const e of w.exercises) {
+      // assisted exercises get easier with less weight; the 1RM ratio would read backwards
+      if (isAssisted(e.exerciseId)) continue
       for (const s of e.sets) {
         if (!isRealSet(s) || (s.weight ?? 0) > 500) continue
         const v = e1rm(s.weight ?? 0, s.reps ?? 0)

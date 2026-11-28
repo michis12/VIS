@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { openOnboarding } from '../components/Onboarding'
 import { AiCreditCard } from '../components/AiCreditCard'
 import { CloudCard } from '../components/CloudCard'
 import { FeedbackCard } from '../components/FeedbackCard'
@@ -83,6 +84,14 @@ export function Settings({ toast }: { toast: (t: string) => void }) {
           <button className={lang === 'en' ? 'on' : ''} onClick={() => setLanguage('en')}>English</button>
         </div>
       </div>
+
+      <button className="card subtle-link" onClick={openOnboarding}>
+        <span style={{ flex: 1 }}>
+          {t('Einführung ansehen', 'Watch the intro')}
+          <span className="faint" style={{ display: 'block', fontSize: 12 }}>{t('Alle Funktionen von VIS kurz erklärt', 'Every VIS feature, briefly explained')}</span>
+        </span>
+        <Icon.chevron />
+      </button>
 
       <div className="section-title"><h2>{t('Ernährung', 'Nutrition')}</h2></div>
       <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

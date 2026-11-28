@@ -26,13 +26,14 @@ export type Action =
   | { kind: 'rest'; sec: number }
 
 /** A known food the coach may refer to by id (recipes count as a food per 100 g of the dish). */
-export interface KnownFood { id: string; food: Food; recipeId?: string; g?: number }
+export interface KnownFood { id: string; food: Food; recipeId?: string; g?: number; note?: string }
 
 /** Recipes, own foods, recently eaten and the basics: what the coach gets as its food list. */
 export function knownFoods(store: Store): KnownFood[] {
   const out: KnownFood[] = []
   const seen = new Set<string>()
-  const push = (k: KnownFood) => { if (!seen.has(k.id)) { seen.add(k.id); out.push(k) } }
+  const notes = store.settings.foodNotes ?? {}
+  const push = (k: KnownFood) => { if (!seen.has(k.id)) { seen.add(k.id); out.push(notes[k.id] ? { ...k, note: notes[k.id] } : k) } }
   for (const r of store.recipes) push({ id: r.id, food: recipeAsFood(r), recipeId: r.id, g: recipeWeight(r) })
   for (const f of store.foods) push({ id: f.id, food: f })
   for (let i = store.foodLog.length - 1, n = 0; i >= 0 && n < 40; i--, n++) {

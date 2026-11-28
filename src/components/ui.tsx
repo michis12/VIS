@@ -127,6 +127,53 @@ export function Wheel({ values, value, onChange, format = String }: {
   )
 }
 
+/** Flat, horizontal wheel (e.g. how many portions): swipe sideways, the middle value counts. */
+export function HWheel({ values, value, onChange, format = String }: {
+  values: number[]
+  value: number
+  onChange: (v: number) => void
+  format?: (v: number) => string
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const ITEM = 58
+  const idx = Math.max(0, values.findIndex((v) => v >= value - 1e-9))
+  const [sel, setSel] = useState(idx)
+  const settle = useRef<number>(0)
+
+  useEffect(() => {
+    ref.current?.scrollTo({ left: idx * ITEM })
+    setSel(idx)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const onScroll = () => {
+    const el = ref.current
+    if (!el) return
+    const i = Math.min(values.length - 1, Math.max(0, Math.round(el.scrollLeft / ITEM)))
+    if (i !== sel) {
+      setSel(i)
+      if (!IS_TOUCH_IOS) haptic()
+    }
+    clearTimeout(settle.current)
+    settle.current = window.setTimeout(() => onChange(values[i]), 60)
+  }
+
+  return (
+    <div className="hwheel">
+      <div className="hwheel-band" />
+      <div className="hwheel-scroll" ref={ref} onScroll={onScroll} onTouchEnd={() => haptic()}>
+        <div className="hwheel-pad" />
+        {values.map((v, i) => (
+          <Tap key={v} className={'hwheel-item' + (i === sel ? ' sel' : '')} onClick={() => ref.current?.scrollTo({ left: i * ITEM, behavior: 'smooth' })}>
+            <span>{format(v)}</span>
+          </Tap>
+        ))}
+        <div className="hwheel-pad" />
+      </div>
+    </div>
+  )
+}
+
 /**
  * A tappable element that carries an invisible native iOS switch. The user's own
  * tap toggles the switch, and iOS (18+) plays its system haptic for that – this

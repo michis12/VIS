@@ -2,8 +2,8 @@ import { dec, t } from '../i18n'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { haptic } from '../lib'
-import { PLANS, fmtEuro, planPhotos, planPrice, usePlan, type Plan } from './AiCredit'
-import { Icon } from './ui'
+import { PLANS, fmtEuro, openPaywall, planPhotos, planPrice, useCredit, usePlan, type Plan } from './AiCredit'
+import { Icon, Sheet } from './ui'
 
 /** plan badges: chrome pills for Free and Solo, a cut emerald for Ultra, Fam and Dev */
 const PLAN_TIER: Record<Plan, { label: string; gem: boolean }> = {
@@ -15,14 +15,70 @@ const PLAN_TIER: Record<Plan, { label: string; gem: boolean }> = {
 }
 const tierClass = (k: Plan) => (PLAN_TIER[k].gem ? 'tier-gem' : 'tier-chrome')
 
-export function PlanBadge({ onClick }: { onClick: () => void }) {
+/**
+ * The plan badge in the profile. Free opens the plans page; Solo a summary of
+ * what it includes with the way to Ultra; every other plan its status.
+ */
+export function PlanBadge() {
   const s = usePlan()
+  const [open, setOpen] = useState(false)
   if (s === undefined) return null
   const key: Plan = s.plan && s.active ? s.plan : 'free'
   return (
-    <button className={'plan-badge ' + tierClass(key)} onClick={() => { haptic(); onClick() }}>
-      {key === 'free' && s.friend ? 'Friend' : PLAN_TIER[key].label}
-    </button>
+    <>
+      <button className={'plan-badge ' + tierClass(key)} onClick={() => { haptic(); if (key === 'free') openPaywall(); else setOpen(true) }}>
+        {key === 'free' && s.friend ? 'Friend' : PLAN_TIER[key].label}
+      </button>
+      {open && key !== 'free' && <PlanStatus plan={key} friend={s.friend} onClose={() => setOpen(false)} />}
+    </>
+  )
+}
+
+const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(t('de-AT', 'en-GB'), { day: 'numeric', month: 'long', year: 'numeric' }) : '–')
+
+function PlanStatus({ plan, friend, onClose }: { plan: Exclude<Plan, 'free'>; friend: boolean; onClose: () => void }) {
+  const { credit } = useCredit()
+  const coach = plan !== 'solo'
+  const unlimited = plan === 'fam' || plan === 'dev'
+  const pct = credit?.usedPct ?? null
+  const rows: [string, string][] = [
+    [t('Plan', 'Plan'), PLAN_TIER[plan].label + (friend ? ' · Friend' : '')],
+    ...(plan === 'solo' || plan === 'ultra' ? [
+      [t('Abrechnung', 'Billing'), credit?.period === 'year' ? t('jährlich', 'yearly') : credit?.period === 'month' ? t('monatlich', 'monthly') : '–'] as [string, string],
+      [t('Bezahlt bis', 'Paid until'), fmtDate(credit?.paidUntil ?? null)] as [string, string],
+    ] : []),
+    [t('KI diesen Monat', 'AI this month'), unlimited ? (credit ? `${dec(credit.monthUsed, 2)} $` : '–') : pct == null ? '–' : `${dec(pct, 1)} %`],
+    ...(credit?.resetsAt && !unlimited ? [[t('Neu ab', 'Resets on'), fmtDate(credit.resetsAt)] as [string, string]] : []),
+  ]
+  return (
+    <Sheet onClose={onClose}>
+      <div className="ps-head">
+        <span className={'pw-tier ' + tierClass(plan)}>{PLAN_TIER[plan].label}</span>
+        <h3>{plan === 'solo' ? t('Das kann dein Solo', 'What Solo gives you') : t('Dein Status', 'Your status')}</h3>
+      </div>
+      {!unlimited && pct != null && (
+        <div className="ps-meter"><div style={{ width: `${Math.min(100, pct)}%` }} /></div>
+      )}
+      <div className="menu ps-rows">
+        {rows.map(([k, v]) => <div key={k} className="list-row"><div className="grow muted">{k}</div><b className="num">{v}</b></div>)}
+      </div>
+      <div className="ps-features">
+        {FEATURES.filter((f) => !f.coach).map((f) => (
+          <div key={f.title} className="ps-feature"><span className="ps-check">✓</span>{f.title}</div>
+        ))}
+        <div className={'ps-feature' + (coach ? '' : ' off')}><span className="ps-check">{coach ? '✓' : '✦'}</span>{t('KI-Coach', 'AI coach')}{!coach && <span className="ps-only">Ultra</span>}</div>
+      </div>
+      {plan === 'solo' && (
+        <>
+          <div className="pw-killer ps-killer">
+            <div className="pw-killer-tag">{t('Nur mit Ultra', 'Only with Ultra')}</div>
+            <b>{t('Der KI-Coach', 'The AI coach')}</b>
+            <span>{COACH_TEXT()}</span>
+          </div>
+          <button className="btn btn-chrome btn-block" style={{ marginTop: 14 }} onClick={() => { onClose(); openPaywall() }}>{t('Auf Ultra upgraden', 'Upgrade to Ultra')}</button>
+        </>
+      )}
+    </Sheet>
   )
 }
 
@@ -46,14 +102,19 @@ function Tween({ value }: { value: number }) {
   return <>{Number.isInteger(value) ? Math.round(shown) : dec(shown, 2)}</>
 }
 
-const FEATURES: { icon: React.JSX.Element; title: string; text: string }[] = [
+const COACH_TEXT = () => t(
+  'Dein persönlicher Coach kennt dein ganzes Training, deine Ernährung und Phasen – und erledigt Dinge für dich: Essen eintragen, Vorlagen und Pläne bauen, Übungen und Rezepte anlegen, Phase anpassen. Alles mit einem Tipp.',
+  'Your personal coach knows all your training, food and phases – and gets things done: logs food, builds templates and plans, creates exercises and recipes, adjusts your phase. All with one tap.',
+)
+
+const FEATURES: { icon: React.JSX.Element; title: string; text: string; coach?: boolean }[] = [
   { icon: <path d="M4 8h3l2-3h6l2 3h3v11H4ZM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />, get title() { return t('Essen per Foto', 'Food by photo') }, get text() { return t('Teller fotografieren – Lebensmittel, Mengen und Makros stehen drin.', 'Snap your plate – foods, amounts and macros are filled in.') } },
   { icon: <path d="M5 6h14M5 11h14M5 16h8M16 15l3 3-3 3" />, get title() { return t('Einfach hinschreiben', 'Just write it down') }, get text() { return t('„2 Semmeln mit Schinken" wird zu fertigen Einträgen.', '“2 rolls with ham” turns into ready entries.') } },
   { icon: <path d="M6 4h12v16H6ZM9 8h6M9 11h6M9 14h3" />, get title() { return t('Nährwerttabelle scannen', 'Scan nutrition labels') }, get text() { return t('Packung fotografieren statt Werte abtippen.', 'Photograph the pack instead of typing values.') } },
   { icon: <path d="M12 3a9 9 0 1 0 9 9M12 7v5l3 2M17 3l1 2 2 1-2 1-1 2-1-2-2-1 2-1Z" />, get title() { return t('Was soll ich noch essen?', 'What should I still eat?') }, get text() { return t('Vorschläge aus deinen echten Mahlzeiten für die restlichen Makros.', 'Ideas from your real meals for the remaining macros.') } },
   { icon: <path d="M3 18c3 0 4-9 7-9s3 6 5 6 3-9 6-9M3 21h18" />, get title() { return t('Phasenplaner', 'Phase planner') }, get text() { return t('Kalorien und Dauer für Bulk oder Cut aus deinen eigenen Daten.', 'Calories and duration for a bulk or cut from your own data.') } },
   { icon: <path d="M12 3v12M7 10l5 5 5-5M4 19h16" />, get title() { return t('Trainings importieren', 'Import workouts') }, get text() { return t('Strong, Hevy, FitNotes oder Notizen – deine Historie kommt mit.', 'Strong, Hevy, FitNotes or notes – your history comes along.') } },
-  { icon: <path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-4 3.5V17H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2ZM12 8.2l.9 1.9 1.9.9-1.9.9-.9 1.9-.9-1.9-1.9-.9 1.9-.9Z" />, get title() { return t('Coach-Chat · Ultra', 'Coach chat · Ultra') }, get text() { return t('Fragt deine Daten ab, gibt Tipps und baut dir Vorlagen.', 'Knows your data, gives tips and builds templates for you.') } },
+  { coach: true, icon: <path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-4 3.5V17H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2ZM12 8.2l.9 1.9 1.9.9-1.9.9-.9 1.9-.9-1.9-1.9-.9 1.9-.9Z" />, get title() { return t('KI-Coach · Ultra', 'AI coach · Ultra') }, get text() { return COACH_TEXT() } },
 ]
 
 /**
@@ -179,8 +240,20 @@ export function Paywall({ onClose }: { onClose: () => void }) {
         </div>
         {expired && <div className="hint" style={{ justifyContent: 'center' }}><span>{t('Dein Abo ist abgelaufen – verlängere es, um die KI weiter zu nutzen.', 'Your subscription has expired – renew it to keep using the AI.')}</span></div>}
 
+        {/* the killer feature: the coach gets its own card above the list */}
+        <div className="pw-killer">
+          <div className="pw-killer-tag">✦ {t('Killer-Feature · Ultra', 'Killer feature · Ultra')}</div>
+          <div className="pw-killer-row">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{FEATURES.find((f) => f.coach)!.icon}</svg>
+            <b>{t('Dein KI-Coach', 'Your AI coach')}</b>
+          </div>
+          <span>{COACH_TEXT()}</span>
+          <div className="pw-killer-chips">
+            {[t('Kennt deine Daten', 'Knows your data'), t('Trägt Essen ein', 'Logs food'), t('Baut Pläne', 'Builds plans'), t('Legt Rezepte an', 'Creates recipes')].map((c) => <i key={c}>{c}</i>)}
+          </div>
+        </div>
         <div className="pw-features">
-          {FEATURES.map((f) => (
+          {FEATURES.filter((f) => !f.coach).map((f) => (
             <div key={f.title} className="pw-feature">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{f.icon}</svg>
               <div><b>{f.title}</b><span>{f.text}</span></div>

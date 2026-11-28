@@ -2,6 +2,8 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { refreshPlan } from './components/AiCredit'
 import { Celebration } from './components/Celebration'
 import { Paywall } from './components/Paywall'
+import { loadOverrides } from './foodCorrections'
+import { Onboarding, onboarded, setOnboarded } from './components/Onboarding'
 import { Welcome } from './components/Welcome'
 import { Icon, Tap, Toast } from './components/ui'
 import { getLang, t } from './i18n'
@@ -35,7 +37,8 @@ const TABS: { id: Tab; label: () => string; icon: () => React.JSX.Element; sf: s
 ]
 
 function Shell() {
-  const { active } = useStore()
+  const store = useStore()
+  const { active } = store
   // switching the language remounts the screens (not the navigation state), so every string re-renders
   const lang = getLang()
   const [tab, setTab] = useState<Tab>('train')
@@ -47,6 +50,25 @@ function Shell() {
   const clearToast = useCallback(() => setToast(null), [])
   // plans page: opened by the plan badge or when someone without a plan taps an AI feature
   const [paywall, setPaywall] = useState(false)
+  // intro: once for new users (nothing logged yet), again from Settings
+  const [intro, setIntro] = useState(() => {
+    if (onboarded()) return false
+    const used = store.workouts.some((w) => w.status === 'done') || store.foodLog.length > 0 || store.weights.length > 0
+    if (used) { setOnboarded(); return false }
+    return true
+  })
+  // toasts from places without a toast prop, and the accepted product corrections
+  useEffect(() => {
+    loadOverrides().catch(() => {})
+    const on = (e: Event) => setToast(String((e as CustomEvent<string>).detail))
+    window.addEventListener('vis-toast', on)
+    return () => window.removeEventListener('vis-toast', on)
+  }, [])
+  useEffect(() => {
+    const open = () => setIntro(true)
+    window.addEventListener('vis-onboarding', open)
+    return () => window.removeEventListener('vis-onboarding', open)
+  }, [])
   useEffect(() => {
     refreshPlan()
     const open = () => setPaywall(true)
@@ -126,6 +148,7 @@ function Shell() {
         {toast && <Toast text={toast} onDone={clearToast} />}
         {celebrate && <Celebration id={celebrate} onClose={() => setCelebrate(null)} />}
         {paywall && <Paywall onClose={() => setPaywall(false)} />}
+        {intro && <Onboarding onClose={() => setIntro(false)} toast={setToast} />}
         <Welcome />
       </div>
     </NavCtx.Provider>
