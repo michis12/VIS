@@ -35,7 +35,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,webp,json}'],
-        globIgnores: ['push-sw.js'],
+        // the Officium always comes fresh from the network, never from the app's offline cache
+        globIgnores: ['push-sw.js', 'officium.html', 'officium*', 'assets/officium-*'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         importScripts: ['push-sw.js'],
         // the Officium is its own page, never the app's fallback
