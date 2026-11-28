@@ -1,4 +1,6 @@
 import { t as tr } from '../i18n'
+import { PushupCounter } from '../components/PushupCounter'
+import { pushupCounter } from '../native'
 import { muscleLabel, musclesFor } from '../muscles'
 import { MuscleIcon } from '../components/MuscleMap'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -527,23 +529,29 @@ function SetEditor({ initial, fallback, title, dumbbell, onClose, onApply, onCom
   onApply: (v: { weight: number; reps: number }) => void
   onComplete: (v: { weight: number; reps: number }) => void
 }) {
-  const [mode, setMode] = useState<'wheel' | 'keys'>(() => {
+  const [mode, setMode] = useState<'wheel' | 'keys' | 'face'>(() => {
     try { return (localStorage.getItem('vis.inputMode') as 'wheel' | 'keys') || 'wheel' } catch { return 'wheel' }
   })
+  // push-ups in the iOS app on an iPhone with Face ID: a third way, counted by the camera
+  const isPushup = /push[\s-]?ups?\b|liegest/i.test(title)
+  const [faceOk, setFaceOk] = useState(false)
+  const [counting, setCounting] = useState(false)
+  useEffect(() => { if (isPushup) pushupCounter.available().then(setFaceOk) }, [isPushup])
   const [weight, setWeight] = useState(initial.weight ?? fallback?.weight ?? (dumbbell ? 10 : 20))
   const [kgValues] = useState(() => kgSteps(dumbbell, initial.weight, fallback?.weight))
   const [reps, setReps] = useState(initial.reps ?? fallback?.reps ?? 8)
   const [wText, setWText] = useState(fmtKg(weight))
   const [rText, setRText] = useState(String(reps))
 
-  const switchMode = (m: 'wheel' | 'keys') => {
+  const switchMode = (m: 'wheel' | 'keys' | 'face') => {
     setMode(m)
     setWText(fmtKg(weight))
     setRText(String(reps))
-    try { localStorage.setItem('vis.inputMode', m) } catch { /* ignore */ }
+    // the camera is chosen per set, the keyboard / wheel choice is remembered
+    if (m !== 'face') try { localStorage.setItem('vis.inputMode', m) } catch { /* ignore */ }
   }
   const values = () =>
-    mode === 'wheel'
+    mode !== 'keys'
       ? { weight, reps }
       : { weight: Math.max(0, Number(wText.replace(',', '.')) || 0), reps: Math.max(0, Math.round(Number(rText) || 0)) }
 
@@ -554,8 +562,16 @@ function SetEditor({ initial, fallback, title, dumbbell, onClose, onApply, onCom
       <div className="segmented" style={{ marginTop: 14 }}>
         <button className={mode === 'wheel' ? 'on' : ''} onClick={() => switchMode('wheel')}>{tr('Drehrad', 'Wheel')}</button>
         <button className={mode === 'keys' ? 'on' : ''} onClick={() => switchMode('keys')}>{tr('Tastatur', 'Keyboard')}</button>
+        {isPushup && faceOk && <button className={mode === 'face' ? 'on' : ''} onClick={() => switchMode('face')}>Face ID</button>}
       </div>
-      {mode === 'wheel' ? (
+      {mode === 'face' ? (
+        <div className="pc-inline">
+          <div className="pc-inline-reps num">{reps}<span>{tr('Wdh', 'reps')}</span></div>
+          <p className="faint">{tr('Handy unter das Gesicht legen – die Face-ID-Kamera zählt jede Wiederholung.', 'Put the phone under your face – the Face ID camera counts every rep.')}</p>
+          <button className="btn btn-ghost btn-block" onClick={() => setCounting(true)}>{tr('Zählen starten', 'Start counting')}</button>
+          {counting && <PushupCounter onClose={() => setCounting(false)} onDone={(n) => { setReps(n); setRText(String(n)); setCounting(false) }} />}
+        </div>
+      ) : mode === 'wheel' ? (
         <div className="wheels">
           <div className="wheel-col"><div className="cap">kg</div><Wheel values={kgValues} value={weight} onChange={setWeight} format={fmtKg} /></div>
           <div className="wheel-col"><div className="cap">{tr('Wdh', 'Reps')}</div><Wheel values={REPS} value={reps} onChange={setReps} /></div>

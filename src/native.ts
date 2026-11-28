@@ -32,7 +32,41 @@ interface NativeTabsPlugin {
   addListener(event: 'layout', cb: (e: { bottom: number }) => void): Promise<PluginListenerHandle>
 }
 
+interface PushupCounterPlugin {
+  isAvailable(): Promise<{ available: boolean }>
+  start(): Promise<void>
+  stop(): Promise<{ count: number }>
+  addListener(event: 'rep', cb: (e: { count: number }) => void): Promise<PluginListenerHandle>
+  addListener(event: 'distance', cb: (e: { meters: number; down: boolean; tracking: boolean }) => void): Promise<PluginListenerHandle>
+}
+
 const RestActivity = registerPlugin<RestActivityPlugin>('RestActivity')
+const PushupNative = registerPlugin<PushupCounterPlugin>('PushupCounter')
+
+// ---------- push-ups counted with the Face ID camera (ios/App/App/PushupCounterPlugin.swift) ----------
+
+let pushupAvailable: boolean | null = null
+export const pushupCounter = {
+  /** iOS app on an iPhone with Face ID (TrueDepth camera) and the plugin in the build */
+  async available(): Promise<boolean> {
+    if (!isNativeIOS()) return false
+    if (pushupAvailable == null) pushupAvailable = await PushupNative.isAvailable().then((r) => r.available).catch(() => false)
+    return pushupAvailable
+  },
+  /** starts counting; resolves to a stop function that returns the final count */
+  async start(onRep: (n: number) => void, onDistance: (d: { meters: number; down: boolean; tracking: boolean }) => void): Promise<() => Promise<number>> {
+    const subs = [PushupNative.addListener('rep', (e) => onRep(e.count)), PushupNative.addListener('distance', onDistance)]
+    await PushupNative.start()
+    let stopped = false
+    return async () => {
+      if (stopped) return 0
+      stopped = true
+      const r = await PushupNative.stop().catch(() => ({ count: 0 }))
+      subs.forEach((s) => s.then((h) => h.remove()).catch(quiet))
+      return r.count
+    }
+  },
+}
 const NativeTabs = registerPlugin<NativeTabsPlugin>('NativeTabs')
 const quiet = () => { /* older app build without the plugin, or Live Activities switched off */ }
 

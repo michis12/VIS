@@ -44,7 +44,7 @@
     </dict>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>VIS nutzt die Kamera zum Scannen von Barcodes und für Fotos von Lebensmitteln.</string>
+	<string>VIS nutzt die Kamera zum Scannen von Barcodes, für Fotos von Lebensmitteln und die Face-ID-Kamera zum Zählen von Liegestützen.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>VIS braucht Zugriff auf deine Fotos, damit du ein Bild von einem Lebensmittel auswählen kannst.</string>
 	<key>NSSupportsLiveActivities</key>

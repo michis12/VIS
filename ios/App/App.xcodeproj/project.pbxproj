@@ -10,6 +10,7 @@
 		C0DE00000000000000000011 /* RootViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000001 /* RootViewController.swift */; };
 		C0DE00000000000000000012 /* NativeTabsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000002 /* NativeTabsPlugin.swift */; };
 		C0DE00000000000000000013 /* RestActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000003 /* RestActivityPlugin.swift */; };
+		C0DE00000000000000000019 /* PushupCounterPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000009 /* PushupCounterPlugin.swift */; };
 		C0DE00000000000000000014 /* RestActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000004 /* RestActivityAttributes.swift */; };
 		C0DE00000000000000000015 /* RestActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000004 /* RestActivityAttributes.swift */; };
 		C0DE00000000000000000016 /* RestWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DE00000000000000000005 /* RestWidgetBundle.swift */; };
@@ -54,6 +55,7 @@
 		C0DE00000000000000000001 /* RootViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootViewController.swift; sourceTree = "<group>"; };
 		C0DE00000000000000000002 /* NativeTabsPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeTabsPlugin.swift; sourceTree = "<group>"; };
 		C0DE00000000000000000003 /* RestActivityPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestActivityPlugin.swift; sourceTree = "<group>"; };
+		C0DE00000000000000000009 /* PushupCounterPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushupCounterPlugin.swift; sourceTree = "<group>"; };
 		C0DE00000000000000000004 /* RestActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestActivityAttributes.swift; sourceTree = "<group>"; };
 		C0DE00000000000000000005 /* RestWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestWidgetBundle.swift; sourceTree = "<group>"; };
 		C0DE00000000000000000006 /* RestLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestLiveActivity.swift; sourceTree = "<group>"; };
@@ -117,6 +119,7 @@
 				C0DE00000000000000000001 /* RootViewController.swift */,
 				C0DE00000000000000000002 /* NativeTabsPlugin.swift */,
 				C0DE00000000000000000003 /* RestActivityPlugin.swift */,
+				C0DE00000000000000000009 /* PushupCounterPlugin.swift */,
 				C0DE00000000000000000004 /* RestActivityAttributes.swift */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
@@ -256,6 +259,7 @@
 				C0DE00000000000000000011 /* RootViewController.swift in Sources */,
 				C0DE00000000000000000012 /* NativeTabsPlugin.swift in Sources */,
 				C0DE00000000000000000013 /* RestActivityPlugin.swift in Sources */,
+				C0DE00000000000000000019 /* PushupCounterPlugin.swift in Sources */,
 				C0DE00000000000000000014 /* RestActivityAttributes.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

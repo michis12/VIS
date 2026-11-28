@@ -6,6 +6,7 @@ class VISBridgeViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(RestActivityPlugin())
         bridge?.registerPluginInstance(NativeTabsPlugin())
+        bridge?.registerPluginInstance(PushupCounterPlugin())
     }
 }
 
