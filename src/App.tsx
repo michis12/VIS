@@ -49,7 +49,7 @@ function Shell() {
   const [celebrate, setCelebrate] = useState<string | null>(null)
   const clearToast = useCallback(() => setToast(null), [])
   // plans page: opened by the plan badge or when someone without a plan taps an AI feature
-  const [paywall, setPaywall] = useState(false)
+  const [paywall, setPaywall] = useState<false | { reason?: string }>(false)
   // intro: once for new users (nothing logged yet), again from Settings
   const [intro, setIntro] = useState(() => {
     if (onboarded()) return false
@@ -71,7 +71,7 @@ function Shell() {
   }, [])
   useEffect(() => {
     refreshPlan()
-    const open = () => setPaywall(true)
+    const open = (e: Event) => setPaywall({ reason: (e as CustomEvent<string | undefined>).detail })
     const onShow = () => document.visibilityState === 'visible' && refreshPlan()
     window.addEventListener('vis-paywall', open)
     document.addEventListener('visibilitychange', onShow)
@@ -147,7 +147,7 @@ function Shell() {
         {content && <div className="overlay" key={stack.length + (showWorkout ? 'w' : '')}><Fragment key={lang}>{content}</Fragment></div>}
         {toast && <Toast text={toast} onDone={clearToast} />}
         {celebrate && <Celebration id={celebrate} onClose={() => setCelebrate(null)} />}
-        {paywall && <Paywall onClose={() => setPaywall(false)} />}
+        {paywall && <Paywall reason={paywall.reason} onClose={() => setPaywall(false)} />}
         {intro && <Onboarding onClose={() => setIntro(false)} toast={setToast} />}
         <Welcome />
       </div>

@@ -81,7 +81,20 @@ export async function ackWelcome() {
   if (planState) publish({ ...planState, welcome: null })
   await supabase?.rpc('ai_ack_welcome')
 }
-export const openPaywall = () => window.dispatchEvent(new Event('vis-paywall'))
+/** the plans page; `reason` explains why it opened (e.g. the template limit) */
+export const openPaywall = (reason?: unknown) => window.dispatchEvent(new CustomEvent('vis-paywall', { detail: typeof reason === 'string' ? reason : undefined }))
+
+/** Free keeps up to 3 workout templates; every paid plan has no limit. */
+export const FREE_TEMPLATES = 3
+/** how many templates the current plan allows, null = no limit (or the plan is not known yet) */
+export const templateLimit = (): number | null => (!planState || (planState.plan && planState.active) ? null : FREE_TEMPLATES)
+/** true if one more template may be created; otherwise the plans page opens and says why */
+export function requireTemplateSlot(count: number): boolean {
+  const l = templateLimit()
+  if (l == null || count < l) return true
+  openPaywall('templates')
+  return false
+}
 
 /** true if the AI may be used; otherwise opens the plans page */
 export function requireAi(): boolean {
