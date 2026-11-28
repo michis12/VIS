@@ -1176,3 +1176,10 @@ button.nut-ring:active { transform: scale(.97); transition: transform .1s; }
 /* Free: templates beyond the 3 most used are locked (greyed out, tap opens the plans page) */
 .card.tpl.tpl-locked { opacity: .45; filter: grayscale(1); }
 .card.tpl.tpl-locked .tpl-badge { color: var(--text-2); }
+/* profile: the ultimate achievement inside the rank card */
+.rank-ult { position: relative; width: 100%; display: flex; align-items: center; gap: 14px; margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.08); text-align: left; color: inherit; }
+.rank-ult .grow { flex: 1; min-width: 0; }
+.rank-ult-name { font-size: 19px; font-weight: 750; margin: 1px 0 1px; }
+.rank-ult .chev { color: var(--text-3); }
+.rank-ult .eyebrow { font-size: 10.5px; letter-spacing: .1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rank-ult.won .rank-ult-name { text-shadow: 0 0 18px rgba(255,255,255,.25); }

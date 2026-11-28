@@ -277,17 +277,18 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
         <div className="faint" style={{ fontSize: 12, marginTop: 6 }}>
           {nr ? tr(`Noch ${nr.min - total} Sterne bis ${nr.name}`, `${nr.min - total} more stars to ${nr.name}`) : tr('Höchster Rang erreicht', 'Highest rank reached')}
         </div>
+        {/* rank and the ultimate achievement in one card: the goal sits right under the rank */}
+        <button className={'rank-ult' + (ultimate ? ' won' : '')} onClick={() => setUltOpen(true)}>
+          <Medal glyph="crown" stars={ultimate ? 5 : 0} size={58} ultimate />
+          <div className="grow">
+            <div className="eyebrow" style={{ margin: 0 }}>{tr('Ultimatives Achievement', 'Ultimate achievement')}</div>
+            <div className={'rank-ult-name' + (ultimate ? ' chrome-text' : '')}>{ULTIMATE.name}</div>
+            <div className="faint num" style={{ fontSize: 12 }}>{maxed} / {core.length} {tr('Achievements gemaxt', 'achievements maxed')}</div>
+            <div className="progress" style={{ marginTop: 6 }}><div style={{ width: `${(maxed / core.length) * 100}%` }} /></div>
+          </div>
+          <span className="chev"><Icon.chevron /></span>
+        </button>
       </div>
-
-      <button className={'card ult-card' + (ultimate ? ' won' : '')} onClick={() => setUltOpen(true)}>
-        <Medal glyph="crown" stars={ultimate ? 5 : 0} size={78} ultimate />
-        <div style={{ flex: 1, textAlign: 'left' }}>
-          <div className="eyebrow">{tr('Ultimatives Achievement', 'Ultimate achievement')}</div>
-          <div style={{ fontSize: 22, fontWeight: 750 }} className={ultimate ? 'chrome-text' : ''}>{ULTIMATE.name}</div>
-          <div className="muted" style={{ fontSize: 13 }}>{maxed} / {core.length} {tr('Achievements gemaxt', 'achievements maxed')}</div>
-          <div className="progress" style={{ marginTop: 8 }}><div style={{ width: `${(maxed / core.length) * 100}%` }} /></div>
-        </div>
-      </button>
 
       <div className="section-title"><h2>{tr('Achievements', 'Achievements')}</h2><span className="faint" style={{ fontSize: 13 }}>{core.filter((a) => a.stars > 0).length} / {core.length} {tr('freigeschaltet', 'unlocked')}</span></div>
       <div className="ach-grid" ref={gridRef}>{sorted.map(renderAch)}</div>
