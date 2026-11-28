@@ -1,4 +1,5 @@
 import { decStr, t as tr } from '../i18n'
+import { CheckinNudge } from '../components/Checkin'
 import { overrideKcal, sendCorrection, withOverride } from '../foodCorrections'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -95,6 +96,7 @@ export function Nutrition() {
         <button className="icon-btn" style={{ transform: 'scaleX(-1)', visibility: dayNav && date < today() ? undefined : 'hidden' }} onClick={() => setDate(addDays(date, 1))} aria-label={tr('Nächster Tag', 'Next day')}><Icon.back /></button>
       </div>
 
+      <CheckinNudge />
       <div className="card chrome-edge nut-ring-card">
         <KcalRing eaten={total.kcal} target={target.kcal} flash={added} onClick={() => { haptic(); setSuggest(true) }} />
         <div className="nut-macros">

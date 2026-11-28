@@ -14,6 +14,9 @@ import type { SetEntry, Template, Workout } from '../types'
 const KG_BAR = Array.from({ length: 121 }, (_, i) => i * 2.5) // 0–300 kg in 2,5er Schritten
 const KG_DB = Array.from({ length: 41 }, (_, i) => i * 2) // Kurzhanteln: 0–80 kg in 2er Schritten
 export const isDumbbell = (name = '') => /dumb+ell|kurzhantel/i.test(name)
+/** position of a set among the working sets (warm-ups don't count) */
+const workIndex = (sets: SetEntry[], i: number) => sets.slice(0, i).filter((s) => !s.warmup).length
+export const isBarbell = (name = '') => /barbell|langhantel/i.test(name)
 /** Wheel values for an exercise; a current value off the grid (e.g. 21 kg) is kept as its own stop. */
 function kgSteps(dumbbell: boolean, ...keep: (number | null | undefined)[]) {
   const base = dumbbell ? KG_DB : KG_BAR
@@ -174,7 +177,7 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
     save({ ...w, exercises })
   }
 
-  const complete = (ex: number, set: number, values?: { weight: number; reps: number }) => {
+  const complete = (ex: number, set: number, values?: { weight: number; reps: number; rir?: number }) => {
     unlockAudio()
     const e = w.exercises[ex]
     const s = e.sets[set]
@@ -182,7 +185,7 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
       updateSet(ex, set, { done: false })
       return
     }
-    const p = prev.get(e.exerciseId)?.[set]
+    const p = s.warmup ? undefined : prev.get(e.exerciseId)?.[workIndex(e.sets, set)]
     const weight = values?.weight ?? s.weight ?? p?.weight ?? null
     const reps = values?.reps ?? s.reps ?? p?.reps ?? null
     if (weight == null || reps == null) {
@@ -191,9 +194,9 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
     }
     haptic()
     const sets = e.sets.map((x, j) => {
-      if (j === set) return { weight, reps, done: true }
-      // suggest the next untouched set: same weight, two reps fewer
-      if (j === set + 1 && !x.done && (x.weight == null || x.suggested))
+      if (j === set) return { weight, reps, done: true, ...(s.warmup ? { warmup: true } : {}), ...(values?.rir != null ? { rir: values.rir } : s.rir != null ? { rir: s.rir } : {}) }
+      // suggest the next untouched set: same weight, two reps fewer (not after a warm-up)
+      if (!s.warmup && j === set + 1 && !x.done && (x.weight == null || x.suggested))
         return { weight, reps: Math.max(1, reps - 2), done: false, suggested: true }
       return x
     })
@@ -241,18 +244,85 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
     save({ ...w, exercises })
   }
 
+  // ---- warm-up sets: 50 / 70 / 85 % of the first working weight, before the working sets
+  const [noteFor, setNoteFor] = useState<string | null>(null)
+  const [plateau, setPlateau] = useState<number | null>(null)
+  const stepOf = (ex: number) => (isDumbbell(exerciseById.get(w.exercises[ex].exerciseId)?.name) ? 2 : 2.5)
+  const roundTo = (v: number, step: number) => Math.max(0, Math.round(v / step) * step)
+  const workWeight = (ex: number): number | null => {
+    const e = w.exercises[ex]
+    const first = e.sets.find((s) => !s.warmup)
+    const p = prev.get(e.exerciseId)?.[0]
+    return first?.weight ?? p?.weight ?? null
+  }
+  const addWarmups = (ex: number) => {
+    const top = workWeight(ex)
+    if (top == null) return
+    haptic()
+    const step = stepOf(ex)
+    const warm: SetEntry[] = [[0.5, 10], [0.7, 5], [0.85, 3]].map(([k, r]) => ({ weight: roundTo(top * k, step), reps: r, done: false, warmup: true }))
+    save({ ...w, exercises: w.exercises.map((x, i) => (i === ex ? { ...x, sets: [...warm, ...x.sets.filter((s) => !s.warmup)] } : x)) })
+  }
+  const removeWarmups = (ex: number) => save({ ...w, exercises: w.exercises.map((x, i) => (i === ex ? { ...x, sets: x.sets.filter((s) => !s.warmup) } : x)) })
+
+  // ---- progression hints (Settings › Training): next weight step, plateau
+  const fillWeight = (ex: number, kg: number) => {
+    haptic()
+    save({ ...w, exercises: w.exercises.map((x, i) => (i === ex ? { ...x, sets: x.sets.map((s) => (s.done || s.warmup ? s : { ...s, weight: kg, suggested: true })) } : x)) })
+  }
+  const deloadWeight = (ex: number) => roundTo((workWeight(ex) ?? 0) * 0.9, stepOf(ex))
+  const hints = useMemo(() => {
+    const out = new Map<string, { up?: number; plateau?: boolean }>()
+    if (settings.progressHints === false) return out
+    for (const e of w.exercises) {
+      const p = prev.get(e.exerciseId)
+      if (!p?.length || out.has(e.exerciseId)) continue
+      const h: { up?: number; plateau?: boolean } = {}
+      // every working set last time at 10+ reps with the same weight: time for the next step
+      const kg = p[0].weight ?? 0
+      if (kg > 0 && p.every((s) => (s.reps ?? 0) >= 10 && s.weight === kg)) {
+        h.up = kg + (isDumbbell(exerciseById.get(e.exerciseId)?.name) ? 2 : 5)
+      }
+      // the last 3 sessions without progress or a record: plateau
+      let flat = 0
+      for (let i = workouts.length - 1; i >= 0 && flat < 3; i--) {
+        const o = workouts[i]
+        if (o.status !== 'done' || o.id === w.id) continue
+        const k = o.exercises.findIndex((x) => x.exerciseId === e.exerciseId && x.sets.some(isRealSet))
+        if (k < 0) continue
+        const flags = store.progress.byId.get(o.id)?.exercises[k]?.flags ?? []
+        if (flags.some((f) => f)) break
+        flat++
+      }
+      if (flat >= 3 && !h.up) h.plateau = true
+      if (h.up || h.plateau) out.set(e.exerciseId, h)
+    }
+    return out
+  }, [w.exercises, prev, workouts, store.progress.byId, settings.progressHints, exerciseById])
+  const hint = (ex: number) => {
+    const e = w.exercises[ex]
+    const h = hints.get(e.exerciseId)
+    if (!h || e.sets.some((s) => s.done && !s.warmup)) return null
+    if (h.up != null) {
+      if (e.sets.filter((s) => !s.warmup).every((s) => s.weight === h.up)) return null
+      return <button className="ex-hint" onClick={() => fillWeight(ex, h.up!)}>↑ {fmtKg(h.up)} kg</button>
+    }
+    return <button className="ex-hint flat" onClick={() => setPlateau(ex)}>{tr('Plateau', 'Plateau')}</button>
+  }
+
   const elapsed = Math.floor((now - new Date(w.startedAt).getTime()) / 1000)
   const active = w.exercises.filter((e) => !e.skipped)
   const doneSets = active.reduce((n, e) => n + e.sets.filter((s) => s.done).length, 0)
   const totalSets = active.reduce((n, e) => n + e.sets.length, 0)
   const skippedCount = w.exercises.length - active.length
+  const liveVol = workoutVolume(w)
 
   const finishWorkout = () => {
     // skipped exercises stay in the record (no values) so the history shows they were left out today
     const exercises = w.exercises
       .map((e) => e.skipped
         ? { exerciseId: e.exerciseId, group: e.group, skipped: true, sets: e.sets.map(() => ({ weight: null, reps: null, done: false })) }
-        : { exerciseId: e.exerciseId, group: e.group, sets: e.sets.filter((s) => s.done).map(({ weight, reps, done }) => ({ weight, reps, done })) })
+        : { exerciseId: e.exerciseId, group: e.group, sets: e.sets.filter((s) => s.done).map(({ weight, reps, done, warmup, rir }) => ({ weight, reps, done, ...(warmup ? { warmup } : {}), ...(rir != null ? { rir } : {}) })) })
       .filter((e) => e.skipped || e.sets.length)
     const done: Workout = { ...w, exercises, status: 'done', durationSec: elapsed }
     haptic(true)
@@ -305,7 +375,7 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
         <div className="grow">
           <div className="name">{w.name}</div>
           <div className="wo-timer" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span><b>{clock(elapsed)}</b> · {doneSets}/{totalSets} {tr('Sätze', 'sets')}{skippedCount ? ` · ${skippedCount} ${tr('ausgelassen', 'skipped')}` : ''}</span>
+            <span><b>{clock(elapsed)}</b> · {doneSets}/{totalSets} {tr('Sätze', 'sets')}{skippedCount ? ` · ${skippedCount} ${tr('ausgelassen', 'skipped')}` : ''}{settings.liveVolume !== false && liveVol > 0 ? ` · ${liveVol >= 1000 ? `${fmtKg(Math.round(liveVol / 100) / 10)} t` : `${fmtInt(liveVol)} kg`}` : ''}</span>
             <ProgressBadges ups={live.ups} prs={live.prs} />
           </div>
         </div>
@@ -341,14 +411,21 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
                 <button className="icon-btn" style={{ width: 34, height: 34 }} onClick={() => setExMenu(ei)} aria-label={tr('Übungsmenü', 'Exercise menu')}><Icon.more /></button>
               </div>
             </div>
+            {(settings.exerciseNotes?.[e.exerciseId] || hint(ei)) && (
+                <div className="ex-extra">
+                  {settings.exerciseNotes?.[e.exerciseId] && <button className="ex-note" onClick={() => setNoteFor(e.exerciseId)}>✎ {settings.exerciseNotes[e.exerciseId]}</button>}
+                  {hint(ei)}
+                </div>
+              )}
             <div className="set-head"><span>{tr('Satz', 'Set')}</span><span>{tr('Vorher', 'Previous')}</span><span>kg</span><span>{tr('Wdh', 'Reps')}</span><span /></div>
             {e.sets.map((s, si) => {
-              const ps = p?.[si]
+              const ps = s.warmup ? undefined : p?.[workIndex(e.sets, si)]
               return (
-                <div className={'set-row' + (s.done ? ' done' : '')} key={si}>
+                <div className={'set-row' + (s.done ? ' done' : '') + (s.warmup ? ' warm' : '')} key={si}>
                   <button className="set-no" onClick={() => setSetMenu({ ex: ei, set: si })}>
-                    {si + 1}
+                    {s.warmup ? 'W' : workIndex(e.sets, si) + 1}
                     <SetMark flag={live.exercises[ei]?.flags[si]} />
+                    {settings.rir && s.done && s.rir != null && <span className="set-rir">@{s.rir}</span>}
                   </button>
                   <Tap
                     className="prev"
@@ -407,8 +484,9 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
         <SetEditor
           key={`${ed.ex}-${ed.set}`}
           initial={w.exercises[ed.ex].sets[ed.set]}
-          fallback={prev.get(w.exercises[ed.ex].exerciseId)?.[ed.set]}
-          title={`${exerciseById.get(w.exercises[ed.ex].exerciseId)?.name ?? ''} · ${tr('Satz', 'Set')} ${ed.set + 1}`}
+          fallback={w.exercises[ed.ex].sets[ed.set].warmup ? undefined : prev.get(w.exercises[ed.ex].exerciseId)?.[workIndex(w.exercises[ed.ex].sets, ed.set)]}
+          rir={!!settings.rir && !w.exercises[ed.ex].sets[ed.set].warmup}
+          title={`${exerciseById.get(w.exercises[ed.ex].exerciseId)?.name ?? ''} · ${w.exercises[ed.ex].sets[ed.set].warmup ? tr('Aufwärmsatz', 'Warm-up set') : `${tr('Satz', 'Set')} ${workIndex(w.exercises[ed.ex].sets, ed.set) + 1}`}`}
           dumbbell={isDumbbell(exerciseById.get(w.exercises[ed.ex].exerciseId)?.name)}
           onClose={() => setEditing(null)}
           onApply={(v) => { updateSet(ed.ex, ed.set, { ...v, suggested: false }); setEditing(null) }}
@@ -416,9 +494,23 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
         />
       )}
 
+      {noteFor && <ExerciseNoteSheet id={noteFor} name={exerciseById.get(noteFor)?.name ?? ''} onClose={() => setNoteFor(null)} />}
+      {plateau != null && w.exercises[plateau] && (
+        <Sheet onClose={() => setPlateau(null)}>
+          <h3>{tr('Plateau', 'Plateau')}</h3>
+          <p className="muted" style={{ fontSize: 14, lineHeight: 1.5, margin: '6px 0 14px' }}>
+            {tr('Bei dieser Übung gab es seit 3 Einheiten keinen Fortschritt. Ein leichter Deload hilft oft: diesmal etwa 10 % weniger Gewicht, sauber und schnell bewegen – danach wieder steigern.',
+              'No progress on this exercise for 3 sessions. A light deload often helps: about 10 % less weight this time, clean and fast reps – then build up again.')}
+          </p>
+          <button className="btn btn-chrome btn-block" onClick={() => { fillWeight(plateau, deloadWeight(plateau)); setPlateau(null) }}>
+            {tr(`Diesmal ${fmtKg(deloadWeight(plateau))} kg`, `${fmtKg(deloadWeight(plateau))} kg this time`)}
+          </button>
+        </Sheet>
+      )}
+
       {setMenu && (
         <Sheet onClose={() => setSetMenu(null)}>
-          <h3>{tr('Satz', 'Set')} {setMenu.set + 1}</h3>
+          <h3>{w.exercises[setMenu.ex]?.sets[setMenu.set]?.warmup ? tr('Aufwärmsatz', 'Warm-up set') : `${tr('Satz', 'Set')} ${workIndex(w.exercises[setMenu.ex]?.sets ?? [], setMenu.set) + 1}`}</h3>
           <div className="menu">
             <button onClick={() => { updateSet(setMenu.ex, setMenu.set, { weight: null, reps: null, done: false, suggested: false }); setSetMenu(null) }}>{tr('Werte leeren', 'Clear values')}</button>
             <button className="danger" onClick={() => { deleteSet(setMenu.ex, setMenu.set); setSetMenu(null) }}>{tr('Satz löschen', 'Delete set')}</button>
@@ -437,6 +529,13 @@ export function WorkoutScreen({ workout, onClose, onFinished }: {
               </button>
             )}
             <button onClick={() => { addSet(exMenu); setExMenu(null) }}>{tr('Satz hinzufügen', 'Add set')}</button>
+            {w.exercises[exMenu].sets.some((s) => s.warmup)
+              ? <button onClick={() => { removeWarmups(exMenu); setExMenu(null) }}>{tr('Aufwärmsätze entfernen', 'Remove warm-up sets')}</button>
+              : <button disabled={workWeight(exMenu) == null} onClick={() => { addWarmups(exMenu); setExMenu(null) }}>
+                  {tr('Aufwärmsätze hinzufügen', 'Add warm-up sets')}
+                  <span className="faint" style={{ fontSize: 12, marginLeft: 'auto' }}>{workWeight(exMenu) == null ? tr('erst ein Gewicht eintragen', 'enter a weight first') : '50 · 70 · 85 %'}</span>
+                </button>}
+            <button onClick={() => { setNoteFor(w.exercises[exMenu].exerciseId); setExMenu(null) }}>{settings.exerciseNotes?.[w.exercises[exMenu].exerciseId] ? tr('Notiz bearbeiten', 'Edit note') : tr('Notiz hinzufügen', 'Add note')}</button>
             <button className="danger" onClick={() => { removeExercise(exMenu); setExMenu(null) }}>{tr('Übung aus diesem Workout entfernen', 'Remove exercise from this workout')}</button>
           </div>
         </Sheet>
@@ -510,34 +609,47 @@ function RestDock({ left, msLeft, total, done, onAdd, onSkip }: {
   )
 }
 
-function SetEditor({ initial, fallback, title, dumbbell, onClose, onApply, onComplete }: {
+function SetEditor({ initial, fallback, title, dumbbell, rir: withRir, onClose, onApply, onComplete }: {
   initial: SetEntry
   fallback?: SetEntry
   title: string
   dumbbell: boolean
+  /** ask for reps in reserve (Settings › Training) */
+  rir?: boolean
   onClose: () => void
-  onApply: (v: { weight: number; reps: number }) => void
-  onComplete: (v: { weight: number; reps: number }) => void
+  onApply: (v: { weight: number; reps: number; rir?: number }) => void
+  onComplete: (v: { weight: number; reps: number; rir?: number }) => void
 }) {
-  const [mode, setMode] = useState<'wheel' | 'keys'>(() => {
+  const [mode, setMode] = useState<'wheel' | 'keys' | 'plates'>(() => {
     try { return (localStorage.getItem('vis.inputMode') as 'wheel' | 'keys') || 'wheel' } catch { return 'wheel' }
   })
+  // barbell exercises: a third view that shows which plates go on each side
+  const barbell = isBarbell(title)
+  const [rir, setRir] = useState<number | undefined>(initial.rir)
   const [weight, setWeight] = useState(initial.weight ?? fallback?.weight ?? (dumbbell ? 10 : 20))
   const [kgValues] = useState(() => kgSteps(dumbbell, initial.weight, fallback?.weight))
   const [reps, setReps] = useState(initial.reps ?? fallback?.reps ?? 8)
   const [wText, setWText] = useState(fmtKg(weight))
   const [rText, setRText] = useState(String(reps))
 
-  const switchMode = (m: 'wheel' | 'keys') => {
+  const switchMode = (m: 'wheel' | 'keys' | 'plates') => {
+    // the plates view works on the current numbers, whichever way they were entered
+    if (mode === 'keys' && m !== 'keys') {
+      setWeight(Math.max(0, Number(wText.replace(',', '.')) || 0))
+      setReps(Math.max(0, Math.round(Number(rText) || 0)))
+    } else {
+      setWText(fmtKg(weight))
+      setRText(String(reps))
+    }
     setMode(m)
-    setWText(fmtKg(weight))
-    setRText(String(reps))
-    try { localStorage.setItem('vis.inputMode', m) } catch { /* ignore */ }
+    if (m !== 'plates') try { localStorage.setItem('vis.inputMode', m) } catch { /* ignore */ }
   }
-  const values = () =>
-    mode === 'wheel'
+  const values = () => ({
+    ...(mode !== 'keys'
       ? { weight, reps }
-      : { weight: Math.max(0, Number(wText.replace(',', '.')) || 0), reps: Math.max(0, Math.round(Number(rText) || 0)) }
+      : { weight: Math.max(0, Number(wText.replace(',', '.')) || 0), reps: Math.max(0, Math.round(Number(rText) || 0)) }),
+    ...(withRir && rir != null ? { rir } : {}),
+  })
 
   return (
     <Sheet onClose={onClose}>
@@ -546,8 +658,11 @@ function SetEditor({ initial, fallback, title, dumbbell, onClose, onApply, onCom
       <div className="segmented" style={{ marginTop: 14 }}>
         <button className={mode === 'wheel' ? 'on' : ''} onClick={() => switchMode('wheel')}>{tr('Drehrad', 'Wheel')}</button>
         <button className={mode === 'keys' ? 'on' : ''} onClick={() => switchMode('keys')}>{tr('Tastatur', 'Keyboard')}</button>
+        {barbell && <button className={mode === 'plates' ? 'on' : ''} onClick={() => switchMode('plates')}>{tr('Scheiben', 'Plates')}</button>}
       </div>
-      {mode === 'wheel' ? (
+      {mode === 'plates' ? (
+        <PlateView kg={weight} onChange={setWeight} />
+      ) : mode === 'wheel' ? (
         <div className="wheels">
           <div className="wheel-col"><div className="cap">kg</div><Wheel values={kgValues} value={weight} onChange={setWeight} format={fmtKg} /></div>
           <div className="wheel-col"><div className="cap">{tr('Wdh', 'Reps')}</div><Wheel values={REPS} value={reps} onChange={setReps} /></div>
@@ -558,10 +673,73 @@ function SetEditor({ initial, fallback, title, dumbbell, onClose, onApply, onCom
           <div><label className="lbl">{tr('Wiederholungen', 'Reps')}</label><input className="field" inputMode="numeric" value={rText} onChange={(e) => setRText(e.target.value)} onFocus={(e) => e.target.select()} /></div>
         </div>
       )}
+      {withRir && (
+        <div className="rir-row">
+          <span className="faint">RIR</span>
+          {[0, 1, 2, 3, 4].map((n) => (
+            <button key={n} className={'chip' + (rir === n ? ' on' : '')} onClick={() => { haptic(); setRir(rir === n ? undefined : n) }}>{n === 4 ? '4+' : n}</button>
+          ))}
+        </div>
+      )}
       <div className="grid-2">
         <button className="btn btn-ghost" onClick={() => onApply(values())}>{tr('Übernehmen', 'Apply')}</button>
         <Tap className="btn btn-chrome" onClick={() => onComplete(values())}><Icon.check /> {tr('Satz fertig', 'Set done')}</Tap>
       </div>
+    </Sheet>
+  )
+}
+
+/** standard plates in kg, heaviest first; the bar weighs 20 kg */
+const PLATES = [25, 20, 15, 10, 5, 2.5, 1.25]
+const BAR = 20
+const PLATE_COLOR: Record<number, string> = { 25: '#d64545', 20: '#3f6fd6', 15: '#e0b43a', 10: '#3fae6a', 5: '#e9e9ee', 2.5: '#9a9aa2', 1.25: '#6c6c74' }
+
+/** Which plates go on each side of the bar for a weight, drawn like a loaded barbell. */
+function PlateView({ kg, onChange }: { kg: number; onChange: (v: number) => void }) {
+  let rest = Math.max(0, (kg - BAR) / 2)
+  const side: number[] = []
+  for (const p of PLATES) while (rest + 1e-9 >= p) { side.push(p); rest -= p }
+  const off = Math.round(rest * 2 * 100) / 100
+  const step = (d: number) => { haptic(); onChange(Math.max(BAR, Math.round((kg + d) / 2.5) * 2.5)) }
+  return (
+    <div className="plates">
+      <div className="plates-kg">
+        <button className="icon-btn" onClick={() => step(-2.5)}>−</button>
+        <b className="num">{fmtKg(kg)}<span>kg</span></b>
+        <button className="icon-btn" onClick={() => step(2.5)}>+</button>
+      </div>
+      <div className="plates-bar" aria-hidden="true">
+        <div className="plates-side left">{[...side].reverse().map((p, i) => <i key={i} style={{ background: PLATE_COLOR[p], height: `${34 + p * 2.2}px` }} />)}</div>
+        <div className="plates-shaft" />
+        <div className="plates-side">{side.map((p, i) => <i key={i} style={{ background: PLATE_COLOR[p], height: `${34 + p * 2.2}px` }} />)}</div>
+      </div>
+      <div className="plates-list">
+        {kg < BAR ? tr('Weniger als die leere Stange (20 kg)', 'Less than the empty bar (20 kg)')
+          : side.length ? <>{tr('Pro Seite', 'Each side')}: <b>{side.map(fmtKg).join(' + ')}</b> kg</> : tr('Nur die Stange (20 kg)', 'Just the bar (20 kg)')}
+        {off > 0 && kg >= BAR && <div className="faint" style={{ fontSize: 12 }}>{tr(`${fmtKg(off)} kg gehen mit Standardscheiben nicht auf`, `${fmtKg(off)} kg can't be loaded with standard plates`)}</div>}
+      </div>
+    </div>
+  )
+}
+
+/** The user's own note on an exercise (e.g. "Sitz Stufe 4"), shown in every workout. */
+function ExerciseNoteSheet({ id, name, onClose }: { id: string; name: string; onClose: () => void }) {
+  const store = useStore()
+  const [text, setText] = useState(store.settings.exerciseNotes?.[id] ?? '')
+  const save = () => {
+    const notes = { ...(store.settings.exerciseNotes ?? {}) }
+    const v = text.trim().slice(0, 140)
+    if (v) notes[id] = v
+    else delete notes[id]
+    store.saveSettings({ ...store.settings, exerciseNotes: notes })
+    onClose()
+  }
+  return (
+    <Sheet onClose={onClose}>
+      <h3>{tr('Notiz', 'Note')} · {name}</h3>
+      <input className="input" style={{ margin: '12px 0' }} autoFocus value={text} maxLength={140} onChange={(e) => setText(e.target.value)}
+        placeholder={tr('z. B. Sitz auf Stufe 4, Griff eng', 'e.g. seat on level 4, close grip')} onKeyDown={(e) => e.key === 'Enter' && save()} />
+      <button className="btn btn-chrome btn-block" onClick={save}>{tr('Speichern', 'Save')}</button>
     </Sheet>
   )
 }

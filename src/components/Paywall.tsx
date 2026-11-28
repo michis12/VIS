@@ -114,6 +114,7 @@ const FEATURES: { icon: React.JSX.Element; title: string; text: string; coach?: 
   { icon: <path d="M12 3a9 9 0 1 0 9 9M12 7v5l3 2M17 3l1 2 2 1-2 1-1 2-1-2-2-1 2-1Z" />, get title() { return t('Was soll ich noch essen?', 'What should I still eat?') }, get text() { return t('Vorschläge aus deinen echten Mahlzeiten für die restlichen Makros.', 'Ideas from your real meals for the remaining macros.') } },
   { icon: <path d="M3 18c3 0 4-9 7-9s3 6 5 6 3-9 6-9M3 21h18" />, get title() { return t('Phasenplaner', 'Phase planner') }, get text() { return t('Kalorien und Dauer für Bulk oder Cut aus deinen eigenen Daten.', 'Calories and duration for a bulk or cut from your own data.') } },
   { icon: <path d="M12 3v12M7 10l5 5 5-5M4 19h16" />, get title() { return t('Trainings importieren', 'Import workouts') }, get text() { return t('Strong, Hevy, FitNotes oder Notizen – deine Historie kommt mit.', 'Strong, Hevy, FitNotes or notes – your history comes along.') } },
+  { icon: <path d="M4 19h16M6 16l4-5 3 3 5-7M18 7h-3M18 7v3" />, get title() { return t('Wöchentlicher Kalorien-Check-in', 'Weekly calorie check-in') }, get text() { return t('Echter Verbrauch aus deinem Essen und Gewichtstrend – jede Woche ein passendes neues Kalorienziel.', 'Real expenditure from your food and weight trend – a fitting new calorie target every week.') } },
   { templates: true, icon: <path d="M5 4h10l4 4v12H5ZM15 4v4h4M8.5 12h7M8.5 15.5h7M8.5 8.5h3" />, get title() { return t('Unbegrenzt Vorlagen', 'Unlimited templates') }, get text() { return t(`Free hat bis zu ${FREE_TEMPLATES} Vorlagen – mit Solo und Ultra so viele du willst.`, `Free has up to ${FREE_TEMPLATES} templates – with Solo and Ultra as many as you like.`) } },
   { coach: true, icon: <path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-4 3.5V17H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2ZM12 8.2l.9 1.9 1.9.9-1.9.9-.9 1.9-.9-1.9-1.9-.9 1.9-.9Z" />, get title() { return t('KI-Coach · Ultra', 'AI coach · Ultra') }, get text() { return COACH_TEXT() } },
 ]
@@ -243,6 +244,12 @@ export function Paywall({ onClose, reason }: { onClose: () => void; reason?: str
           <div className="pw-reason">
             <b>{t('Diese Vorlage ist gesperrt', 'This template is locked')}</b>
             <span>{t(`Mit Free bleiben deine ${FREE_TEMPLATES} meistgenutzten Vorlagen. Mit Solo oder Ultra sind alle wieder da – nichts ist gelöscht.`, `On Free your ${FREE_TEMPLATES} most used templates stay. With Solo or Ultra all of them are back – nothing was deleted.`)}</span>
+          </div>
+        )}
+        {reason === 'checkin' && (
+          <div className="pw-reason">
+            <b>{t('Kalorien-Check-in mit Solo oder Ultra', 'Calorie check-in with Solo or Ultra')}</b>
+            <span>{t('Jede Woche rechnet VIS aus deinem Essen und Gewichtstrend deinen echten Verbrauch aus und schlägt ein neues Kalorienziel vor.', 'Every week VIS works out your real expenditure from your food and weight trend and suggests a new calorie target.')}</span>
           </div>
         )}
         {reason === 'templates' && (

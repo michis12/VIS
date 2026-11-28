@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { FriendsSync } from './components/Friends'
 import { refreshPlan } from './components/AiCredit'
 import { Celebration } from './components/Celebration'
 import { Paywall } from './components/Paywall'
@@ -139,6 +140,7 @@ function Shell() {
         {paywall && <Paywall reason={paywall.reason} onClose={() => setPaywall(false)} />}
         {intro && <Onboarding onClose={() => setIntro(false)} toast={setToast} />}
         <Welcome />
+        <FriendsSync />
       </div>
     </NavCtx.Provider>
   )

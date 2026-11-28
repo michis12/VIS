@@ -102,6 +102,13 @@ export function Settings({ toast }: { toast: (t: string) => void }) {
         </div>
       </div>
 
+      <Toggle label={t('Wöchentlicher Kalorien-Check-in', 'Weekly calorie check-in')} sub={t('Echter Verbrauch + neues Ziel, jede Woche (Solo / Ultra)', 'Real expenditure + new target, every week (Solo / Ultra)')}
+        on={store.settings.checkin !== false} set={(v) => store.saveSettings({ ...store.settings, checkin: v })} />
+
+      <div className="section-title"><h2>{t('Körper', 'Body')}</h2></div>
+      <Toggle label={t('Gewichts-Trendlinie', 'Weight trend line')} sub={t('Geglättetes Gewicht ohne Tagesschwankungen', 'Smoothed weight without daily swings')}
+        on={store.settings.weightTrend !== false} set={(v) => store.saveSettings({ ...store.settings, weightTrend: v })} />
+
       <div className="section-title"><h2>Training</h2></div>
       <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ flex: 1 }}>{t('Pausenzeit', 'Rest time')}<div className="faint" style={{ fontSize: 13 }}>{t('startet nach jedem bestätigten Satz', 'starts after every confirmed set')}</div></div>
@@ -127,6 +134,13 @@ export function Settings({ toast }: { toast: (t: string) => void }) {
         )}
         {pushOn && <span className="sync-dot" data-on="1" />}
       </div>
+
+      <Toggle label={t('Progressions-Tipps', 'Progression hints')} sub={t('Kleiner Hinweis, wann mehr Gewicht dran ist (+5 kg, Kurzhantel +2 kg)', 'Small hint when it’s time for more weight (+5 kg, dumbbells +2 kg)')}
+        on={store.settings.progressHints !== false} set={(v) => store.saveSettings({ ...store.settings, progressHints: v })} />
+      <Toggle label={t('Volumen live', 'Live volume')} sub={t('Bewegtes Gewicht oben im laufenden Workout', 'Weight moved, shown at the top of the running workout')}
+        on={store.settings.liveVolume !== false} set={(v) => store.saveSettings({ ...store.settings, liveVolume: v })} />
+      <Toggle label={t('RIR erfassen', 'Track RIR')} sub={t('Wie viele Wiederholungen noch drin gewesen wären – für Fortgeschrittene', 'How many reps you had left – for advanced lifters')}
+        on={!!store.settings.rir} set={(v) => store.saveSettings({ ...store.settings, rir: v })} />
 
       <div className="section-title"><h2>Cloud</h2></div>
       <CloudCard toast={toast} />
@@ -157,6 +171,19 @@ export function Settings({ toast }: { toast: (t: string) => void }) {
       <p className="faint num" style={{ fontSize: 12, textAlign: 'center', marginTop: 28 }}>
         VIS · Version {__BUILD__} UTC
       </p>
+    </div>
+  )
+}
+
+/** an on/off row like the meal sections switch */
+function Toggle({ label, sub, on, set }: { label: string; sub: string; on: boolean; set: (v: boolean) => void }) {
+  return (
+    <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ flex: 1 }}>{label}<div className="faint" style={{ fontSize: 13 }}>{sub}</div></div>
+      <div className="segmented" style={{ width: 120, flexShrink: 0 }}>
+        <button className={!on ? 'on' : ''} onClick={() => set(false)}>{t('Aus', 'Off')}</button>
+        <button className={on ? 'on' : ''} onClick={() => set(true)}>{t('An', 'On')}</button>
+      </div>
     </div>
   )
 }
