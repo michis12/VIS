@@ -1144,3 +1144,15 @@ button.nut-ring:active { transform: scale(.97); transition: transform .1s; }
 .cf p { position: relative; margin-top: 12px; max-width: 360px; font-size: 15px; line-height: 1.5; color: var(--text-2); animation: ob-rise .7s cubic-bezier(.2,.9,.3,1) .55s both; }
 .cf-hint { position: relative; margin-top: 26px; font-size: 13px; color: var(--text-3); padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line-strong); opacity: 0; transition: opacity .6s ease .3s; }
 .cf-hint.in { opacity: 1; }
+
+/* nutrition: eating streak next to the title (days with >= 70 % of the calorie target) */
+.nut-top { display: flex; align-items: center; justify-content: space-between; min-height: 30px; }
+.nut-streak { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px 5px 9px; border-radius: 999px; font-size: 14px;
+  color: var(--text-2); border: 1px solid var(--line-strong); background: rgba(255,255,255,.04); transition: color .3s, border-color .3s, box-shadow .3s; }
+.nut-streak b { font-weight: 750; }
+.nut-streak.on { color: #7ff0bf; border-color: rgba(79,227,166,.5); background: rgba(34,199,132,.1); box-shadow: 0 0 16px rgba(63,214,154,.18); }
+.nut-streak.on svg { filter: drop-shadow(0 0 5px rgba(63,214,154,.7)); animation: streak-flame 2.4s ease-in-out infinite; transform-origin: 50% 80%; }
+.nut-streak.zero { color: var(--text-3); }
+@keyframes streak-flame { 0%, 100% { transform: scale(1) rotate(0deg); } 30% { transform: scale(1.08) rotate(-3deg); } 60% { transform: scale(.96) rotate(2deg); } }
+.nut-streak-big { font-size: 56px; font-weight: 800; letter-spacing: -0.03em; margin: 6px 0 8px; color: #7ff0bf; display: flex; align-items: baseline; gap: 8px; }
+.nut-streak-big span { font-size: 18px; font-weight: 600; color: var(--text-2); letter-spacing: 0; }

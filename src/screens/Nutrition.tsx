@@ -16,7 +16,7 @@ import {
   type Macros, type OffHit,
 } from '../nutrition'
 import { useStore } from '../store'
-import { MEALS, type Food, type FoodEntry, type Meal, type Recipe } from '../types'
+import { MEALS, type Food, type FoodEntry, type Meal, type Phase, type Recipe } from '../types'
 import { RecipeEditor } from './RecipeEditor'
 
 const addDays = (iso: string, d: number) => {
@@ -83,7 +83,10 @@ export function Nutrition() {
 
   return (
     <div className="screen">
-      <div className="eyebrow">{tr('Ernährung', 'Nutrition')}</div>
+      <div className="nut-top">
+        <div className="eyebrow" style={{ margin: 0 }}>{tr('Ernährung', 'Nutrition')}</div>
+        <EatStreak />
+      </div>
       <div className="nut-day">
         <button className="icon-btn" style={dayNav ? undefined : { visibility: 'hidden' }} onClick={() => setDate(addDays(date, -1))} aria-label={tr('Vorheriger Tag', 'Previous day')}><Icon.back /></button>
         <button className="nut-day-title" onClick={() => { if (dayNav && date !== today()) setDate(today()); else setDayNav(!dayNav) }}>
@@ -551,6 +554,51 @@ function HeartIcon({ on }: { on: boolean }) {
     <svg viewBox="0 0 24 24" width="18" height="18" fill={on ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.9" strokeLinejoin="round" aria-hidden="true">
       <path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.3a4.3 4.3 0 0 1 7.5 2.5C19.5 15.4 12 20 12 20Z" />
     </svg>
+  )
+}
+
+/** days in a row with at least 70 % of the day's calorie target eaten */
+export function eatStreak(foodLog: FoodEntry[], phases: Phase[]) {
+  const kcal = new Map<string, number>()
+  for (const e of foodLog) kcal.set(e.date, (kcal.get(e.date) ?? 0) + e.kcal)
+  const reached = (d: string) => {
+    const target = kcalTarget(phases, d)
+    return !!target && (kcal.get(d) ?? 0) >= target * 0.7
+  }
+  const t = today()
+  const todayDone = reached(t)
+  // today still open: the streak up to yesterday stays alive until the day is over
+  let d = todayDone ? t : addDays(t, -1)
+  let n = 0
+  while (reached(d) && n < 3650) { n++; d = addDays(d, -1) }
+  return { days: n, todayDone, hasTarget: !!kcalTarget(phases, t) }
+}
+
+function EatStreak() {
+  const { foodLog, phases } = useStore()
+  const s = useMemo(() => eatStreak(foodLog, phases), [foodLog, phases])
+  const [info, setInfo] = useState(false)
+  if (!s.hasTarget) return null
+  return (
+    <>
+      <button className={'nut-streak' + (s.todayDone ? ' on' : '') + (s.days === 0 ? ' zero' : '')} onClick={() => { haptic(); setInfo(true) }}
+        aria-label={tr(`Ess-Streak: ${s.days} Tage`, `Eating streak: ${s.days} days`)}>
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 2.5c.6 3.2 4.8 5.6 4.8 10.4A4.8 4.8 0 0 1 12 17.7a4.8 4.8 0 0 1-4.8-4.8c0-2 1-3.4 2.1-4.6.2 1.5.9 2.6 2 3.1C10.8 8.7 11.2 5.3 12 2.5Z" fill="currentColor" /><path d="M8 20.5h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+        <b className="num">{s.days}</b>
+      </button>
+      {info && (
+        <Sheet onClose={() => setInfo(false)}>
+          <h3>{tr('Ess-Streak', 'Eating streak')}</h3>
+          <div className="nut-streak-big num">{s.days}<span>{s.days === 1 ? tr('Tag', 'day') : tr('Tage', 'days')}</span></div>
+          <p className="muted" style={{ fontSize: 14, lineHeight: 1.5 }}>
+            {tr('Ein Tag zählt, wenn du mindestens 70 % deines Kalorienziels einträgst. Verpasst du einen Tag, beginnt der Streak von vorn.', 'A day counts when you log at least 70 % of your calorie target. Miss a day and the streak starts over.')}
+          </p>
+          <div className="hint" style={{ marginTop: 12 }}>
+            <span>{s.todayDone ? tr('Heute schon geschafft ✓', 'Done for today ✓') : tr('Heute noch offen – trag bis Mitternacht 70 % deines Ziels ein, dann geht der Streak weiter.', 'Still open today – log 70 % of your target before midnight to keep it going.')}</span>
+          </div>
+        </Sheet>
+      )}
+    </>
   )
 }
 
