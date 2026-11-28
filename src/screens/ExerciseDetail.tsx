@@ -30,7 +30,7 @@ const CHARTS = [
 const PAGE = 15
 
 export function ExerciseDetail({ id }: { id: string }) {
-  const { workouts, exerciseById, progress } = useStore()
+  const { workouts, exerciseById, progress, settings } = useStore()
   const nav = useNav()
   const ex = exerciseById.get(id)
   const [chart, setChart] = useState<(typeof CHARTS)[number]['id']>('w')
@@ -131,6 +131,7 @@ export function ExerciseDetail({ id }: { id: string }) {
           <div className="wo-timer">{ex && muscleLabel(ex.muscle)} · {sessions.length} {t('Einheiten', 'sessions')}</div>
         </div>
       </div>
+      {settings.exerciseNotes?.[id] && <div className="ex-note" style={{ display: 'inline-block', marginTop: 12 }}>✎ {settings.exerciseNotes[id]}</div>}
 
       {!sessions.length ? (
         <div className="card faint" style={{ marginTop: 18, textAlign: 'center', padding: 28 }}>{t('Noch keine Sätze zu dieser Übung', 'No sets for this exercise yet')}</div>

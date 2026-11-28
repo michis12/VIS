@@ -1,4 +1,5 @@
 import { getLang, t as tr } from '../i18n'
+import { FriendsButton } from '../components/Friends'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useTween } from '../anim'
 import { pastWeekScores } from '../weekly'
@@ -259,6 +260,7 @@ export function Profile({ toast }: { toast: (t: string) => void }) {
           <button className="link muted" style={{ fontSize: 14 }} onClick={() => setEditing(true)}>{tr('Profil bearbeiten', 'Edit profile')}</button>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          <FriendsButton />
           <button className="icon-btn" onClick={buildShare} disabled={busy} aria-label={tr('Profil teilen', 'Share profile')} style={{ width: 44, height: 44 }}>
             <Icon.share />
           </button>

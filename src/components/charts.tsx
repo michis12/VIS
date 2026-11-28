@@ -31,8 +31,10 @@ function niceTicks(min: number, max: number, count = 4) {
 export interface Pt { x: number; y: number; note?: string }
 export interface Band { from: number; to: number; color: string }
 
-export function LineChart({ points, height = 200, yFmt = (v) => String(Math.round(v)), unit = '', bands = [], dots = false }: {
+export function LineChart({ points, height = 200, yFmt = (v) => String(Math.round(v)), unit = '', bands = [], dots = false, trend }: {
   points: Pt[]; height?: number; yFmt?: (v: number) => string; unit?: string; bands?: Band[]; dots?: boolean
+  /** optional smoothed line drawn on top (e.g. the weight trend) */
+  trend?: Pt[]
 }) {
   const [ref, width] = useWidth()
   const [hover, setHover] = useState<number | null>(null)
@@ -81,7 +83,11 @@ export function LineChart({ points, height = 200, yFmt = (v) => String(Math.roun
           {xt.map((t, i) => <text key={i} x={sx(t)} y={height - 6} textAnchor={i === 0 ? 'start' : i === 3 ? 'end' : 'middle'}>{span > 200 * 864e5 ? monthLabel(new Date(t)) : shortDate(new Date(t).toISOString())}</text>)}
         </g>
         <path d={area} fill={`url(#${gid})`} />
-        <path d={d} fill="none" stroke="#e5e5ea" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+        <path d={d} fill="none" stroke="#e5e5ea" strokeWidth={trend ? 1.4 : 2} strokeOpacity={trend ? 0.55 : 1} strokeLinejoin="round" strokeLinecap="round" />
+        {trend && trend.length > 1 && (
+          <path d={trend.filter((p) => p.x >= x0 && p.x <= x1).map((p, i) => `${i ? 'L' : 'M'}${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join('')}
+            fill="none" stroke="#3fd69a" strokeWidth={2.4} strokeLinejoin="round" strokeLinecap="round" style={{ filter: 'drop-shadow(0 0 4px rgba(63,214,154,.5))' }} />
+        )}
         {dots && points.map((p, i) => <circle key={i} cx={sx(p.x)} cy={sy(p.y)} r={2.5} fill="#e5e5ea" />)}
         {hp && (
           <g>

@@ -1,4 +1,6 @@
 import { t as tr } from '../i18n'
+import { CheckinRow } from '../components/Checkin'
+import { weightTrend } from '../checkin'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { LineChart, type Band } from '../components/charts'
 import { Icon, Sheet, Wheel } from '../components/ui'
@@ -36,6 +38,8 @@ export function Body({ focus }: { focus?: 'phase' | null }) {
 
   const since = new Date(Date.now() - range * 864e5).toISOString().slice(0, 10)
   const pts = weights.filter((w) => w.date >= since).map((w) => ({ x: new Date(w.date + 'T12:00:00').getTime(), y: w.kg }))
+  // smoothed weight (EMA), the same the weekly check-in uses
+  const trendPts = useMemo(() => weightTrend(weights).filter((w) => w.date >= since).map((w) => ({ x: new Date(w.date + 'T12:00:00').getTime(), y: w.kg })), [weights, since])
   const last = weights[weights.length - 1]
 
   const delta = (days: number) => {
@@ -112,7 +116,14 @@ export function Body({ focus }: { focus?: 'phase' | null }) {
         </div>
       </div>
       <div className="card" style={{ marginTop: 12 }}>
-        <LineChart points={pts} height={220} yFmt={(v) => fmtKg(Math.round(v * 10) / 10)} unit="kg" bands={bands} />
+        <LineChart points={pts} height={220} yFmt={(v) => fmtKg(Math.round(v * 10) / 10)} unit="kg" bands={bands}
+          trend={store.settings.weightTrend === false ? undefined : trendPts} />
+        {store.settings.weightTrend !== false && trendPts.length > 1 && (
+          <div className="faint" style={{ fontSize: 12, marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <i style={{ width: 14, height: 3, borderRadius: 2, background: '#3fd69a', display: 'inline-block' }} />
+            {tr(`Trend ${fmtKg(Math.round(trendPts[trendPts.length - 1].y * 10) / 10)} kg – geglättet, ohne Tagesschwankungen`, `Trend ${fmtKg(Math.round(trendPts[trendPts.length - 1].y * 10) / 10)} kg – smoothed, without daily swings`)}
+          </div>
+        )}
         {phases.length > 0 && (
           <div className="legend">
             {(['bulk', 'cut', 'maintain'] as PhaseType[]).filter((t) => phases.some((p) => p.type === t)).map((t) => (
@@ -153,7 +164,8 @@ export function Body({ focus }: { focus?: 'phase' | null }) {
       ) : (
         <div className="card muted">{tr('Noch keine Phase gesetzt. Leg fest, ob du gerade im Bulk, Cut oder Erhalt bist.', 'No phase set yet. Choose whether you are bulking, cutting or maintaining.')}</div>
       )}
-      <button className="ai-row" style={{ marginTop: 12 }} onClick={() => requireAi() && setPlanning(true)}>
+      <CheckinRow />
+      <button className="ai-row" style={{ marginTop: 10 }} onClick={() => requireAi() && setPlanning(true)}>
         <span className="ai-spark" aria-hidden="true">✦</span>
         <div className="grow">
           <div className="nut-entry-name">{tr('Nächste Phase planen', 'Plan the next phase')}</div>

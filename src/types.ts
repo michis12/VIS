@@ -12,6 +12,10 @@ export interface SetEntry {
   done: boolean
   /** values were pre-filled as a suggestion and not yet touched */
   suggested?: boolean
+  /** warm-up set: shown and saved, but no volume, records or progress */
+  warmup?: boolean
+  /** reps in reserve (optional, Settings › Training) */
+  rir?: number
 }
 
 export interface WorkoutExercise {
@@ -115,6 +119,19 @@ export interface Settings {
   templateOrder?: string[]
   /** own notes on foods / recipes (id → text), e.g. "Toast": found by the search and the AI */
   foodNotes?: Record<string, string>
+  /** own notes on exercises (id → text), e.g. "Sitz Stufe 4" */
+  exerciseNotes?: Record<string, string>
+  /** small hints in the workout: next weight step, plateau (default on) */
+  progressHints?: boolean
+  /** total volume in the workout header while training (default on) */
+  liveVolume?: boolean
+  /** reps in reserve per set (default off) */
+  rir?: boolean
+  /** weekly calorie check-in for paid plans (default on) and when it was last shown */
+  checkin?: boolean
+  checkinAt?: string
+  /** smoothed weight trend line on the body page (default on) */
+  weightTrend?: boolean
 }
 
 // ---- Ernährung

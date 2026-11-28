@@ -40,7 +40,7 @@ const sections = (): Section[] => [
     key: 'workout', shot: 'workout', eyebrow: t('Im Gym', 'At the gym'),
     title: t('Jeder Satz zählt', 'Every set counts'),
     text: t('Gewicht und Wiederholungen tippen, abhaken, Pause läuft. Der Pokal zeigt Rekorde, der Pfeil Fortschritt gegenüber dem letzten Mal.', 'Tap weight and reps, check the set, the rest timer runs. The trophy marks records, the arrow progress over last time.'),
-    points: [t('Pausen-Timer mit Mitteilung', 'Rest timer with notification'), t('Supersätze koppeln', 'Link supersets'), t('Werte vom letzten Mal stehen schon drin', 'Last time’s values are prefilled')],
+    points: [t('Pausen-Timer mit Mitteilung', 'Rest timer with notification'), t('Scheibenrechner bei Langhantel-Übungen', 'Plate calculator for barbell lifts'), t('Aufwärmsätze mit einem Tipp', 'Warm-up sets with one tap'), t('Dezenter Tipp, wann mehr Gewicht dran ist', 'A subtle hint when it’s time for more weight')],
   },
   {
     key: 'stats', shot: 'stats', eyebrow: t('Statistik', 'Stats'),
@@ -52,7 +52,7 @@ const sections = (): Section[] => [
     key: 'food', shot: 'food', eyebrow: t('Ernährung', 'Nutrition'),
     title: t('Kalorien ohne Stress', 'Calories made easy'),
     text: t('Barcode scannen, suchen, Favoriten und eigene Rezepte. Ziel und Makros kommen aus deiner Phase.', 'Scan barcodes, search, favourites and your own recipes. Target and macros come from your phase.'),
-    points: [t('Millionen Produkte per Barcode', 'Millions of products by barcode'), t('Menge vom letzten Mal wird vorgeschlagen', 'Last amount is suggested'), t('Eigene Notizen, z. B. „Toast“', 'Own notes, e.g. “toast”')],
+    points: [t('Millionen Produkte per Barcode', 'Millions of products by barcode'), t('Menge vom letzten Mal wird vorgeschlagen', 'Last amount is suggested'), t('Ess-Streak ab 70 % deines Ziels', 'Eating streak from 70 % of your target'), t('Wöchentlicher Kalorien-Check-in (Solo / Ultra)', 'Weekly calorie check-in (Solo / Ultra)')],
   },
   {
     key: 'ai', shot: 'ai-food', eyebrow: t('KI', 'AI'),
@@ -70,7 +70,13 @@ const sections = (): Section[] => [
     key: 'body', shot: 'body-muscles', eyebrow: t('Körper', 'Body'),
     title: t('Sieh, was du trainierst', 'See what you train'),
     text: t('Gewicht mit Bulk- und Cut-Phasen, Körpermaße und eine Heatmap, die jeden Muskel zeigt – auch die, die du liegen lässt.', 'Weight with bulk and cut phases, measurements and a heat map that shows every muscle – including the ones you skip.'),
-    points: [t('Phasenplaner mit KI', 'Phase planner with AI'), t('Vorne und hinten, 7 oder 30 Tage', 'Front and back, 7 or 30 days')],
+    points: [t('Gewichts-Trendlinie ohne Tagesschwankungen', 'Weight trend line without daily swings'), t('Phasenplaner mit KI', 'Phase planner with AI'), t('Heatmap vorne und hinten, 7 oder 30 Tage', 'Heat map front and back, 7 or 30 days')],
+  },
+  {
+    key: 'friends', shot: 'stats', eyebrow: t('Freunde', 'Friends'),
+    title: t('Trainiert zusammen', 'Train together'),
+    text: t('Im Profil oben das Freunde-Symbol: Code teilen, Anfragen annehmen und jede Woche in der Rangliste vergleichen – Wochenscore, Volumen, Bestwerte.', 'The friends icon at the top of your profile: share your code, accept requests and compare in a weekly ranking – week score, volume, best lifts.'),
+    points: [t('Nur dein Name und Fortschritt – nie deine E-Mail', 'Only your name and progress – never your e-mail'), t('Duell: du gegen einen Freund', 'Head-to-head: you vs a friend')],
   },
   {
     key: 'awards', shot: 'profile', eyebrow: 'Achievements',
@@ -141,7 +147,7 @@ export function Onboarding({ onClose, toast }: { onClose: () => void; toast: (s:
 
             <section className="ob-end ob-reveal">
               <h2 className="chrome-text">{t('Bereit?', 'Ready?')}</h2>
-              <p>{t('Die Einführung findest du jederzeit wieder unter Profil › Einstellungen.', 'You can open this intro again any time under Profile › Settings.')}</p>
+              <p>{t('Die Einführung findest du jederzeit wieder unter Profil › Einstellungen – dort lässt sich auch alles Zusätzliche einzeln ausschalten.', 'You can open this intro again any time under Profile › Settings – where every extra can be switched off, too.')}</p>
               <button className="btn btn-chrome btn-block ob-next" onClick={next}>{t('Weiter', 'Continue')}</button>
             </section>
           </>

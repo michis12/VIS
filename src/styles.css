@@ -1210,3 +1210,71 @@ button.nut-ring:active { transform: scale(.97); transition: transform .1s; }
 .pc-meter-tag { position: absolute; right: 16px; top: -24px; font-size: 12px; font-weight: 700; color: var(--text-3); white-space: nowrap; }
 .pc-meter-tag.down { color: #7ff0bf; }
 .pc-actions { position: absolute; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
+/* workout extras: note + progression hint under the exercise name, warm-up sets, RIR, plates */
+.ex-extra { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 10px; }
+.ex-note { font-size: 12px; color: var(--text-2); padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.05); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ex-hint { font-size: 12px; font-weight: 700; color: #7ff0bf; padding: 3px 9px; border-radius: 999px; border: 1px solid rgba(79,227,166,.35); background: rgba(34,199,132,.07); }
+.ex-hint.flat { color: #f5c26b; border-color: rgba(245,194,107,.35); background: rgba(245,194,107,.06); }
+.set-row.warm .set-no { color: var(--text-3); font-size: 12px; }
+.set-row.warm .val { opacity: .7; }
+.set-rir { position: absolute; bottom: -3px; right: -6px; font-size: 9px; font-weight: 700; color: var(--text-3); }
+.set-no { position: relative; }
+.rir-row { display: flex; align-items: center; gap: 6px; margin: 0 0 14px; }
+.rir-row span { font-size: 12px; font-weight: 700; letter-spacing: .1em; margin-right: 4px; }
+.rir-row .chip { flex: 1; justify-content: center; }
+.plates { margin: 16px 0; text-align: center; }
+.plates-kg { display: flex; align-items: center; justify-content: center; gap: 18px; }
+.plates-kg b { font-size: 40px; font-weight: 800; letter-spacing: -0.02em; }
+.plates-kg b span { font-size: 16px; color: var(--text-2); margin-left: 4px; font-weight: 600; }
+.plates-bar { display: flex; align-items: center; justify-content: center; height: 110px; margin: 10px 0 6px; }
+.plates-shaft { width: 110px; height: 8px; border-radius: 3px; background: linear-gradient(180deg, #f0f0f3, #8e9096); }
+.plates-side { display: flex; align-items: center; gap: 2px; min-width: 20px; }
+.plates-side.left { justify-content: flex-end; }
+.plates-side i { display: block; width: 11px; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.35); }
+.plates-list { font-size: 14px; color: var(--text-2); }
+.plates-list b { color: var(--text); }
+
+/* weekly calorie check-in */
+.checkin-nudge { width: 100%; display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 10px 14px; border-radius: 16px; text-align: left; color: inherit;
+  border: 1px solid rgba(79,227,166,.4); background: linear-gradient(90deg, rgba(34,199,132,.12), rgba(34,199,132,.03)); animation: rise-in .4s ease-out both; }
+.checkin-nudge .grow { flex: 1; font-weight: 650; font-size: 14.5px; }
+.checkin-nudge small { display: block; font-weight: 500; font-size: 12px; color: var(--text-2); }
+.checkin-big { font-size: 46px; font-weight: 800; letter-spacing: -0.03em; margin: 6px 0 10px; color: #7ff0bf; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.checkin-big span { font-size: 14px; font-weight: 600; color: var(--text-2); letter-spacing: 0; }
+.checkin-rows { margin-bottom: 14px; }
+.checkin-reco { display: grid; gap: 2px; text-align: center; padding: 14px; border-radius: 16px; background: rgba(255,255,255,.04); border: 1px solid var(--line); margin-bottom: 14px; }
+.checkin-reco b { font-size: 28px; font-weight: 800; }
+.checkin-reco small { font-size: 12.5px; color: var(--text-2); }
+
+/* friends */
+.friends-btn { position: relative; }
+.friends-dot { position: absolute; top: 2px; right: 2px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; font-style: normal; font-size: 10.5px; font-weight: 800; display: grid; place-items: center; background: #22c784; color: #001a0f; }
+.fr-empty, .fr-setup { display: grid; gap: 10px; }
+.fr-empty b, .fr-setup b { font-size: 16px; }
+.fr-empty span, .fr-setup span { font-size: 13.5px; line-height: 1.45; }
+.fr-code { display: flex; align-items: center; gap: 12px; }
+.fr-code b { flex: 1; font-size: 26px; font-weight: 800; letter-spacing: .18em; color: #7ff0bf; text-align: center; }
+.fr-add { display: flex; gap: 8px; margin-top: 10px; }
+.fr-add .input { flex: 1; letter-spacing: .12em; text-transform: uppercase; }
+.fr-req { display: flex; align-items: center; gap: 10px; }
+.fr-avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; font-weight: 800; font-size: 15px; background: linear-gradient(180deg, #2a2a2e, #141416); border: 1px solid var(--line-strong); }
+.fr-avatar.big { width: 52px; height: 52px; font-size: 22px; margin: 0 auto 6px; }
+.fr-list { padding: 4px 10px; }
+.fr-row { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 2px; text-align: left; color: inherit; border-bottom: 1px solid rgba(255,255,255,.05); }
+.fr-row:last-child { border-bottom: 0; }
+.fr-row:disabled { opacity: 1; }
+.fr-row .grow { flex: 1; min-width: 0; display: grid; }
+.fr-row small { font-size: 12px; }
+.fr-row.me b { color: #7ff0bf; }
+.fr-pos { width: 18px; text-align: center; font-weight: 800; color: var(--text-3); }
+.fr-score { font-size: 20px; font-weight: 800; }
+.fr-vs { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; text-align: center; margin: 4px 0 14px; }
+.fr-vs > div { display: grid; }
+.fr-vs b { font-size: 16px; }
+.fr-vs small { font-size: 12px; }
+.fr-vs-mid { font-size: 13px; font-weight: 800; color: var(--text-3); letter-spacing: .1em; text-transform: uppercase; }
+.fr-cmp { display: grid; }
+.fr-cmp-row { display: grid; grid-template-columns: 1fr 1.4fr 1fr; align-items: center; padding: 9px 0; border-top: 1px solid rgba(255,255,255,.05); text-align: center; }
+.fr-cmp-row span { font-size: 12.5px; color: var(--text-2); }
+.fr-cmp-row b { font-size: 16px; font-weight: 750; color: var(--text-2); }
+.fr-cmp-row b.win { color: #7ff0bf; text-shadow: 0 0 12px rgba(63,214,154,.4); }
