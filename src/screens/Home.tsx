@@ -1,11 +1,11 @@
 import { t as tr } from '../i18n'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { FREE_TEMPLATES, openPaywall, requireAi, requireTemplateSlot, templateLimit, usePlan } from '../components/AiCredit'
 import { Coach } from '../components/Coach'
 import { ScoreGauge } from '../components/ScoreGauge'
 import { TemplateOrder } from '../components/TemplateOrder'
 import { TrainingImport } from '../components/TrainingImport'
-import { nextTemplate, orderedTemplates } from '../templateOrder'
+import { lockedTemplates, nextTemplate, orderedTemplates } from '../templateOrder'
 import { Icon, Sheet } from '../components/ui'
 import { useWeekScore } from '../components/WeeklyReport'
 import { scoreLabel, WEEKLY_TARGET } from '../weekly'
@@ -73,16 +73,24 @@ export function Home({ onOpenWorkout, onOpenStats, onOpenBody, onOpenFood, toast
   const lastOf = (t: Template) => [...workouts].reverse().find((w) => w.name === t.name && w.status === 'done')
   // rhythm: templates run in their order (Settings › Verwalten › Reihenfolge); after the
   // last trained one comes the next, after the last template the first again
-  const next = nextTemplate(templates, workouts)
-  const nextId = templates.length > 1 ? next?.id ?? null : null
-  // only the next template is shown, the others fold out
-  const rest = next && templates.length > 1 ? templates.filter((x) => x.id !== next.id) : []
+  // Free (e.g. after a subscription ended): only the 3 most trained templates stay usable,
+  // the others are greyed out and lead to the plans page
+  const locked = useMemo(() => lockedTemplates(templates, workouts, templateLimit()), [templates, workouts, plan]) // eslint-disable-line react-hooks/exhaustive-deps
+  const usable = templates.filter((x) => !locked.has(x.id))
+  const next = nextTemplate(usable, workouts)
+  const nextId = usable.length > 1 ? next?.id ?? null : null
+  // only the next template is shown, the others fold out (locked ones last)
+  const rest = next && templates.length > 1 ? [...usable.filter((x) => x.id !== next.id), ...templates.filter((x) => locked.has(x.id))] : []
   const shown = rest.length ? [next!] : templates
   const tplCard = (t: Template) => {
     const last = lastOf(t)
+    const isLocked = locked.has(t.id)
     return (
-      <button key={t.id} className={'card tpl' + (t.id === nextId && !active ? ' tpl-next' : '')} style={{ width: '100%', textAlign: 'left' }} onClick={() => !active && setChosen(t)} disabled={!!active}>
-        <div className="tpl-badge"><span className="chrome-text">{badge(t.name)}</span></div>
+      <button key={t.id} className={'card tpl' + (t.id === nextId && !active ? ' tpl-next' : '') + (isLocked ? ' tpl-locked' : '')} style={{ width: '100%', textAlign: 'left' }}
+        onClick={() => { if (isLocked) { haptic(); openPaywall('templates-locked') } else if (!active) setChosen(t) }} disabled={!!active && !isLocked}>
+        <div className="tpl-badge">{isLocked
+          ? <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+          : <span className="chrome-text">{badge(t.name)}</span>}</div>
         <div className="tpl-main">
           {t.id === nextId && !active && <div className="tpl-next-tag">{tr('Als Nächstes', 'Up next')}</div>}
           <div className="name">{t.name}</div>
